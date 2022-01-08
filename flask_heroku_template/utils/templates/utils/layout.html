@@ -1,0 +1,25 @@
+Title: {{ page_info.title }}<br>
+Website name: {{ page_info.website_name }}<br>
+Website short name: {{ page_info.short_website_name }}<br>
+
+{% if page_info.form %}
+This page is form page<br>
+{% for error in page_info.error %}
+  - Error: {{ error }}<br>
+{% endfor %}
+{% endif %}
+<br>
+---------- PAGE CSS ----------<br>
+{% block css_block %}
+{% endblock %}
+----------------------------------<br>
+<br>
+---------- PAGE CONTENT ----------<br>
+{% block content_block %}
+{% endblock %}
+----------------------------------<br>
+<br>
+---------- PAGE JS ----------<br>
+{% block js_block %}
+{% endblock %}
+----------------------------------<br>

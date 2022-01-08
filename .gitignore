@@ -1,0 +1,14 @@
+*.pyc
+
+__pycache__
+
+.project
+.pydevproject
+.idea
+.code
+.i18n-editor-metadata
+
+venv/
+docs/build/
+
+*.sqlite

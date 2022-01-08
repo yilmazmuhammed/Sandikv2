@@ -1,0 +1,11 @@
+run.py
+|- flask_heroku_template/app.py
+  |-blueprint_template/ <api.py & page.py>
+    |-authorization.py
+      |-exceptions.py
+      |-utils.py
+        |-flask_heroku_template/utils/__init__.py
+        |-db.py
+          |-flask_heroku_template/utils/db_models.py
+
+
