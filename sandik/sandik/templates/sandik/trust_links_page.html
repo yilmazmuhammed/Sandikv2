@@ -1,0 +1,105 @@
+{% extends "utils/layout.html" %}
+{% import "utils/parts/macros.html" as macros%}
+
+{% block js_block %}
+  <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+  <script>
+    jQuery(function($){
+      $('#waiting-trust-links-table').footable({
+        "toggleColumn": "first",
+        "columns": [
+          { "name": "index", "title": "#", "classes": "text-center font-bold", },
+          { "name": "name_surname", "title": "Üye", "classes": "text-center" },
+          {# { "name": "status", "title": "Durum", "classes": "text-center" }, #}
+          { "name": "time", "title": "İstek tarihi", "classes": "text-center" },
+          { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+        ],
+        "rows": [
+        {% for tr in g.member.waiting_trust_links() %}
+          {
+            "index": `<span title='ID: {{ tr.id }}'>{{ loop.index }}</span>`,
+            "name_surname": `{{ tr.other_member(current_user).web_user_ref.name_surname  }}`,
+            {# "status": `{{ tr.status }}`, #}
+            "time": `{{ tr.time.strftime("%d.%m.%Y") }}`,
+            "actions": `
+              <tr>
+                {% if tr.receiver_member_ref.web_user_ref == current_user %}
+                <td>{{ macros.button(url=url_for('sandik_page_bp.accept_trust_relationship_request_page', trust_relationship_id=tr.id), icon='fa fa-check', type='success', size='xs', title='Kabul et', confirm_msg='Güven bağı isteğini onaylıyorsunuz. Devam etmek istiyor musunuz?') }}</td>
+                <td style='padding:5px;'></td>
+                {% endif %}
+                <td>{{ macros.button(url=url_for('sandik_page_bp.reject_trust_relationship_request_page', trust_relationship_id=tr.id), icon='fa fa-times', type='danger', size='xs', title='Reddet', confirm_msg='Güven bağı isteğini reddetmek istediğinizden emin misiniz?') }}</td>
+                <td style='padding:5px;'></td>
+              </tr>`,
+          },
+        {% endfor %}
+        ]
+      });
+
+      $('#accepted-trust-links-table').footable({
+        "toggleColumn": "first",
+        "columns": [
+          { "name": "index", "title": "#", "classes": "text-center font-bold", },
+          { "name": "name_surname", "title": "Üye", "classes": "text-center" },
+          {# { "name": "status", "title": "Durum", "classes": "text-center" }, #}
+          { "name": "time", "title": "Tarih", "classes": "text-center" },
+          { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+        ],
+        "rows": [
+        {% for tr in g.member.accepted_trust_links() %}
+          {
+            "index": `<span title='ID: {{ tr.id }}'>{{ loop.index }}</span>`,
+            "name_surname": `{{ tr.other_member(current_user).web_user_ref.name_surname  }}`,
+            {# "status": `{{ tr.status }}`, #}
+            "time": `{{ tr.time.strftime("%d.%m.%Y") }}`,
+            "actions": `
+              <tr>
+                <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Reddet', confirm_msg='Devam etmek istiyor musunuz?') }}</td>
+                <td style='padding:5px;'></td>
+              </tr>`,
+          },
+        {% endfor %}
+        ]
+      });
+    });
+  </script>
+{% endblock %}
+
+{% block content_block %}
+  {{ macros.page_header(page_info.title) }}
+  <div class="wrapper-md">
+
+    <div class="row">
+
+      <!-- Güven bağı istekleri -->
+      <div class="col-md-6">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            <span>Güven bağı istekleri</span>
+            <span class="pull-right">
+              {{ macros.button(url_for("sandik_page_bp.request_trust_link_page", sandik_id=g.sandik.id), "glyphicon glyphicon-plus") }}
+            </span>
+          </div>
+          <div>
+            <table id="waiting-trust-links-table" class="table"></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Güven halkam -->
+      <div class="col-md-6">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            <span>Güven halkam</span>
+            <span class="pull-right">
+              {{ macros.button(url_for("sandik_page_bp.request_trust_link_page", sandik_id=g.sandik.id), "glyphicon glyphicon-plus") }}
+            </span>
+          </div>
+          <div>
+            <table id="accepted-trust-links-table" class="table"></table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+{% endblock %}

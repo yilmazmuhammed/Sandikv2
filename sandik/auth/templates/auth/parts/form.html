@@ -1,0 +1,33 @@
+{{ form.open|safe }}
+  {% if form.errors %}
+    <div class="alert alert-danger">
+      <ul>
+        {% for field_key in form.errors %}
+        {% for error in form.errors[field_key] %}
+        <li>{{ error }}</li>
+        {% endfor %}
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+  <div class="list-group list-group-sm">
+    {% for field in form %}
+      {% if field.id == "csrf_token" or field.type in ["HiddenField"] %}
+        {{ field }}
+      {% elif field.id == "submit" %}
+      {% elif field.type == "BooleanField" %}
+        <div class="checkbox m-b-md m-t-none">
+            <label class="i-checks">
+              {{ field }}<i></i> {{ field.label }} </a>
+            </label>
+          </div>
+      {% else %}
+        <div class="list-group-item">
+{#          {{ field.label }}{% if field.flags.required %}*{% else %}&ensp;{% endif %}#}
+          {{ field(class="form-control no-border") }}
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {{ form["submit"](class="btn btn-lg btn-primary btn-block") }}
+{{ form.close|safe }}

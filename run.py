@@ -1,4 +1,5 @@
-from flask_heroku_template.app import app
+from sandik.app import create_app
 
+app = create_app()
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,0 +1,20 @@
+{% extends "utils/layout.html" %}
+
+{% block content_block %}
+  <h1>Bu sayfa henüz oluşturulmadı.</h1>
+  <table class="table table-">
+    <thead>
+      <th>#</th>
+      <th>Başlık</th>
+      <th>Metin</th></thead>
+    <tbody>
+  {% for n in current_user.notifications_set.order_by('lambda n: n.creation_time') %}
+    <tr>
+      <th>{{ loop.index }}</th>
+      <td>{{ n.title }}</td>
+      <td>{{ n.text }}</td>
+    </tr>
+  {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

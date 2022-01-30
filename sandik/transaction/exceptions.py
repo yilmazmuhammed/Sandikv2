@@ -1,0 +1,2 @@
+class MaximumDebtAmountExceeded(Exception):
+    pass

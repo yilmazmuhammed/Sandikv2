@@ -1,0 +1,220 @@
+{% extends "utils/layout.html" %}
+{% import "utils/parts/macros.html" as macros%}
+
+{% block js_block %}
+  <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+  <script>
+    jQuery(function($){
+      $('#member-details').footable({
+        "toggleColumn": "first",
+        "columns": [
+          { "name": "order", "title": "Hisse", "classes": "text-center font-bold", },
+          { "name": "total_contribution", "title": "Ödenen aidatlar", "classes": "text-center" },
+          { "name": "total_debt", "title": "Alınan borçlar", "classes": "text-center", },
+          { "name": "total_installment", "title": "Ödenen taksitler", "classes": "text-center",  },
+          { "name": "final_status", "title": "Son durum", "classes": "text-center", },
+          { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+        ],
+        "rows": [
+        {% for share in g.member.shares_set.order_by("lambda s: s.share_order_of_member") %}
+          {
+            "order": `<span title='ID: {{ share.id }}'>{{ share.share_order_of_member }}</span>`,
+            "total_contribution": `{{ share.final_status("contribution") }}`,
+            "total_debt": `{{ share.final_status("debt") }}`,
+            "total_installment": `{{ share.final_status("installment") }}`,
+            "final_status": `{{ share.final_status("total") }}`,
+            "actions": `
+              <tr>
+                <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
+                <td style='padding:5px;'></td>
+                <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
+              </tr>`,
+          },
+        {% endfor %}
+        {
+          "order": `<span title='Member ID: {{ g.member.id }}'>Üye Durumu</span>`,
+          "total_contribution": `{{ g.member.final_status("contribution") }}`,
+          "total_debt": `{{ g.member.final_status("debt") }}`,
+          "total_installment": `{{ g.member.final_status("installment") }}`,
+          "final_status": `{{ g.member.final_status("total") }}`,
+          "actions": `
+            <tr>
+              <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
+              <td style='padding:5px;'></td>
+              <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
+            </tr>`,
+        },
+        ]
+      });
+
+    });
+  </script>
+{% endblock %}
+
+{% block content_block %}
+  {{ macros.page_header(page_info.title) }}
+  <div class="wrapper-md">
+
+    <div class="row">
+
+      <!-- Yaklaşan ödemelerim -->
+      <div class="col-md-6">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            <span>Yaklaşan ödemelerim</span>
+            <span class="pull-right">
+              {{ macros.button("#", "glyphicon glyphicon-plus") }}
+            </span>
+          </div>
+          <div class="panel-body"><span>Geçmiş ödemeler ve ayın son x günü bu ayki ödemeler için popup yap</span></div>
+          <div>
+            <table id="my-upcoming-payments-table" class="table"></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Son işlemlerim -->
+      <div class="col-md-6">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            <span>Son işlemlerim</span>
+            <span class="pull-right">
+              {{ macros.button("#", "glyphicon glyphicon-plus") }}
+            </span>
+          </div>
+            <table id="my-latest-transactions-table" class="table"></table>
+          </div>
+        </div>
+
+    </div>
+
+    <div class="row">
+
+      <!-- Üye son durumu -->
+      <div class="col-md-3">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            <span>Üye son durumu</span>
+          </div>
+          <div>
+            <table id="member-final-status" class="table">
+              <tbody>
+              <tr class="row">
+                <th>Ödenen aidat:</th>
+                <td>{{ g.member.final_status("contribution") }} ₺</td>
+              </tr>
+              <tr class="row">
+                <th>Alınan borç:</th>
+                <td>{{ g.member.final_status("debt") }} ₺</td>
+              </tr>
+              <tr class="row">
+                <th>Ödenen taksit:</th>
+                <td>{{ g.member.final_status("installment") }} ₺</td>
+              </tr>
+              <tr class="row">
+                <th>Son durum:</th>
+                <td>{{ g.member.final_status("total") }} ₺</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Üye bilgileri -->
+      <div class="col-md-4 col-md-offset-1">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            <span>Üye bilgileri</span>
+            <span class="pull-right">
+              {{ macros.button("#", "glyphicon glyphicon-pencil") }}
+            </span>
+          </div>
+          <div>
+            <table id="memebr-details" class="table">
+              <tbody>
+              <tr class="row">
+                <th>Sandık ismi:</th>
+                <td>{{ g.member.sandik_ref.name }}</td>
+              </tr>
+              <tr class="row">
+                <th>Üyelik tarihi:</th>
+                <td>{{ g.member.date_of_membership.strftime("%d.%m.%Y") }}</td>
+              </tr>
+              <tr class="row">
+                <th>Aidat miktarı:</th>
+                <td>{{ g.member.contribution_amount|round(0) }}</td>
+              </tr>
+              <tr class="row">
+                <th>Hisse sayısı:</th>
+                <td>{{ g.member.shares_count() }}</td>
+              </tr>
+              <tr class="row">
+                <th>İşlem sayısı:</th>
+                <td>{{ g.member.transactions_count() }}</td>
+              </tr>
+              <tr class="row">
+                <th>Üyelik durumu:</th>
+                <td>{% if g.member.is_active %}Aktif{% else %}Pasif{% endif %}</td>
+              </tr>
+              <tr class="row">
+                <th>Varsayılan hesap:</th>
+                <td>{{ g.member.iban }}</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Güven halkam -->
+      <div class="col-md-3 col-md-offset-1">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            <span>Güven halkam</span>
+          </div>
+          <div>
+            <table id="sandik-final-status" class="table">
+              <tbody>
+              <tr class="row">
+                <th>Toplanan aidat:</th>
+                <td>xxx ₺</td>
+              </tr>
+              <tr class="row">
+                <th>Verilen borç:</th>
+                <td>xxx ₺</td>
+              </tr>
+              <tr class="row">
+                <th>Toplanan taksit:</th>
+                <td>xxx ₺</td>
+              </tr>
+              <tr class="row">
+                <th>Son durum:</th>
+                <td>xxx ₺</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="row">
+
+      <!-- Hisseler -->
+      <div class="col-md-8 col-md-offset-2">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            <span>Hisseler</span>
+          </div>
+          <div>
+            <table id="member-details" class="table"></table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+{% endblock %}

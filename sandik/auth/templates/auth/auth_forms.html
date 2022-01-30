@@ -1,0 +1,27 @@
+{% extends "auth/auth_layout.html" %}
+
+{% block content %}
+  <a class="wrapper  navbar-brand block m-t">{{ page_info.title }}</a>
+  <div class="m-b-lg">
+    <div class="wrapper text-center">
+{#      <strong>Sign in to get in touch</strong>#}
+    </div>
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+      <div class="text-center alert alert-{{ category }}" role="alert">
+        {{ message }}
+      </div>
+    {% endfor %}
+    {%  with form = page_info.form  %}
+    {%  include 'auth/parts/form.html' %}
+    {%  endwith %}
+  </div>
+  {% block form_footer %}
+  {% endblock %}
+  {%  include 'auth/parts/footer.html' %}
+
+{% endblock %}
+
+
+
+
+

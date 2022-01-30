@@ -1,0 +1,113 @@
+{% if errors + form.get_all_errors() %}
+  <div class="col-12 alert alert-danger" role="alert">
+    <ul>
+      {% for error in (errors + form.get_all_errors()) %}
+      <li>{{ error|safe }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+{{ form.open|safe }}
+  {% for field in form %}
+    {% if field.id == "csrf_token" or field.type in ["HiddenField"] %}
+      {{ field }}
+    {% elif field.type in ["StringField", "PasswordField", "TextAreaField", "IntegerField", "FloatField", "DecimalField", "DateField", "TimeField", "SelectField", "SelectMultipleField", "TelField", "EmailField", "URLField"] %}
+      <div class="form-group">
+        <div class="col-lg-3 control-label">
+          {{ field.label }}{% if field.flags.required %}*{% else %}&ensp;{% endif %}
+        </div>
+        <div class="col-lg-9">
+          {{ field(class="form-control") }}
+        </div>
+      </div>
+    {% elif field.type in ["RadioField"] %}
+      <div class="form-group">
+        <div class="col-lg-3 control-label">
+          {{ field.label }}{% if field.flags.required %}*{% else %}&ensp;{% endif %}
+        </div>
+        <div class="col-lg-9">
+        {% for i in range((field.choices)|length) %}
+          <div class="radio">
+            <label>
+              <input type="radio" name="{{ field.name }}" id="{{ field.id }}-{{ i }}" value="{{ field.choices[i][0] }}">
+              {{ field.choices[i][1] }}
+            </label>
+          </div>
+        {% endfor %}
+        </div>
+      </div>
+    {% elif field.type in ["MultiCheckboxField"] %}
+      <div class="form-group">
+        <div class="col-lg-3 control-label">
+          {{ field.label }}{% if field.flags.required %}*{% else %}&ensp;{% endif %}
+        </div>
+        <div class="col-lg-9">
+        {% for i in range((field.choices)|length) %}
+          <div class="checkbox">
+            <label>
+{#                          TODO is_required kontrolü ekle #}
+              <input type="checkbox" name="{{ field.name }}" id="{{ field.id }}-{{ i }}" value="y">
+              {{ field.choices[i][1] }}
+            </label>
+          </div>
+        {% endfor %}
+        </div>
+      </div>
+    {% elif field.type in ["BooleanField"] %}
+      <div class="form-group">
+        <div class="col-lg-3 control-label">
+          {{ field.label }}{% if field.flags.required %}*{% else %}&ensp;{% endif %}
+        </div>
+        <div class="col-lg-9">
+          <label class="i-switch m-t-xs m-r">
+            {{ field() }}
+            <i></i>
+          </label>
+        </div>
+      </div>
+    {% elif field.type in ["FieldList"] %}
+      {% for sub_field in field %}
+        <div class="form-group">
+          <div class="col-lg-3 control-label">
+            {{ sub_field.label }}{% if field.flags.required or sub_field.flags.required %}*{% else %}&ensp;{% endif %}
+          </div>
+          <div class="col-lg-9">
+            <div class="row" style="margin-bottom: 5px;" id="row-{{ sub_field.id }}">
+              <div class="col-lg-9">
+                {{ sub_field(class="form-control", style="padding: 0px; border: 0px;") }}
+              </div>
+              <div id="add-remove-file-field-div-{{ sub_field.id }}" class="col-lg-3" style="margin-top: 6px;" >
+                <a class="add-file-field" id="{{ sub_field.id }}"><i class="glyphicon glyphicon-plus"></i></a>
+                <a class="remove-file-field" id="{{ sub_field.id }}"><i class="glyphicon glyphicon-minus"></i></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% elif field.type in ["CustomSelectField"] %}
+      <div class="form-group">
+        <div class="col-lg-3 control-label">
+          {{ field.label }}{% if field.flags.required %}*{% else %}&ensp;{% endif %}
+        </div>
+        <div class="col-lg-9">
+          {{ field(class="form-control m-b") }}
+        </div>
+      </div>
+    {% elif field.type in ["FileField", "MultipleFileField"] %}
+      <div class="form-group">
+        <div class="col-lg-3 control-label">
+          {{ field.label }}{% if field.flags.required %}*{% else %}&ensp;{% endif %}
+        </div>
+        <div class="col-lg-9">
+          {{ field(class="filestyle form-control m-b", style="border: 0px;") }}
+        </div>
+      </div>
+    {% elif field.type in ["SubmitField"] %}
+      <div class="form-group">
+        <div class="col-lg-offset-1 col-lg-11 text-center">
+          {{ field(class="btn btn-m btn-info") }}
+        </div>
+      </div>
+    {% endif %}
+  {% endfor %}
+{{ form.close|safe }}

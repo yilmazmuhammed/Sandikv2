@@ -1,0 +1,210 @@
+{% extends "utils/layout.html" %}
+{% import "utils/parts/macros.html" as macros%}
+
+{% block js_block %}
+  <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+  <script>
+    jQuery(function($){
+      $('#members-table').footable({
+        "components": {
+          "filtering": create_footable_basic_filter("is_active", "Üye durumu:", ["Aktif", "Pasif"], "Aktif")
+        },
+        "toggleColumn": "first",
+        "paging": {
+          "enabled": true,
+        },
+        "filtering": {
+          "enabled": true,
+          "delay": 1,
+          "dropdownTitle": "Şu sütunlarda ara:"
+        },
+        "sorting": {
+          "enabled": true
+        },
+        "columns": [
+          { "name": "index", "title": "#"},
+          { "name": "name_surname", "title": "Üye ismi" },
+          { "name": "date_of_membership", "title": "Üyelik tarihi", "breakpoints": "xs sm md" },
+          { "name": "shares_count", "title": "Hisse sayısı", "breakpoints": "xs sm md", "classes": "text-center", },
+          { "name": "is_active", "title": "Durum", "classes": "text-center", "breakpoints": "xs sm md lg" ,  },
+          {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
+          { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+          {% endif %}
+        ],
+        "rows": [
+        {% for member in g.sandik.members_set.order_by("lambda m: m.web_user_ref.name_surname.lower()") %}
+          {
+            "index": `<span title='ID: {{ member.id }}'>{{ loop.index }}</span>`,
+            "name_surname": `{{ member.web_user_ref.name_surname }}`,
+            "shares_count": `{{ member.shares_count() }}`,
+            "is_active": `{{ "Aktif" if member.is_active else "Pasif" }}`,
+            "date_of_membership": `{{ member.date_of_membership.strftime("%Y-%m-%d") }}`,
+            {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
+            "actions": `
+              <tr>
+                <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
+                <td style='padding:5px;'></td>
+                <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
+              </tr>`,
+            {% endif %}
+          },
+        {% endfor %}
+        ]
+      });
+
+      $('#applications-table').footable({
+        "toggleColumn": "first",
+        "paging": {
+          "enabled": true,
+        },
+        "sorting": {
+          "enabled": true
+        },
+        "columns": [
+          { "name": "index", "title": "#"},
+          { "name": "name_surname", "title": "Üye ismi" },
+          { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+        ],
+        "rows": [
+        {% for web_user in g.sandik.applicant_web_users_set.order_by("lambda wu: wu.name_surname.lower()") %}
+          {
+            "index": `<span title='ID: {{ web_user.id }}'>{{ loop.index }}</span>`,
+            "name_surname": `{{ web_user.name_surname }}`,
+            {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
+            "actions": `
+              <tr>
+                <td>{{ macros.button(url=url_for('sandik_page_bp.confirm_membership_application_page', sandik_id=g.sandik.id, web_user_id=web_user.id), icon='fa fa-check', type='info', size='xs', title='Onayla', confirm_msg='Üyeyi onaylamak istediğinize emin misiniz?') }}</td>
+                <td style='padding:5px;'></td>
+                <td>{{ macros.button(url=url_for('sandik_page_bp.reject_membership_application_page', sandik_id=g.sandik.id, web_user_id=web_user.id), icon='fa fa-trash', type='danger', size='xs', title='Reddet', confirm_msg='Üyeyi reddetmek istediğinize emin misiniz?') }}</td>
+              </tr>
+            `,
+            {% endif %}
+          },
+        {% endfor %}
+        ]
+      });
+
+    });
+  </script>
+{% endblock %}
+
+{% block content_block %}
+  {{ macros.page_header(page_info.title) }}
+  <div class="wrapper-md">
+    <div class="row">
+
+      <!-- Sandık bilgileri -->
+      <div class="col-md-offset-3 col-md-6">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            <span>Sandik bilgileri</span>
+            <span class="pull-right">
+              {{ macros.button("#", "glyphicon glyphicon-pencil") }}
+            </span>
+          </div>
+          <div>
+            <table id="sandik-details" class="table">
+              <tbody>
+              <tr class="row">
+                <th class="col-xs-4">ID:</th>
+                <td class="col-xs-8">{{ g.sandik.id }}</td>
+              </tr>
+              <tr class="row">
+                <th>Sandık ismi:</th>
+                <td>{{ g.sandik.name }}</td>
+              </tr>
+              <tr class="row">
+                <th>Oluşturulma tarihi:</th>
+                <td>{{ g.sandik.date_of_opening.strftime("%d.%m.%Y") }}</td>
+              </tr>
+              <tr class="row">
+                <th>Aidat miktarı:</th>
+                <td>{{ g.sandik.contribution_amount|round(0) }}</td>
+              </tr>
+              <tr class="row">
+                <th>Durumu:</th>
+                <td>{% if g.sandik.is_active %}Aktif{% else %}Pasif{% endif %}</td>
+              </tr>
+              <tr class="row">
+                <th>Detay:</th>
+                <td>{{ g.sandik.detail }}</td>
+              </tr>
+              <tr class="row">
+                <th>Üye sayısı:</th>
+                <td>{{ g.sandik.members_count() }} Üye - {{ g.sandik.shares_count() }} Hisse</td>
+              </tr>
+              <tr class="row">
+                <th>İşlem sayısı:</th>
+                <td>{{ g.sandik.transactions_count() }}</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sandık son durumu -->
+      <div class="col-md-3">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            <span>Son durum</span>
+          </div>
+          <div>
+            <table id="sandik-final-status" class="table">
+              <tbody>
+              <tr class="row">
+                <th>Toplanan aidat:</th>
+                <td>{{ g.sandik.final_status("contribution") }} ₺</td>
+              </tr>
+              <tr class="row">
+                <th>Verilen borç:</th>
+                <td>{{ g.sandik.final_status("debt") }} ₺</td>
+              </tr>
+              <tr class="row">
+                <th>Toplanan taksit:</th>
+                <td>{{ g.sandik.final_status("installment") }} ₺</td>
+              </tr>
+              <tr class="row">
+                <th>Son durum:</th>
+                <td>{{ g.sandik.final_status("total") }} ₺</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="row">
+
+      <!-- Üyeler -->
+      <div class="col-md-6">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            <span>Üyeler</span>
+            <span class="pull-right">
+              {{ macros.button("#", "glyphicon glyphicon-plus") }}
+            </span>
+          </div>
+          <div>
+            <table id="members-table" class="table"></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Başvurular -->
+      <div class="col-md-6">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            <span>Başvurular</span>
+          </div>
+          <div>
+            <table id="applications-table" class="table"></table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+{% endblock %}

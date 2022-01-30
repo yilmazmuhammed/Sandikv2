@@ -1,0 +1,9 @@
+{% extends "auth/auth_forms.html" %}
+
+{% block form_footer %}
+  <div class="m-b-lg">
+    <div class="text-center m-t m-b">
+      <a href="{{ url_for("auth_page_bp.register_page") }}">Hesap oluştur</a>
+    </div>
+  </div>
+{% endblock %}

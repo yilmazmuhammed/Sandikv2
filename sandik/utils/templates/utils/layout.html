@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+  <meta charset="utf-8" />
+  <title>{% block page_title %}{{ page_info.title }}{% endblock %} | {{ page_info.website_name }}</title>
+  <meta name="description" content="app, web app, responsive, responsive layout, admin, admin panel, admin dashboard, flat, flat ui, ui kit, AngularJS, ui route, charts, widgets, components" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <link rel="shortcut icon" href="{{ url_for('static', filename='my_custom/img/favicon.ico') }}" />
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='angulr_template/libs/assets/animate.css/animate.css') }}" type="text/css" />
+  <script src="https://kit.fontawesome.com/96d7a4eba0.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='angulr_template/libs/assets/simple-line-icons/css/simple-line-icons.css') }}" type="text/css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='angulr_template/libs/jquery/bootstrap/dist/css/bootstrap.css') }}" type="text/css" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:ital,wght@0,200;0,300;0,400;0,600;0,700;0,900;1,200;1,300;1,400;1,600;1,700;1,900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='angulr_template/css/app.css') }}" type="text/css" />
+
+  <!-- my custom -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='my_custom/css/footable.bootstrap.css') }}" type="text/css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='my_custom/css/app.css') }}" type="text/css" />
+
+  <style>
+    table.footable > thead > tr > td.footable-sortable, table.footable > thead > tr > th.footable-sortable, table.footable > tbody > tr > td.footable-sortable, table.footable > tbody > tr > th.footable-sortable, table.footable > tfoot > tr > td.footable-sortable, table.footable > tfoot > tr > th.footable-sortable {
+      padding-right: 15px;
+    }
+  </style>
+  <!-- block css_block -->
+  {% block css_block %}
+  {% endblock %}
+  <!-- finish -->
+</head>
+<body>
+<div class="app app-header-fixed app-aside-fixed">
+
+  {%  include 'utils/layout/top_bar.html' %}
+
+  {%  include 'utils/layout/left_menu.html' %}
+
+  <!-- content -->
+  <div id="content" class="app-content" role="main">
+  	<div class="app-content-body">
+
+      <!-- hbox layout -->
+      <!-- block content -->
+      {% block content_block %}
+      {% endblock %}
+      <!-- finish -->
+      <!-- /hbox layout -->
+
+	  </div>
+  </div>
+  <!-- /content -->
+
+  {%  include 'utils/layout/footer.html' %}
+
+</div>
+
+<script src="{{ url_for('static', filename='angulr_template/libs/jquery/jquery/dist/jquery.js') }}"></script>
+<script src="{{ url_for('static', filename='angulr_template/libs/jquery/bootstrap/dist/js/bootstrap.js') }}"></script>
+<script src="{{ url_for('static', filename='angulr_template/js/ui-load.js') }}"></script>
+<script src="{{ url_for('static', filename='angulr_template/js/ui-jp.config.js') }}"></script>
+<script src="{{ url_for('static', filename='angulr_template/js/ui-jp.js') }}"></script>
+<script src="{{ url_for('static', filename='angulr_template/js/ui-nav.js') }}"></script>
+<script src="{{ url_for('static', filename='angulr_template/js/ui-toggle.js') }}"></script>
+<script src="{{ url_for('static', filename='angulr_template/js/ui-client.js') }}"></script>
+
+<!-- my custom -->
+<script src="{{ url_for('static', filename='my_custom/js/footable.js') }}"></script>
+<script src="{{ url_for('static', filename='my_custom/js/custom.js') }}"></script>
+<script>
+  {% if page_info.active_dropdown %}
+    setTimeout(function() {
+      $('#{{ page_info.active_dropdown }}'+'-dropdown').addClass('active');
+    }, 500);
+  {% endif %}
+</script>
+
+<!-- block js_block -->
+{% block js_block %}
+{% endblock %}
+<!-- finish -->
+
+</body>
+</html>

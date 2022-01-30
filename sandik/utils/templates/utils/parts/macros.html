@@ -1,0 +1,13 @@
+{% macro page_header(title) -%}
+  <div class="bg-light lter b-b wrapper-md">
+    <h1 class="m-n font-thin h3">{{ title }}</h1>
+  </div>
+{%- endmacro %}
+
+{% macro button(url, icon, type='default', size='sm', title='', confirm_msg='') -%}
+  {% set btn_class = "btn btn-"+ size +" btn-"+ type %}
+  {% set confirm_msg_class = "dialog-confirm" if confirm_msg else ""%}
+  {% set sm_btn_style = "display: initial; padding-left: 8px; padding-right: 8px;" if size=='sm' else ""%}
+  <a href='{{ url }}' title='{{ title }}' class="{{btn_class}} {{ confirm_msg_class }}" style="{{ sm_btn_style }}" confirm-message="{{ confirm_msg }}"><i class="{{ icon }}"></i></a>
+{%- endmacro %}
+
