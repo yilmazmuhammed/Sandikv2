@@ -78,6 +78,17 @@ class Share(db.Entity):
             expense = select(sr.amount for sr in self.sub_receipts_set if sr.debt_ref).sum()
             return revenue - expense
 
+    def max_amount_can_borrow(self, use_untreated_amount=False):
+        amount = self.member_ref.total_balance_from_accepted_trust_links()
+        if use_untreated_amount:
+            amount += self.member_ref.total_amount_of_untreated_money_transactions()
+
+        from sandik.utils import sandik_preferences
+        remaining_debt_amount = sandik_preferences.remaining_debt_balance(sandik=self.member_ref.sandik_ref, whose=self)
+        amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
+
+        return amount
+
 
 class Member(db.Entity):
     id = PrimaryKey(int, auto=True)
@@ -126,8 +137,8 @@ class Member(db.Entity):
                              mt.type == MoneyTransaction.TYPE.EXPENSE).sum()
             return revenue - expense
 
-    def due_installment(self):
-        return Installment.select(lambda i: i.share_ref.member_ref == self and i.is_fully_paid == False and i.is_due())
+    # def due_installments(self):
+    #     return Installment.select(lambda i: i.share_ref.member_ref == self and i.is_fully_paid is False and i.is_due())
 
     def accepted_trust_links(self):
         return select(t for t in TrustRelationship
@@ -138,6 +149,40 @@ class Member(db.Entity):
         return select(t for t in TrustRelationship
                       if (t.requester_member_ref == self or t.receiver_member_ref == self)
                       and t.status == TrustRelationship.STATUS.WAITING)
+
+    def total_balance_from_accepted_trust_links(self):
+        return select(link.other_member(whose=self).balance for link in self.accepted_trust_links()).sum()
+
+    def max_amount_can_borrow(self, use_untreated_amount):
+        amount = self.total_balance_from_accepted_trust_links()
+        if use_untreated_amount:
+            amount += self.total_amount_of_untreated_money_transactions()
+
+        from sandik.utils import sandik_preferences
+        remaining_debt_amount = sandik_preferences.remaining_debt_balance(sandik=self.member_ref.sandik_ref, whose=self)
+        amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
+
+        return amount
+
+    def get_untreated_money_transactions(self):
+        return select(mt for mt in self.money_transactions_set if
+                      mt.type == MoneyTransaction.TYPE.REVENUE and mt.is_fully_distributed is False)
+
+    def total_amount_of_untreated_money_transactions(self):
+        return select(mt.untreated_amount() for mt in self.get_untreated_money_transactions())
+
+    def total_amount_unpaid_installments(self):
+        return select(i.unpaid_amount() for i in Installment if
+                      i.debt_ref.share_ref.member_ref == self and i.is_fully_paid is False).sum()
+
+    def total_amount_of_paid_contribution(self):
+        total_of_half_paid_contributions = select(
+            c.paid_amount() for c in Contribution if c.share_ref.member_ref == self and c.is_fully_paid is False
+        ).sum()
+        total_of_fully_paid_contributions = select(
+            c.amount for c in Contribution if c.share_ref.member_ref == self and c.is_fully_paid is True
+        ).sum()
+        return total_of_half_paid_contributions + total_of_fully_paid_contributions
 
 
 class WebUser(db.Entity, UserMixin):
@@ -264,6 +309,10 @@ class Log(db.Entity):
             first, last = 800, 899
             CREATE = first + 1
 
+        class CONTRIBUTION:
+            first, last = 900, 999
+            CREATE = first + 1
+
 
 class Sandik(db.Entity):
     id = PrimaryKey(int, auto=True)
@@ -309,6 +358,9 @@ class Sandik(db.Entity):
 
     def has_application(self):
         return self.applicant_web_users_set.count() > 0
+
+    def get_money_transactions(self):
+        return select(mt for mt in MoneyTransaction if mt.member_ref.sandik_ref == self)
 
 
 class TrustRelationship(db.Entity):
@@ -379,8 +431,11 @@ class Contribution(db.Entity):
     share_ref = Required(Share)
     sub_receipts_set = Set('SubReceipt')
 
+    def paid_amount(self):
+        return select(sr.amount for sr in self.sub_receipts_set).sum()
+
     def unpaid_amount(self):
-        return self.amount - select(sr.amount for sr in self.sub_receipts_set).sum()
+        return self.amount - self.paid_amount()
 
 
 class Debt(db.Entity):
@@ -463,14 +518,16 @@ class SubReceipt(db.Entity):
             unpaid_amount = self.contribution_ref.unpaid_amount()
             if unpaid_amount == 0:
                 self.contribution_ref.is_fully_paid = True
-            elif unpaid_amount > 0:
+            elif unpaid_amount < 0:
+                print(unpaid_amount)
+                rollback()
                 raise Exception("ERRCODE: 0010, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
 
         if self.installment_ref:
             unpaid_amount = self.installment_ref.unpaid_amount()
             if unpaid_amount == 0:
                 self.installment_ref.is_fully_paid = True
-            elif unpaid_amount > 0:
+            elif unpaid_amount < 0:
                 raise Exception("ERRCODE: 0011, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
             # TODO ilgili borç tamamen ödendiyse PieceOfDebt'leri sil
             # TODO ilgili borç tamamen ödenmediyse PieceOfDebt'leri güncelle

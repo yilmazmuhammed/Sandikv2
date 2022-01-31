@@ -1,0 +1,64 @@
+{% extends "utils/layout.html" %}
+{% import "utils/parts/macros.html" as macros%}
+
+{% block js_block %}
+  <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+  <script>
+    jQuery(function($){
+      $('#applications-table').footable({
+        "toggleColumn": "first",
+        "paging": {
+          "enabled": true,
+        },
+        "sorting": {
+          "enabled": true
+        },
+        "columns": [
+          { "name": "index", "title": "#"},
+          { "name": "name_surname", "title": "Üye ismi" },
+          { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+        ],
+        "rows": [
+        {% for web_user in g.sandik.applicant_web_users_set.order_by("lambda wu: wu.name_surname.lower()") %}
+          {
+            "index": `<span title='ID: {{ web_user.id }}'>{{ loop.index }}</span>`,
+            "name_surname": `{{ web_user.name_surname }}`,
+            {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
+            "actions": `
+              <tr>
+                <td>{{ macros.button(url=url_for('sandik_page_bp.confirm_membership_application_page', sandik_id=g.sandik.id, web_user_id=web_user.id), icon='fa fa-check', type='info', size='xs', title='Onayla', confirm_msg='Üyeyi onaylamak istediğinize emin misiniz?') }}</td>
+                <td style='padding:5px;'></td>
+                <td>{{ macros.button(url=url_for('sandik_page_bp.reject_membership_application_page', sandik_id=g.sandik.id, web_user_id=web_user.id), icon='fa fa-trash', type='danger', size='xs', title='Reddet', confirm_msg='Üyeyi reddetmek istediğinize emin misiniz?') }}</td>
+              </tr>
+            `,
+            {% endif %}
+          },
+        {% endfor %}
+        ]
+      });
+
+    });
+  </script>
+{% endblock %}
+
+{% block content_block %}
+  <div class="bg-light lter b-b wrapper-md">
+    <h1 class="m-n font-thin h3">{{ page_info.title }}</h1>
+  </div>
+  <div class="wrapper-md">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        {{ page_info.title }}
+        <span class="pull-right">
+          {# {{ url_for('sandik_page_bp.add_member_page', sandik_id=g.sandik.id) }} #}
+          <a href="#" class="btn btn-xs btn-primary">
+            <i class="fa fa-plus"></i>
+          </a>
+        </span>
+      </div>
+      <div class="table table-responsive">
+        <table id="applications-table" class="table"></table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

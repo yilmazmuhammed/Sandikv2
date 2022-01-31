@@ -1,0 +1,80 @@
+{% extends "utils/layout.html" %}
+
+{% block js_block %}
+<script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+<script>
+jQuery(function($){
+	$('#money-transactions-table').footable({
+    "toggleColumn": "first",
+    "paging": {
+      "enabled": true,
+      "size": 50
+    },
+    "filtering": {
+      "enabled": true,
+      "delay": 1,
+      "dropdownTitle": "Şu sütunlarda ara:"
+    },
+    "sorting": {
+      "enabled": true
+    },
+		"columns": [
+			{ "name": "id", "title": "#"},
+			{ "name": "date", "title": "Tarih" },
+			{ "name": "amount", "title": "Miktar", },
+			{ "name": "name_surname", "title": "İsim Soyisim" },
+			{ "name": "type", "title": "İşlem türü", },
+			{ "name": "detail", "title": "Detay", },
+			{ "name": "is_fully_distributed", "title": "Hepsi işleme sokulmuş mu?", "breakpoints": "xs sm md lg", },
+			{ "name": "creation_type", "title": "Oluşturulma türü", "breakpoints": "xs sm md lg", },
+			{ "name": "bank_transaction", "title": "Banka işlemi", "breakpoints": "xs sm md lg", },
+			{# { "name": "action", "title": "", "breakpoints": "xs sm md lg", }, #}
+		],
+		"rows": [
+    {% for mt in g.money_transactions %}
+      {
+        "id": "<span title='ID: {{ mt.id }}'>{{ loop.revindex }}</span>",
+        "date": "{{ mt.date.strftime("%Y-%m-%d") }}",
+        "amount": "{{ mt.amount }} ₺",
+        "name_surname": "{{ mt.member_ref.web_user_ref.name_surname }}",
+        "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}"Para girişi"{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}"Para çıkışı"{% else %}"---"{% endif %},
+        "detail": "{{ mt.detail }}",
+        "is_fully_distributed": "{{ "Evet" if mt.is_fully_distributed else "Hayır" }}",
+        "creation_type": {% if mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}"Manuel"{% elif mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}"Otomatik"{% else %}"---"{% endif %},
+        "bank_transaction": "{{ "Var" if mt.bank_transaction_ref else "Yok" }}",
+        {# "action":` #}
+        {#   <label class="i-switch m-t-xs m-r"> #}
+        {#     <a href="{% if web_user.is_active %}{{ url_for("auth_page_bp.block_web_user_page", web_user_id=web_user.id) }}{% else %}{{ url_for("auth_page_bp.confirm_web_user_page", web_user_id=web_user.id) }}{% endif %}"> #}
+        {#       <input id="is_timed" name="is_timed" {{ "checked=''" if web_user.is_active else "" }} type="checkbox" value="y"> #}
+        {#       <i></i> #}
+        {#     </a> #}
+        {#   </label> #}
+        {# ` #}
+      },
+    {% endfor %}
+    ]
+	});
+});
+</script>
+{% endblock %}
+
+{% block content_block %}
+  <div class="bg-light lter b-b wrapper-md">
+    <h1 class="m-n font-thin h3">{{ page_info.title }}</h1>
+  </div>
+  <div class="wrapper-md">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        {{ page_info.title }}
+        <span class="pull-right">
+          <a href="{{ url_for('transaction_page_bp.add_money_transaction_by_manager_page', sandik_id=g.sandik.id) }}" class="btn btn-xs btn-primary">
+            <i class="fa fa-plus"></i>
+          </a>
+        </span>
+      </div>
+      <div class="table table-responsive">
+        <table class="table" id="money-transactions-table"></table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

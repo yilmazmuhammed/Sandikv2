@@ -157,3 +157,17 @@ def confirm_membership_application_page(sandik_id, web_user_id):
 def reject_membership_application_page(sandik_id, web_user_id):
     db.reject_membership_application(sandik=g.sandik, web_user=g.web_user, rejected_by=current_user)
     return redirect(request.referrer)
+
+
+@sandik_page_bp.route("/<int:sandik_id>/uyeler")
+@sandik_authorization_required(permission="read")
+def members_of_sandik_page(sandik_id):
+    return render_template("sandik/members_of_sandik_page.html",
+                           page_info=LayoutPI(title="Üyeler", active_dropdown="members"))
+
+
+@sandik_page_bp.route("/<int:sandik_id>/uyelik-basvurulari")
+@sandik_authorization_required(permission="read")
+def membership_applications_to_sandik_page(sandik_id):
+    return render_template("sandik/membership_applications_to_sandik_page.html",
+                           page_info=LayoutPI(title="Üyelik başvuruları", active_dropdown="members"))

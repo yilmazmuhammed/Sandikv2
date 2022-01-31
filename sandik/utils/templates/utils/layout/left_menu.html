@@ -5,6 +5,7 @@
           <nav ui-nav class="navi clearfix">
             <ul class="nav">
               {% if g.sandik %}
+              <!-- Sandık menüleri-->
               <li class="hidden-folded padder m-t m-b-sm text-muted text-xs">
                 <span>{{ g.sandik.name }}</span>
               </li>
@@ -14,7 +15,7 @@
                     <i class="fa fa-fw fa-angle-right text"></i>
                     <i class="fa fa-fw fa-angle-down text-active"></i>
                   </span>
-{#                  <b class="badge bg-info pull-right">3</b>#}
+{#                  <b class="badge bg-info pull-right">x</b>#}
                   <i class="fa fa-wallet"></i>
                   <span>Sandık</span>
                 </a>
@@ -47,8 +48,8 @@
                     <i class="fa fa-fw fa-angle-right text"></i>
                     <i class="fa fa-fw fa-angle-down text-active"></i>
                   </span>
-                  <b class="badge bg-info pull-right">3</b>
-                  <b class="badge bg-danger pull-right">3</b>
+                  <b class="badge bg-info pull-right">x</b>
+                  <b class="badge bg-danger pull-right">x</b>
                   <i class="fa fa-wallet"></i>
                   <span>İşlemler</span>
                 </a>
@@ -65,12 +66,12 @@
                   </li>
                   <li>
                     <a href="#">
-                      <b class="badge bg-danger pull-right">3</b>
+                      <b class="badge bg-danger pull-right">x</b>
                       <span>Ödemelerim</span>
                     </a>
                   </li>
                   <li>
-                    <a href="#">
+                    <a href="{{ url_for('transaction_page_bp.money_transactions_of_member_page', sandik_id=g.sandik.id) }}">
                       <span>Para giriş/çıkışları</span>
                     </a>
                   </li>
@@ -81,14 +82,16 @@
                   </li>
                   <li>
                     <a href="#">
-                      <b class="badge bg-info pull-right">3</b>
+                      <b class="badge bg-info pull-right">x</b>
                       <span>Onay bekleyenler</span>
                     </a>
                   </li>
                 </ul>
               </li>
-              <li class="line dk"></li>
+
               {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
+              <li class="line dk"></li>
+              <!-- Sandık yönetimi menüleri-->
               <li class="hidden-folded padder m-t m-b-sm text-muted text-xs">
                 <span>Sandık yönetimi</span>
               </li>
@@ -98,7 +101,7 @@
                     <i class="fa fa-fw fa-angle-right text"></i>
                     <i class="fa fa-fw fa-angle-down text-active"></i>
                   </span>
-                  <b class="badge bg-info pull-right">3</b>
+                  <b class="badge bg-info pull-right">x</b>
                   <i class="fa fa-wallet"></i>
                   <span>İşlemler</span>
                 </a>
@@ -109,12 +112,12 @@
                     </a>
                   </li>
                   <li>
-                    <a href="#">
+                    <a href="{{ url_for('transaction_page_bp.add_money_transaction_by_manager_page', sandik_id=g.sandik.id) }}">
                       <span>İşlem ekle</span>
                     </a>
                   </li>
                   <li>
-                    <a href="#">
+                    <a href="{{ url_for('transaction_page_bp.money_transactions_of_sandik_page', sandik_id=g.sandik.id) }}">
                       <span>Para giriş/çıkışları</span>
                     </a>
                   </li>
@@ -125,7 +128,7 @@
                   </li>
                   <li>
                     <a href="#">
-                      <b class="badge bg-info pull-right">3</b>
+                      <b class="badge bg-info pull-right">x</b>
                       <span>Onay bekleyenler</span>
                     </a>
                   </li>
@@ -137,7 +140,9 @@
                     <i class="fa fa-fw fa-angle-right text"></i>
                     <i class="fa fa-fw fa-angle-down text-active"></i>
                   </span>
-                  <b class="badge bg-info pull-right">3</b>
+                  {% if g.sandik.applicant_web_users_set.count() > 0 %}
+                  <b class="badge bg-info pull-right">{{ g.sandik.applicant_web_users_set.count() }}</b>
+                  {% endif %}
                   <i class="fa fa-wallet"></i>
                   <span>Üyeler</span>
                 </a>
@@ -148,7 +153,7 @@
                     </a>
                   </li>
                   <li>
-                    <a href="#">
+                    <a href="{{ url_for('sandik_page_bp.members_of_sandik_page', sandik_id=g.sandik.id) }}">
                       <span>Üye listesi</span>
                     </a>
                   </li>
@@ -158,8 +163,10 @@
                     </a>
                   </li>
                   <li>
-                    <a href="#">
-                      <b class="badge bg-info pull-right">3</b>
+                    <a href="{{ url_for('sandik_page_bp.membership_applications_to_sandik_page', sandik_id=g.sandik.id) }}">
+                      {% if g.sandik.applicant_web_users_set.count() > 0 %}
+                      <b class="badge bg-info pull-right">{{ g.sandik.applicant_web_users_set.count() }}</b>
+                      {% endif %}
                       <span>Onay bekleyenler</span>
                     </a>
                   </li>
@@ -192,10 +199,14 @@
                   </li>
                 </ul>
               </li>
-              <li class="line dk"></li>
               {% endif %}
+
               {% endif %}
+
+
               {% if current_user.is_admin()  %}
+              <li class="line dk"></li>
+              <!-- Site yönetimi menüleri-->
               <li class="hidden-folded padder m-t m-b-sm text-muted text-xs">
                 <span>Site yöneticisi</span>
               </li>
@@ -205,7 +216,7 @@
                     <i class="fa fa-fw fa-angle-right text"></i>
                     <i class="fa fa-fw fa-angle-down text-active"></i>
                   </span>
-{#                  <b class="badge bg-info pull-right">3</b>#}
+{#                  <b class="badge bg-info pull-right">x</b>#}
                   <i class="icon icon-user"></i>
                   <span>Site kullanıcıları</span>
                 </a>
@@ -222,284 +233,8 @@
                   </li>
                 </ul>
               </li>
-              {% else %}
               {% endif %}
             </ul>
-<!--            <ul class="nav">-->
-<!--              <li class="hidden-folded padder m-t m-b-sm text-muted text-xs">-->
-<!--                <span>Navigation</span>-->
-<!--              </li>-->
-<!--              <li>-->
-<!--                <a href="{{ url_for("general_page_bp.index_page") }}">-->
-<!--                  <i class="glyphicon glyphicon-stats icon text-primary-dker"></i>-->
-<!--                  <span class="font-bold">Ana panel</span>-->
-<!--                </a>-->
-<!--              </li>-->
-<!--              <li class="line dk"></li>-->
-<!--              <li id="activity-dropdown">-->
-<!--                <a href="#" class="auto">-->
-<!--                  <span class="pull-right text-muted">-->
-<!--                    <i class="fa fa-fw fa-angle-right text"></i>-->
-<!--                    <i class="fa fa-fw fa-angle-down text-active"></i>-->
-<!--                  </span>-->
-<!--{#                  <b class="badge bg-info pull-right">3</b>#}-->
-<!--                  <i class="fa fa-bookmark"></i>-->
-<!--                  <span>Etkinlikler</span>-->
-<!--                </a>-->
-<!--                <ul class="nav nav-sub dk">-->
-<!--                  <li class="nav-sub-header">-->
-<!--                    <a href="#">-->
-<!--                      <span>Etkinlikler</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Tüm etkinlikler</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Etkinlik oluştur</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                </ul>-->
-<!--              </li>-->
-<!--              <li id="zoom-meeting-dropdown">-->
-<!--                <a href="#" class="auto">-->
-<!--                  <span class="pull-right text-muted">-->
-<!--                    <i class="fa fa-fw fa-angle-right text"></i>-->
-<!--                    <i class="fa fa-fw fa-angle-down text-active"></i>-->
-<!--                  </span>-->
-<!--{#                  <b class="badge bg-info pull-right">3</b>#}-->
-<!--                  <i class="fa fa-users"></i>-->
-<!--                  <span>Zoom</span>-->
-<!--                </a>-->
-<!--                <ul class="nav nav-sub dk">-->
-<!--                  <li class="nav-sub-header">-->
-<!--                    <a href="#">-->
-<!--                      <span>Zoom</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Tüm toplantılar</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Toplantı oluştur</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Katılımcı yoklaması</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                </ul>-->
-<!--              </li>-->
-<!--              <li id="form-dropdown">-->
-<!--                <a href class="auto">-->
-<!--                  <span class="pull-right text-muted">-->
-<!--                    <i class="fa fa-fw fa-angle-right text"></i>-->
-<!--                    <i class="fa fa-fw fa-angle-down text-active"></i>-->
-<!--                  </span>-->
-<!--{#                  <b class="badge bg-info pull-right">3</b>#}-->
-<!--                  <i class="fa fa-file-text-o"></i>-->
-<!--                  <span>Formlar</span>-->
-<!--                </a>-->
-<!--                <ul class="nav nav-sub dk">-->
-<!--                  <li class="nav-sub-header">-->
-<!--                    <a href>-->
-<!--                      <span>Formlar</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Tüm formlar</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Form oluştur</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Yetkililer</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                </ul>-->
-<!--              </li>-->
-<!--              <li class="line dk"></li>-->
-<!--              <li id="email-dropdown">-->
-<!--                <a href="#" class="auto">-->
-<!--                  <span class="pull-right text-muted">-->
-<!--                    <i class="fa fa-fw fa-angle-right text"></i>-->
-<!--                    <i class="fa fa-fw fa-angle-down text-active"></i>-->
-<!--                  </span>-->
-<!--{#                  <b class="badge bg-info pull-right">3</b>#}-->
-<!--                  <i class="fa fa-envelope"></i>-->
-<!--                  <span>Toplu epostalar</span>-->
-<!--                </a>-->
-<!--                <ul class="nav nav-sub dk">-->
-<!--                  <li class="nav-sub-header">-->
-<!--                    <a href="#">-->
-<!--                      <span>Toplu eposta</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="{">-->
-<!--                      <span>Tüm toplu epostalar</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Toplu eposta gönder</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                </ul>-->
-<!--              </li>-->
-<!--              <li class="line dk"></li>-->
-<!--              <li id="cash-account-dropdown">-->
-<!--                <a href class="auto">-->
-<!--                  <span class="pull-right text-muted">-->
-<!--                    <i class="fa fa-fw fa-angle-right text"></i>-->
-<!--                    <i class="fa fa-fw fa-angle-down text-active"></i>-->
-<!--                  </span>-->
-<!--{#                  <b class="badge bg-info pull-right">3</b>#}-->
-<!--                  <i class="icon icon-wallet"></i>-->
-<!--                  <span>Cüzdanlar</span>-->
-<!--                </a>-->
-<!--                <ul class="nav nav-sub dk">-->
-<!--                  <li class="nav-sub-header">-->
-<!--                    <a href>-->
-<!--                      <span>Cüzdanlar</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Tüm cüzdanlar</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Cüzdanlar oluştur</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Yetkililer</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                </ul>-->
-<!--              </li>-->
-<!--              <li class="line dk"></li>-->
-<!--              <li id="contact-book-dropdown">-->
-<!--                <a href="#" class="auto">-->
-<!--                  <span class="pull-right text-muted">-->
-<!--                    <i class="fa fa-fw fa-angle-right text"></i>-->
-<!--                    <i class="fa fa-fw fa-angle-down text-active"></i>-->
-<!--                  </span>-->
-<!--{#                  <b class="badge bg-info pull-right">3</b>#}-->
-<!--                  <i class="icon icon-user"></i>-->
-<!--                  <span>Rehber</span>-->
-<!--                </a>-->
-<!--                <ul class="nav nav-sub dk">-->
-<!--                  <li class="nav-sub-header">-->
-<!--                    <a href="#">-->
-<!--                      <span>Rehber</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Rehber listesi</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Rehber oluştur</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Yetkililer</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                </ul>-->
-<!--              </li>-->
-<!--              <li id="cb-mission-dropdown">-->
-<!--                <a href="#" class="auto">-->
-<!--                  <span class="pull-right text-muted">-->
-<!--                    <i class="fa fa-fw fa-angle-right text"></i>-->
-<!--                    <i class="fa fa-fw fa-angle-down text-active"></i>-->
-<!--                  </span>-->
-<!--{#                  <b class="badge bg-info pull-right">3</b>#}-->
-<!--                  <i class="icon icon-user"></i>-->
-<!--                  <span>Rehber görevi</span>-->
-<!--                </a>-->
-<!--                <ul class="nav nav-sub dk">-->
-<!--                  <li class="nav-sub-header">-->
-<!--                    <a href="#">-->
-<!--                      <span>Rehber görevi</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Tüm görevler</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Görev oluştur</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Yetkililer</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                </ul>-->
-<!--              </li>-->
-<!--              <li class="line dk"></li>-->
-<!--              <li id="person-dropdown">-->
-<!--                <a href="#" class="auto">-->
-<!--                  <span class="pull-right text-muted">-->
-<!--                    <i class="fa fa-fw fa-angle-right text"></i>-->
-<!--                    <i class="fa fa-fw fa-angle-down text-active"></i>-->
-<!--                  </span>-->
-<!--{#                  <b class="badge bg-info pull-right">3</b>#}-->
-<!--                  <i class="icon icon-user"></i>-->
-<!--                  <span>Kişiler</span>-->
-<!--                </a>-->
-<!--                <ul class="nav nav-sub dk">-->
-<!--                  <li class="nav-sub-header">-->
-<!--                    <a href="#">-->
-<!--                      <span>Kişiler</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Kişi listesi</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Kişi ekle</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Kişileri birleştir</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                  <li>-->
-<!--                    <a href="">-->
-<!--                      <span>Yetkililer</span>-->
-<!--                    </a>-->
-<!--                  </li>-->
-<!--                </ul>-->
-<!--              </li>-->
-<!--            </ul>-->
           </nav>
           <!-- nav -->
         </div>

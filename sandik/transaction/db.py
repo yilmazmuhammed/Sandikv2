@@ -2,9 +2,10 @@ from math import ceil
 
 from pony.orm import select
 
+from sandik.sandik import utils as sandik_utils
+from sandik.utils import period as period_utils
 from sandik.utils.db_models import Contribution, Share, Member, Installment, MoneyTransaction, Log, SubReceipt, Debt, \
     PieceOfDebt, Retracted
-from sandik.utils import period as period_utils
 
 
 def create_money_transaction(member_ref, created_by, **kwargs) -> MoneyTransaction:
@@ -40,8 +41,17 @@ def create_installment(debt, created_by, **kwargs) -> Installment:
         "logged_member_ref": debt.share_ref.member_ref,
         "logged_sandik_ref": debt.share_ref.member_ref.sandik_ref,
     }
-    log = Log(web_user_ref=created_by, type=Log.TYPE.INSTALLMENT.CREATE, **logged_ref_items)
-    return Installment(logs_set=log, debt_ref=debt, share_ref=debt.share_ref, **kwargs)
+    return Installment(
+        debt_ref=debt, share_ref=debt.share_ref, **kwargs,
+        logs_set=Log(web_user_ref=created_by, type=Log.TYPE.INSTALLMENT.CREATE, **logged_ref_items)
+    )
+
+
+def create_contribution(share, period, created_by, log_detail):
+    return Contribution(
+        amount=share.member_ref.contribution_amount, term=period, share_ref=share,
+        logs_set=Log(web_user_ref=created_by, type=Log.TYPE.CONTRIBUTION.CREATE, detail=log_detail)
+    )
 
 
 def create_piece_of_debt(member, debt, amount, trust_relationship_for_log, created_by) -> PieceOfDebt:
@@ -109,7 +119,7 @@ def get_unpaid_and_due_installments(whose):
             lambda i: i.share_ref == whose and not i.is_fully_paid and i.term <= period_utils.current_period()
         ).order_by(lambda c: c.term)
     elif isinstance(whose, Member):
-        return select_contributions(
+        return select_installments(
             lambda i:
             i.share_ref.member_ref == whose and not i.is_fully_paid and i.term <= period_utils.current_period()
         ).order_by(lambda c: (c.term, c.share_ref.share_order_of_member))
@@ -130,50 +140,20 @@ def get_future_and_unpaid_installments(whose):
         raise Exception("ERRCODE: 0003, MSG: 'whose' sadece 'Member' yada 'Share' olabilir.")
 
 
-def get_untreated_money_transactions(member):
-    return select_money_transactions(lambda mt: mt.member_ref == member and mt.is_fully_distributed is False)
-
-
 def sum_of_unpaid_and_due_contributions(whose):
     return select(c.unpaid_amount() for c in get_unpaid_and_due_contributions(whose=whose)).sum()
-    if isinstance(whose, Share):
-        return select(c.unpaid_amount() for c in Contribution if
-                      c.share_ref == whose and not c.is_fully_paid and c.term <= current_period()).sum()
-    elif isinstance(whose, Member):
-        return select(c.unpaid_amount() for c in Contribution if
-                      c.share_ref.member_ref == whose and not c.is_fully_paid and c.term <= current_period()).sum()
-    else:
-        raise Exception("ERRCODE: 0005, MSG: 'whose' sadece 'Member' yada 'Share' olabilir.")
 
 
 def sum_of_unpaid_and_due_installments(whose):
     return select(c.unpaid_amount() for c in get_unpaid_and_due_installments(whose=whose)).sum()
-    if isinstance(whose, Share):
-        return select(i.unpaid_amount() for i in Installment if
-                      i.share_ref == whose and not i.is_fully_paid and i.term <= current_period()).sum()
-    elif isinstance(whose, Member):
-        return select(i.unpaid_amount() for i in Installment if
-                      i.share_ref.member_ref == whose and not i.is_fully_paid and i.term <= current_period()).sum()
-    else:
-        raise Exception("ERRCODE: 0004, MSG: 'whose' sadece 'Member' yada 'Share' olabilir.")
 
 
 def sum_of_future_and_unpaid_installments(whose):
     return select(c.unpaid_amount() for c in get_future_and_unpaid_installments(whose=whose)).sum()
-    if isinstance(whose, Share):
-        return select(i.unpaid_amount() for i in Installment if
-                      i.share_ref == whose and not i.is_fully_paid and i.term > current_period()).sum()
-    elif isinstance(whose, Member):
-        return select(i.unpaid_amount() for i in Installment if
-                      i.share_ref.member_ref == whose and not i.is_fully_paid and i.term > current_period()).sum()
-    else:
-        raise Exception("ERRCODE: 0009, MSG: 'whose' sadece 'Member' yada 'Share' olabilir.")
 
 
 def sum_of_untreated_money_transactions(member):
-    return select(mt.untreated_amount() for mt in get_untreated_money_transactions(member=member)).sum()
-    return select(mt.untreated_amount() for mt in MoneyTransaction if
-                  mt.member_ref == member and not mt.is_fully_distributed).sum()
+    return select(mt.untreated_amount() for mt in member.get_untreated_money_transactions()).sum()
 
 
 def sign_money_transaction_as_fully_distributed(money_transaction, signed_by):
@@ -248,8 +228,15 @@ def create_piece_of_debts(debt, created_by):
     return debt.piece_of_debts_set
 
 
-def create_debt(amount, share, number_of_installment, start_period, money_transaction, created_by) -> Debt:
+def create_debt(amount, share, money_transaction, created_by, start_period=None, number_of_installment=None) -> Debt:
+    sandik = money_transaction.member_ref.sandik_ref
+    if number_of_installment is None:
+        number_of_installment = sandik_utils.max_number_of_installment(sandik=sandik, amount=amount)
+    if start_period is None:
+        start_period = sandik_utils.get_start_period(sandik=sandik, debt_date=money_transaction.date)
+
     due_term = period_utils.get_last_period(start_period, number_of_installment)
+
     logged_ref_items = {
         "logged_money_transaction_ref": money_transaction,
         "logged_member_ref": money_transaction.member_ref,

@@ -10,3 +10,4 @@ Flask-Login
 passlib~=1.7.4
 email-validator
 Flask-JSGlue
+python-dateutil~=2.8.2

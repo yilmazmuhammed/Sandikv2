@@ -1,0 +1,79 @@
+{% extends "utils/layout.html" %}
+{% import "utils/parts/macros.html" as macros%}
+
+{% block js_block %}
+  <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+  <script>
+    jQuery(function($){
+      $('#members-table').footable({
+        "components": {
+          "filtering": create_footable_basic_filter("is_active", "Üye durumu:", ["Aktif", "Pasif"], "Aktif")
+        },
+        "toggleColumn": "first",
+        "paging": {
+          "enabled": true,
+        },
+        "filtering": {
+          "enabled": true,
+          "delay": 1,
+          "dropdownTitle": "Şu sütunlarda ara:"
+        },
+        "sorting": {
+          "enabled": true
+        },
+        "columns": [
+          { "name": "index", "title": "#"},
+          { "name": "name_surname", "title": "Üye ismi" },
+          { "name": "date_of_membership", "title": "Üyelik tarihi", "breakpoints": "xs sm md" },
+          { "name": "shares_count", "title": "Hisse sayısı", "breakpoints": "xs sm md", "classes": "text-center", },
+          { "name": "is_active", "title": "Durum", "classes": "text-center", "breakpoints": "xs sm md lg" ,  },
+          {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
+          { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+          {% endif %}
+        ],
+        "rows": [
+        {% for member in g.sandik.members_set.order_by("lambda m: m.web_user_ref.name_surname.lower()") %}
+          {
+            "index": `<span title='ID: {{ member.id }}'>{{ loop.index }}</span>`,
+            "name_surname": `{{ member.web_user_ref.name_surname }}`,
+            "shares_count": `{{ member.shares_count() }}`,
+            "is_active": `{{ "Aktif" if member.is_active else "Pasif" }}`,
+            "date_of_membership": `{{ member.date_of_membership.strftime("%Y-%m-%d") }}`,
+            {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
+            "actions": `
+              <tr>
+                <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
+                <td style='padding:5px;'></td>
+                <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
+              </tr>`,
+            {% endif %}
+          },
+        {% endfor %}
+        ]
+      });
+
+    });
+  </script>
+{% endblock %}
+
+{% block content_block %}
+  <div class="bg-light lter b-b wrapper-md">
+    <h1 class="m-n font-thin h3">{{ page_info.title }}</h1>
+  </div>
+  <div class="wrapper-md">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        {{ page_info.title }}
+        <span class="pull-right">
+          {# {{ url_for('sandik_page_bp.add_member_page', sandik_id=g.sandik.id) }} #}
+          <a href="#" class="btn btn-xs btn-primary">
+            <i class="fa fa-plus"></i>
+          </a>
+        </span>
+      </div>
+      <div class="table table-responsive">
+        <table class="table" id="members-table"></table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -21,9 +21,9 @@ def current_period():
 def is_valid_period(period):
     try:
         if not isinstance(period, str):
-            raise NotValidPeriod()
+            raise NotValidPeriod(f"Period '{period}' is not valid: Period is not str)")
         if len(period) != 7:
-            raise NotValidPeriod()
+            raise NotValidPeriod(f"Period '{period}' is not valid: Period len is not equal 7")
         period_to_date(period)
         return True
     except Exception:
@@ -36,7 +36,7 @@ def period_to_date(period):
 
 def get_periods_between_two_period(first_period: str, last_period: str):
     if not is_valid_period(first_period) or not is_valid_period(last_period):
-        raise NotValidPeriod()
+        raise NotValidPeriod(f"Period '{first_period}' or '{last_period}' is not valid")
 
     if first_period > last_period:
         first_period, last_period = last_period, first_period

@@ -1,4 +1,5 @@
 from sandik.transaction import db
+from sandik.utils import period as period_utils
 from sandik.utils.db_models import Share, Member, MoneyTransaction, Contribution, Installment
 
 
@@ -24,8 +25,8 @@ def untreated_amount(member):
 
 
 def get_unpaid_and_due_payments(whose):
-    contributions = db.get_unpaid_and_due_contributions(whose=whose)[:]
-    installments = db.get_unpaid_and_due_installments(whose=whose)[:]
+    contributions = db.get_unpaid_and_due_contributions(whose=whose)[:][:]
+    installments = db.get_unpaid_and_due_installments(whose=whose)[:][:]
     payments = []
     while len(contributions) > 0 and len(installments) > 0:
         if contributions[0].term <= installments[0].term:
@@ -52,9 +53,29 @@ def pay_installment(installment, amount, money_transaction, created_by):
                                  is_auto=True, created_by=created_by)
 
 
-def borrow_debt(share, number_of_installment, start_period, amount, money_transaction, created_by):
-    return db.create_debt(amount=amount, money_transaction=money_transaction, created_by=created_by,
-                          share=share, number_of_installment=number_of_installment, start_period=start_period)
+def borrow_debt(amount, money_transaction, created_by):
+    member = money_transaction.member_ref
+
+    shares_with_max_amount_can_borrow = [(share, share.max_amount_can_borrow()) for share in member.shares_set]
+    sorted_shares_by_max_amount_can_borrow = sorted(shares_with_max_amount_can_borrow, key=lambda x: x[1])
+
+    remaining_amount = amount
+    optimal_share = None
+    for share, macb in sorted_shares_by_max_amount_can_borrow:
+        if not optimal_share and remaining_amount > macb:
+            # Alınacak borcun bir hisseden alınması yetmiyorsa,
+            # bu miktar en çok borç alabilen hisseden başlanarak hisselere paylaştırılır.
+            db.create_debt(amount=macb, money_transaction=money_transaction, created_by=created_by, share=share)
+            remaining_amount -= macb
+        elif macb >= remaining_amount:
+            # Hangi hisseden borç alınacağı belirlenirken,
+            # borç alabileceği miktar borç miktarından büyük ve en yakın olan hisse tercih edilir.
+            optimal_share = share
+        else:
+            break
+    if optimal_share:
+        db.create_debt(amount=remaining_amount, money_transaction=money_transaction, share=optimal_share,
+                       created_by=created_by)
 
 
 def borrow_from_untreated_amount(untreated_money_transaction, amount, money_transaction, created_by):
@@ -102,7 +123,7 @@ def add_expense_transactions(money_transaction, use_untreated_amount, created_by
     remaining_amount = money_transaction.amount
 
     if use_untreated_amount:
-        untreated_money_transactions = db.get_untreated_money_transactions(member=member)
+        untreated_money_transactions = member.get_untreated_money_transactions()
         for mt in untreated_money_transactions:
             amount = mt.untreated_amount() if remaining_amount >= mt.untreated_amount() else remaining_amount
             borrow_from_untreated_amount(untreated_money_transaction=mt, amount=amount,
@@ -113,11 +134,8 @@ def add_expense_transactions(money_transaction, use_untreated_amount, created_by
                 break
 
     if remaining_amount > 0:
-        # TODO Hangi hisseden borç alınacağı belirlenirken, borç alabileceği nmiktar borç miktarından büyük ve en yakın olan hisse tercih edilir. Bir hisseden alınması yetmiyorsa, bu miktar
-        borrow_debt(amount=remaining_amount, money_transaction=money_transaction, created_by=created_by,
-                    share, number_of_installment, start_period)
-        # TODO Eğer eksik miktar kaldıysa (veya use_untreated_amount == False ise) borç işlemi oluştur
-        pass
+        borrow_debt(amount=remaining_amount, money_transaction=money_transaction, created_by=created_by)
+
     if remaining_amount == 0:
         # TODO test et: SubReceipt.after_insert fonksiyonunda yapılıyor,
         #  çalışmıyorsa burada yap, çalışıyorsa fonksiyonu sil
@@ -135,10 +153,13 @@ def add_money_transaction(member, created_by, use_untreated_amount, pay_future_p
                                  created_by=created_by)
 
     elif money_transaction.type == MoneyTransaction.TYPE.EXPENSE:
-        # TODO Önce kendi parasından, güven bağı olan kişilerin parasından bu para aborç olarak alınabiliyor mu diye kontrol et.
+        print("expense")
+        # TODO Önce kendi parasından, güven bağı olan kişilerin parasından bu para aborç olarak
+        #  alınabiliyor mu diye kontrol et.
         add_expense_transactions(money_transaction=money_transaction, use_untreated_amount=use_untreated_amount,
                                  created_by=created_by)
     return money_transaction
+
 
 # def due_all_contributions_periods(whose):
 #     if isinstance(whose, Share):
@@ -159,3 +180,29 @@ def add_money_transaction(member, created_by, use_untreated_amount, pay_future_p
 #     for c in paid_contributions:
 #         old_contribution_periods.remove((c.share_ref.id, c.period))
 #     return
+def create_due_contributions_for_the_share(share, created_by, created_from=""):
+    print(f"START: Creating contributions for '{share}'...")
+    first_period = period_utils.date_to_period(share.date_of_opening)
+    last_period = period_utils.current_period()
+    periods = period_utils.get_periods_between_two_period(first_period=first_period, last_period=last_period)
+    for period in periods:
+        if not db.get_contribution(share_ref=share, term=period):
+            db.create_contribution(share=share, period=period, created_by=created_by, log_detail=created_from)
+            print(f"Create contribution for share: '{share}', period: '{period}'")
+        else:
+            print(f"Contribution already exist for share: '{share}', period: '{period}'")
+    print(f"FINISH: Creating contributions for '{share}'...")
+
+
+def create_due_contributions_for_the_member(member, created_by, created_from=""):
+    print(f"START: Creating contributions for '{member}'...")
+    for share in member.shares_set:
+        create_due_contributions_for_the_share(share=share, created_by=created_by, created_from=created_from)
+    print(f"FINISH: Creating contributions for '{member}'...")
+
+
+def create_due_contributions_for_all_members(sandik, created_by, created_from=""):
+    print(f"START: Creating contributions for '{sandik}'...")
+    for member in sandik.members_set:
+        create_due_contributions_for_the_member(member=member, created_by=created_by, created_from=created_from)
+    print(f"FINISH: Creating contributions for '{sandik}'...")

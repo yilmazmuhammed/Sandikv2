@@ -13,7 +13,7 @@
 <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
 <script>
 jQuery(function($){
-	$('.table').footable({
+	$('#web-users-table').footable({
     components: {
       filtering: create_footable_basic_filter("is_active", "Onay durumu:", ["Onaylı", "Onaysız"])
     },
@@ -59,7 +59,8 @@ jQuery(function($){
 });
 </script>
 {% endblock %}
-{% block content %}
+
+{% block content_block %}
   <div class="bg-light lter b-b wrapper-md">
     <h1 class="m-n font-thin h3">{{ page_info.title }}</h1>
   </div>

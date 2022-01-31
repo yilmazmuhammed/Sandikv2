@@ -80,6 +80,7 @@ def get_member(**kwargs) -> Member:
 
 def members_form_choices(sandik):
     choices = [(m.id, m.web_user_ref.name_surname) for m in sandik.members_set]
+    choices = sorted(choices, key=lambda c: c[1])
     return choices
 
 
