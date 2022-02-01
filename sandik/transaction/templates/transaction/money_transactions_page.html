@@ -28,6 +28,7 @@ jQuery(function($){
 			{ "name": "is_fully_distributed", "title": "Hepsi işleme sokulmuş mu?", "breakpoints": "xs sm md lg", },
 			{ "name": "creation_type", "title": "Oluşturulma türü", "breakpoints": "xs sm md lg", },
 			{ "name": "bank_transaction", "title": "Banka işlemi", "breakpoints": "xs sm md lg", },
+			{ "name": "sub_receipts", "title": "", "breakpoints": "xs sm md lg", },
 			{# { "name": "action", "title": "", "breakpoints": "xs sm md lg", }, #}
 		],
 		"rows": [
@@ -42,6 +43,48 @@ jQuery(function($){
         "is_fully_distributed": "{{ "Evet" if mt.is_fully_distributed else "Hayır" }}",
         "creation_type": {% if mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}"Manuel"{% elif mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}"Otomatik"{% else %}"---"{% endif %},
         "bank_transaction": "{{ "Var" if mt.bank_transaction_ref else "Yok" }}",
+        "sub_receipts": `
+          {% if mt.sub_receipts_set.count() == 0 %}
+          İşlem yok<br><span class="font-bold">Para girişinin {{ mt.untreated_amount() }} ₺'si işleme sokulmamış.</span>
+          {% else %}
+            <div class="table table-responsive">
+              <table class="table table-striped table-bordered text-center" id="sub-receipts-of-mt{{ mt.id }}-table">
+                <tr>
+                  <th></th>
+                  <th colspan="4" class="text-center">Sandık işlemi</th>
+                  <th colspan="3" class="text-center">İlişkilendirme</th>
+                </tr>
+                <tr>
+                  <th class="text-center">Tarih</th>
+                  <th class="text-center">İşlem türü</th>
+                  <th class="text-center">Ödeme dönemi</th>
+                  <th class="text-center">İşlem miktarı</th>
+                  <th class="text-center">Kalan miktar</th>
+                  <th class="text-center">Daha önce</th>
+                  <th class="text-center">Miktar</th>
+                  <th class="text-center">Bundan sonra</th>
+                </tr>
+                {% for sr in mt.sub_receipts_set.order_by('lambda sr: sr.creation_time') %}
+                  <tr>
+                    <td title='{% if sr.is_auto %}Otomatik{% else %}Manuel{% endif %}'>{{ sr.creation_time.strftime("%Y-%m-%d") }}</td>
+                    <td title='ID: {{ (sr.installment_ref or sr.contribution_ref).id }}'>{% if sr.installment_ref %}Taksit{% elif sr.contribution_ref %}Aidat{% elif sr.debt_ref %}Borç{% elif sr.revenue_retracted_ref %}Geri alınmış{% elif sr.expense_retracted_ref %}Geri alınmış{% else %}---{% endif %}</td>
+                    <td>{% if sr.installment_ref or sr.contribution_ref %}{{ (sr.installment_ref or sr.contribution_ref).term }}{% elif sr.debt_ref %}{{ sr.money_transaction_ref.date.strftime("%Y-%m-%d") }}{% elif sr.revenue_retracted_ref or sr.expense_retracted_ref %}-{% else %}---{% endif %}</td>
+                    <td>{{ (sr.installment_ref or sr.contribution_ref or sr.debt_ref or sr.revenue_retracted_ref or sr.expense_retracted_ref ).amount }} ₺</td>
+                    <td>{% if sr.installment_ref or sr.contribution_ref %}{{ (sr.installment_ref or sr.contribution_ref).unpaid_amount() }} ₺ {% else %}-{% endif %}</td>
+                    <td>... ₺</td>
+                    <td>{{ sr.amount }} ₺</td>
+                    <td>... ₺</td>
+                  </tr>
+                {% endfor %}
+                {% if not mt.is_fully_distributed %}
+                  <tr>
+                    <td colspan="8" class="font-bold">Para girişinin {{ mt.untreated_amount() }} ₺'si işleme sokulmamış.</td>
+                  </tr>
+                {% endif %}
+              </table>
+            </div>
+          {% endif %}
+        `,
         {# "action":` #}
         {#   <label class="i-switch m-t-xs m-r"> #}
         {#     <a href="{% if web_user.is_active %}{{ url_for("auth_page_bp.block_web_user_page", web_user_id=web_user.id) }}{% else %}{{ url_for("auth_page_bp.confirm_web_user_page", web_user_id=web_user.id) }}{% endif %}"> #}
@@ -73,7 +116,7 @@ jQuery(function($){
         </span>
       </div>
       <div class="table table-responsive">
-        <table class="table" id="money-transactions-table"></table>
+        <table class="table table-striped" id="money-transactions-table"></table>
       </div>
     </div>
   </div>

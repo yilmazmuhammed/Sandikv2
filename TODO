@@ -1,3 +1,9 @@
+TODO CRITICAL Her ay aidatlar oluşturulacak
+								- Aidatlar oluşturulurken işleme konmamış para varsa onunla ödeme de yapılsın
+								- Taksitler " " " " "?
+										=> Bu ikisi için şöyle bir yol izlenebilir. MoneyTransaction eklenirken, eklendikten sonraki
+										ödeme mekanizması ayrı bir fonksiyona taşınır ve bu çalıştırılırç
+
 TODO Exception'lar için Log mekanizması kullan.
 		- Exception oluştuğunda Log da oluşsun.
 		- Log oluşup oluşmayacağı Exception'a parametre olarak verilsin.
@@ -5,18 +11,14 @@ TODO Exception'lar için Log mekanizması kullan.
 TODO piece_of_debt'te havuz (sandığın %10u) için de oluştur
 
 
-SON HATA KODU: f"ERRCODE: 0018, RA: {remaining_amount}, "
-                        f"MSG: Beklenmedik bir hata ile karşılaşıldı. Düzeltilmesi için "
-                        f"lütfen site yöneticisi ile iletişime geçerek ERRCODE'u ve RA'yı söyleyiniz."
-
 TASARIMLAR:
 - ...
-	Her ayın başında;
-		- Bütün hisseler için o ayın aidatları oluşturulur. Aidatlar oluşturulurken üyenin/hissenin o anki aidat miktarı göz önüne alınır.
-		- Bütün hisseler için işleme sokulmamış paralar ile otomatik ödeme yapılır.
-	Ödeme yapılırken ödenmemiş bir ödeme varsa (içinde bulunulan ay dahil) önce o ödemeler tamamlanır. Eğer ödemeler tamamlandıktan sonra haa para kalıyorsa üyeye sorulur;
-		- Gelecek ödemeler ödenebilir
-		- İşleme sokulmadan beklenilir
-	Borç alınırken işleme konulmamış bir para yoksa direk borç alınır. İşleme konulmamış para varsa üyeye sorulur;
-		- Borç oluşturulabilir.
-		- Önce işleme konmamış paradan alınıp, yeterli gelmezse kalan kısmı için borç oluşturulabilir.
+TODO	Her ayın başında;
+TODO		- Bütün hisseler için o ayın aidatları oluşturulur. Aidatlar oluşturulurken üyenin/hissenin o anki aidat miktarı göz önüne alınır.
+TODO		- Bütün hisseler için işleme sokulmamış paralar ile otomatik ödeme yapılır.
+DONE	Ödeme yapılırken ödenmemiş bir ödeme varsa (içinde bulunulan ay dahil) önce o ödemeler tamamlanır. Eğer ödemeler tamamlandıktan sonra hala para kalıyorsa üyeye sorulur;
+DONE		- Gelecek ödemeler ödenebilir
+DONE		- İşleme sokulmadan beklenilir
+TEST	Borç alınırken işleme konulmamış bir para yoksa direk borç alınır. İşleme konulmamış para varsa üyeye sorulur;
+TEST		- Borç oluşturulabilir.
+TEST		- Önce işleme konmamış paradan alınıp, yeterli gelmezse kalan kısmı için borç oluşturulabilir.

@@ -28,11 +28,10 @@ def remaining_debt_balance(sandik, whose):
     if isinstance(whose, Share):
         contribution_amount = whose.total_amount_of_paid_contribution()
         max_debt_balance = math.ceil(contribution_amount * 3 / 1000) * 1000
+        max_debt_balance = max_debt_balance if max_debt_balance != 0 else 1000
         unpaid_installments_amount = whose.total_amount_unpaid_installments()
         return max_debt_balance - unpaid_installments_amount
     elif isinstance(whose, Member):
         return sum(remaining_debt_balance(sandik=sandik, whose=share) for share in whose.shares_set)
     else:
         raise Exception("whose 'Share' yada 'Member' olmalıdır")
-
-    return

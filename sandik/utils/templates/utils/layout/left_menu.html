@@ -65,7 +65,7 @@
                     </a>
                   </li>
                   <li>
-                    <a href="#">
+                    <a href="{{ url_for('transaction_page_bp.payments_of_member_page', sandik_id=g.sandik.id) }}">
                       <b class="badge bg-danger pull-right">x</b>
                       <span>Ödemelerim</span>
                     </a>
@@ -76,7 +76,7 @@
                     </a>
                   </li>
                   <li>
-                    <a href="#">
+                    <a href="{{ url_for('transaction_page_bp.transactions_of_member_page', sandik_id=g.sandik.id) }}">
                       <span>Sandık işlemlerim</span>
                     </a>
                   </li>
@@ -122,8 +122,13 @@
                     </a>
                   </li>
                   <li>
-                    <a href="#">
+                    <a href="{{ url_for('transaction_page_bp.transactions_of_sandik_page', sandik_id=g.sandik.id) }}">
                       <span>Sandık işlemleri</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{{ url_for('transaction_page_bp.payments_of_sandik_page', sandik_id=g.sandik.id) }}">
+                      <span>Ödemeler</span>
                     </a>
                   </li>
                   <li>

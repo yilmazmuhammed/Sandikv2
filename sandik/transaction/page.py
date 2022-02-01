@@ -1,6 +1,6 @@
 from flask import Blueprint, request, render_template, g, flash, url_for
 from flask_login import current_user
-from pony.orm import desc
+from pony.orm import desc, rollback
 from werkzeug.utils import redirect
 
 from sandik.sandik import db as sandik_db
@@ -32,7 +32,7 @@ def add_money_transaction_by_manager_page(sandik_id):
             if not member:
                 raise ThereIsNoMember("Üye açılan listeden seçilmelidir")
 
-            if form.type.data == MoneyTransaction.TYPE.EXPENSE:
+            if int(form.type.data) == MoneyTransaction.TYPE.EXPENSE:
                 max_amount = member.max_amount_can_borrow(use_untreated_amount=form_data["use_untreated_amount"])
                 if form.amount.data > max_amount:
                     raise MaximumDebtAmountExceeded(f"Üye bu miktarı alamaz. En fazla {max_amount}₺ alabilir.")
@@ -44,7 +44,12 @@ def add_money_transaction_by_manager_page(sandik_id):
             )
             print(money_transaction.to_dict())
             return redirect(url_for("transaction_page_bp.add_money_transaction_by_manager_page", sandik_id=sandik_id))
+        except MaximumDebtAmountExceeded as e:
+            # rollback()
+            flash(str(e), "danger")
         except Exception as e:
+            raise e
+            rollback()
             flash(str(e), "danger")
 
     return render_template("transaction/add_money_transaction_by_manager_page.html",
@@ -59,7 +64,7 @@ def create_due_contributions_for_all_members_page(sandik_id):
     return redirect(request.referrer or url_for("sandik_page_bp.sandik_index_page", sandik_id=sandik_id))
 
 
-@transaction_page_bp.route('sandik-para-giris-cikislari', methods=["GET", "POST"])
+@transaction_page_bp.route('s-para-giris-cikislari', methods=["GET", "POST"])
 @sandik_authorization_required("read")
 def money_transactions_of_sandik_page(sandik_id):
     g.money_transactions = g.sandik.get_money_transactions().order_by(lambda mt: desc(mt.id))
@@ -67,7 +72,7 @@ def money_transactions_of_sandik_page(sandik_id):
                            page_info=LayoutPI(title="Para giriş/çıkış işlemleri", active_dropdown="transactions"))
 
 
-@transaction_page_bp.route('uye-para-giris-cikislari', methods=["GET", "POST"])
+@transaction_page_bp.route('u-para-giris-cikislari', methods=["GET", "POST"])
 @member_required
 def money_transactions_of_member_page(sandik_id):
     g.money_transactions = g.member.money_transactions_set.order_by(lambda mt: desc(mt.id))
@@ -75,3 +80,40 @@ def money_transactions_of_member_page(sandik_id):
         "transaction/money_transactions_page.html",
         page_info=LayoutPI(title="Para giriş/çıkış işlemlerim", active_dropdown="member-transactions")
     )
+
+
+@transaction_page_bp.route('s-sandik-islemleri', methods=["GET", "POST"])
+@sandik_authorization_required("read")
+def transactions_of_sandik_page(sandik_id):
+    print("sandik:", g.sandik)
+    g.transactions = utils.get_transactions(whose=g.sandik)
+    return render_template("transaction/sandik_transactions_page.html",
+                           page_info=LayoutPI(title="Sandık işlemleri", active_dropdown="transactions"))
+
+
+@transaction_page_bp.route('u-sandik-islemleri', methods=["GET", "POST"])
+@member_required
+def transactions_of_member_page(sandik_id):
+    g.transactions = utils.get_transactions(whose=g.member)
+    return render_template("transaction/sandik_transactions_page.html",
+                           page_info=LayoutPI(title="Sandık işlemlerim", active_dropdown="member-transactions"))
+
+
+@transaction_page_bp.route('s-odemeler', methods=["GET", "POST"])
+@sandik_authorization_required("read")
+def payments_of_sandik_page(sandik_id):
+    g.payments = utils.get_payments(whose=g.sandik)
+    g.due_and_unpaid_payments = utils.get_unpaid_and_due_payments(whose=g.sandik)
+    print(g.payments)
+    return render_template("transaction/payments_page.html",
+                           page_info=LayoutPI(title="Sandıktaki ödemeler", active_dropdown="transactions"))
+
+
+@transaction_page_bp.route('u-odemeler', methods=["GET", "POST"])
+@member_required
+def payments_of_member_page(sandik_id):
+    g.payments = utils.get_payments(whose=g.member)
+    g.due_and_unpaid_payments = utils.get_unpaid_and_due_payments(whose=g.member)
+    print(g.payments)
+    return render_template("transaction/payments_page.html",
+                           page_info=LayoutPI(title="Ödemelerim", active_dropdown="member-transactions"))

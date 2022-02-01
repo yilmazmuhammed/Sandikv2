@@ -1,0 +1,77 @@
+{% extends "utils/layout.html" %}
+
+{% block js_block %}
+<script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+<script>
+jQuery(function($){
+	$('#sandik-transactions-table').footable({
+    "toggleColumn": "first",
+    "paging": {
+      "enabled": true,
+      "size": 50
+    },
+    "filtering": {
+      "enabled": true,
+      "delay": 1,
+      "dropdownTitle": "Şu sütunlarda ara:"
+    },
+    "sorting": {
+      "enabled": true
+    },
+		"columns": [
+			{ "name": "id", "title": "#"},
+			{ "name": "term", "title": "Tarih" },
+			{ "name": "name_surname", "title": "İsim Soyisim" },
+			{ "name": "transaction_type", "title": "İşlem türü", },
+			{ "name": "amount", "title": "Miktar", },
+			{ "name": "is_fully_paid", "title": "Ödenme durumu", },
+			{ "name": "detail", "title": "Detay", },
+			{# { "name": "action", "title": "", "breakpoints": "xs sm md lg", }, #}
+		],
+		"rows": [
+    {% for t in g.transactions %}
+      {
+        "id": `<span title='ID: {{ t.id_prefix }}-{{ t.transaction.id }}'>{{ loop.revindex }}</span>`,
+        "term": "{{ t.term }}",
+        "name_surname": "{{ t.transaction.member_ref.web_user_ref.name_surname }}",
+        "transaction_type": `{{ t.transaction_type }}`,
+        "amount": "{{ t.transaction.amount }} ₺",
+        "is_fully_paid": "{{ "Ödendi" if t.transaction.is_fully_paid else "Tamamlanmadı" }}",
+        "detail": "{{ t.detail }}",
+        {# "action":` #}
+        {#   <label class="i-switch m-t-xs m-r"> #}
+        {#     <a href="{% if web_user.is_active %}{{ url_for("auth_page_bp.block_web_user_page", web_user_id=web_user.id) }}{% else %}{{ url_for("auth_page_bp.confirm_web_user_page", web_user_id=web_user.id) }}{% endif %}"> #}
+        {#       <input id="is_timed" name="is_timed" {{ "checked=''" if web_user.is_active else "" }} type="checkbox" value="y"> #}
+        {#       <i></i> #}
+        {#     </a> #}
+        {#   </label> #}
+        {# ` #}
+      },
+    {% endfor %}
+    ]
+	});
+});
+</script>
+{% endblock %}
+
+{% block content_block %}
+  <div class="bg-light lter b-b wrapper-md">
+    <h1 class="m-n font-thin h3">{{ page_info.title }}</h1>
+  </div>
+  <div class="wrapper-md">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        {{ page_info.title }}
+        <span class="pull-right">
+          {# {{ url_for('transaction_page_bp.add_sandik_transaction_by_manager_page', sandik_id=g.sandik.id) }} #}
+          <a href="#" class="btn btn-xs btn-primary">
+            <i class="fa fa-plus"></i>
+          </a>
+        </span>
+      </div>
+      <div class="table table-responsive">
+        <table class="table" id="sandik-transactions-table"></table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

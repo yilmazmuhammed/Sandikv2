@@ -1,6 +1,7 @@
 from sandik.transaction import db
 from sandik.utils import period as period_utils
-from sandik.utils.db_models import Share, Member, MoneyTransaction, Contribution, Installment
+from sandik.utils.db_models import Share, Member, MoneyTransaction, Contribution, Installment, Sandik, Debt
+from sandik.utils.exceptions import InvalidWhoseType
 
 
 def sum_of_unpaid_and_due_payments(whose):
@@ -206,3 +207,79 @@ def create_due_contributions_for_all_members(sandik, created_by, created_from=""
     for member in sandik.members_set:
         create_due_contributions_for_the_member(member=member, created_by=created_by, created_from=created_from)
     print(f"FINISH: Creating contributions for '{sandik}'...")
+
+
+def get_transactions(whose):
+    if isinstance(whose, Sandik):
+        whose_filter_ref = "sandik_ref"
+    elif isinstance(whose, Member):
+        whose_filter_ref = "member_ref"
+    elif isinstance(whose, Share):
+        whose_filter_ref = "share_ref"
+    else:
+        raise InvalidWhoseType("whose 'Sandik', 'Member' veya 'Share' olmalıdır", errcode=1, create_log=True)
+    print("get_transactions -> whose_filter_ref:", whose_filter_ref, "whose:", whose)
+    contributions = db.select_contributions(f"lambda c: c.{whose_filter_ref} == {whose}").order_by(
+        lambda c: (c.term, c.id)
+    )[:][:]
+    installment = db.select_installments(f"lambda i: i.{whose_filter_ref} == {whose}").order_by(
+        lambda i: (i.term, i.id)
+    )[:][:]
+    debts = db.select_debts(f"lambda d: d.{whose_filter_ref} == {whose}").order_by(
+        lambda d: (d.sub_receipt_ref.money_transaction_ref.date, d.id)
+    )[:][:]
+
+    transactions = contributions + installment + debts
+
+    sorting_function = lambda t: t.term if not isinstance(t, Debt) else period_utils.date_to_period(
+        t.sub_receipt_ref.money_transaction_ref.date
+    )
+    sorted_transactions = sorted(transactions, key=sorting_function, reverse=True)
+
+    ret = []
+    for t in sorted_transactions:
+        if isinstance(t, Contribution):
+            temp = {"term": t.term,
+                    "detail": "",
+                    "id_prefix": "C", "transaction_type": "Aidat", "transaction": t}
+        elif isinstance(t, Installment):
+            temp = {"term": t.term,
+                    "detail": f"Borç: #{t.debt_ref.id}",
+                    "id_prefix": "I", "transaction_type": "Taksit", "transaction": t}
+        elif isinstance(t, Debt):
+            # temp = {"term": period_utils.date_to_period(t.sub_receipt_ref.money_transaction_ref.date),
+            temp = {"term": t.sub_receipt_ref.money_transaction_ref.date.strftime("%Y-%m-%d"),
+                    "detail": "",
+                    "id_prefix": "D", "transaction_type": "Borç", "transaction": t}
+        else:
+            temp = {"term": "-", "id_prefix": "-", "transaction_type": "-", "detail": "", "transaction": t}
+
+        ret.append(temp)
+
+    return ret
+
+
+def get_payments(whose):
+    # TODO ödenmiş-ödenmemiş ve vadesi gelmiş-gelmemiş durumları için yapı oluştur ve
+    #  get_unpaid_and_due_payments, get_future_and_unpaid_payments fonksiyonlarını kaldır
+    if isinstance(whose, Sandik):
+        whose_filter_ref = "sandik_ref"
+    elif isinstance(whose, Member):
+        whose_filter_ref = "member_ref"
+    elif isinstance(whose, Share):
+        whose_filter_ref = "share_ref"
+    else:
+        raise InvalidWhoseType("whose 'Sandik', 'Member' veya 'Share' olmalıdır", errcode=2, create_log=True)
+    print("get_transactions -> whose_filter_ref:", whose_filter_ref, "whose:", whose)
+
+    contributions = db.select_contributions(f"lambda c: c.{whose_filter_ref} == {whose}").order_by(
+        lambda c: (c.term, c.member_ref.web_user_ref.name_surname, c.id)
+    )[:][:]
+    installment = db.select_installments(f"lambda i: i.{whose_filter_ref} == {whose}").order_by(
+        lambda i: (i.term, i.member_ref.web_user_ref.name_surname, i.id)
+    )[:][:]
+
+    transactions = contributions + installment
+    sorted_transactions = sorted(transactions, key=lambda t: t.term, reverse=True)
+
+    return sorted_transactions

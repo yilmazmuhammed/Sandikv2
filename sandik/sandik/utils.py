@@ -2,6 +2,7 @@ from flask import url_for
 
 from sandik.general import db as general_db
 from sandik.sandik import db
+from sandik.transaction import utils as transaction_utils
 
 
 def add_share_to_member(member, added_by):
@@ -14,6 +15,7 @@ def confirm_membership_application(sandik, web_user, confirmed_by):
     member = db.create_member(sandik=sandik, web_user=web_user, confirmed_by=confirmed_by, iban=iban,
                               contribution_amount=sandik.contribution_amount)
     share = add_share_to_member(member=member, added_by=confirmed_by)
+    transaction_utils.create_due_contributions_for_the_share(share, created_by=confirmed_by)
     return None
 
 

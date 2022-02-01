@@ -8,6 +8,7 @@ from flask_login import UserMixin
 from pony.orm import *
 
 from sandik.general.exceptions import ThereIsAlreadyPrimaryBankAccount
+from sandik.utils.exceptions import UnexpectedValue
 
 db = Database()
 
@@ -47,8 +48,11 @@ class MoneyTransaction(db.Entity):
         BY_MANUEL = 0
         BY_BANK_TRANSACTION = 1
 
+    def distributed_amount(self):
+        return select(sr.amount for sr in self.sub_receipts_set).sum()
+
     def untreated_amount(self):
-        return self.amount - select(sr.amount for sr in self.sub_receipts_set).sum()
+        return self.amount - self.distributed_amount()
 
 
 class Share(db.Entity):
@@ -61,7 +65,6 @@ class Share(db.Entity):
     is_active = Required(bool, default=True)
     sub_receipts_set = Set('SubReceipt')
     contributions_set = Set('Contribution')
-    installments_set = Set('Installment')
     debts_set = Set('Debt')
 
     def final_status(self, t_type):
@@ -88,6 +91,19 @@ class Share(db.Entity):
         amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
 
         return amount
+
+    def total_amount_of_paid_contribution(self):
+        total_of_half_paid_contributions = select(
+            c.paid_amount() for c in Contribution if c.share_ref == self and c.is_fully_paid is False
+        ).sum()
+        total_of_fully_paid_contributions = select(
+            c.amount for c in Contribution if c.share_ref == self and c.is_fully_paid is True
+        ).sum()
+        return total_of_half_paid_contributions + total_of_fully_paid_contributions
+
+    def total_amount_unpaid_installments(self):
+        return select(i.unpaid_amount() for i in Installment if
+                      i.debt_ref.share_ref == self and i.is_fully_paid is False).sum()
 
 
 class Member(db.Entity):
@@ -151,7 +167,12 @@ class Member(db.Entity):
                       and t.status == TrustRelationship.STATUS.WAITING)
 
     def total_balance_from_accepted_trust_links(self):
-        return select(link.other_member(whose=self).balance for link in self.accepted_trust_links()).sum()
+        amount = 0
+        amount += self.balance
+        print("total_balance_from_accepted_trust_links -> amount:", amount)
+        for link in self.accepted_trust_links():
+            amount += link.other_member(whose=self).balance
+        return amount
 
     def max_amount_can_borrow(self, use_untreated_amount):
         amount = self.total_balance_from_accepted_trust_links()
@@ -159,7 +180,7 @@ class Member(db.Entity):
             amount += self.total_amount_of_untreated_money_transactions()
 
         from sandik.utils import sandik_preferences
-        remaining_debt_amount = sandik_preferences.remaining_debt_balance(sandik=self.member_ref.sandik_ref, whose=self)
+        remaining_debt_amount = sandik_preferences.remaining_debt_balance(sandik=self.sandik_ref, whose=self)
         amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
 
         return amount
@@ -256,6 +277,7 @@ class Log(db.Entity):
     logged_installment_ref = Optional('Installment')
     logged_debt_ref = Optional('Debt')
     logged_sub_receipt_ref = Optional('SubReceipt')
+    logged_piece_of_debt_ref = Optional('PieceOfDebt')
     logged_bank_transaction_ref = Optional(BankTransaction)
     logged_money_transaction_ref = Optional(MoneyTransaction)
     logged_share_ref = Optional(Share)
@@ -431,6 +453,14 @@ class Contribution(db.Entity):
     share_ref = Required(Share)
     sub_receipts_set = Set('SubReceipt')
 
+    @property
+    def member_ref(self):
+        return self.share_ref.member_ref
+
+    @property
+    def sandik_ref(self):
+        return self.member_ref.sandik_ref
+
     def paid_amount(self):
         return select(sr.amount for sr in self.sub_receipts_set).sum()
 
@@ -449,6 +479,14 @@ class Debt(db.Entity):
     logs_set = Set(Log)
     share_ref = Required(Share)
     piece_of_debts_set = Set('PieceOfDebt')
+
+    @property
+    def member_ref(self):
+        return self.share_ref.member_ref
+
+    @property
+    def sandik_ref(self):
+        return self.member_ref.sandik_ref
 
     def paid_amount(self):
         return select(i.paid_amount() for i in self.installments_set).sum()
@@ -477,7 +515,18 @@ class Installment(db.Entity):
     logs_set = Set(Log)
     sub_receipts_set = Set('SubReceipt')
     debt_ref = Required(Debt)
-    share_ref = Required(Share)
+
+    @property
+    def share_ref(self):
+        return self.debt_ref.share_ref
+
+    @property
+    def member_ref(self):
+        return self.share_ref.member_ref
+
+    @property
+    def sandik_ref(self):
+        return self.member_ref.sandik_ref
 
     def paid_amount(self):
         return select(sr.amount for sr in self.sub_receipts_set).sum()
@@ -498,7 +547,7 @@ class SubReceipt(db.Entity):
     debt_ref = Optional(Debt)
     money_transaction_ref = Required(MoneyTransaction)
     logs_set = Set(Log)
-    share_ref = Required(Share)
+    share_ref = Optional(Share)
     creation_time = Required(datetime, default=lambda: datetime.now())
 
     def before_insert(self):
@@ -521,7 +570,8 @@ class SubReceipt(db.Entity):
             elif unpaid_amount < 0:
                 print(unpaid_amount)
                 rollback()
-                raise Exception("ERRCODE: 0010, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+                raise UnexpectedValue("ERRCODE: 0010, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+            self.contribution_ref.share_ref.member_ref.balance += self.amount
 
         if self.installment_ref:
             unpaid_amount = self.installment_ref.unpaid_amount()
@@ -531,7 +581,7 @@ class SubReceipt(db.Entity):
                 raise Exception("ERRCODE: 0011, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
             # TODO ilgili borç tamamen ödendiyse PieceOfDebt'leri sil
             # TODO ilgili borç tamamen ödenmediyse PieceOfDebt'leri güncelle
-            self.installment_ref.update_pieces_of_debt()
+            self.installment_ref.debt_ref.update_pieces_of_debt()
 
         # TODO test et: 4 işlem tipi için de dene
         mt_untreated_amount = self.money_transaction_ref.untreated_amount()
@@ -553,6 +603,7 @@ class Notification(db.Entity):
 
 class PieceOfDebt(db.Entity):
     id = PrimaryKey(int, auto=True)
+    logs_set = Set(Log)
     member_ref = Required(Member)
     debt_ref = Required(Debt)
     amount = Required(Decimal)
@@ -581,10 +632,18 @@ class PieceOfDebt(db.Entity):
 
 class Retracted(db.Entity):
     id = PrimaryKey(int, auto=True)
-    amount = Optional(str)
+    amount = Required(Decimal)
     logs_set = Set(Log)
     expense_sub_receipt_ref = Required(SubReceipt, reverse='expense_retracted_ref')
     revenue_sub_receipt_ref = Required(SubReceipt, reverse='revenue_retracted_ref')
+
+    @property
+    def member_ref(self):
+        return self.expense_sub_receipt_ref.member_ref
+
+    @property
+    def sandik_ref(self):
+        return self.member_ref.sandik_ref
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")

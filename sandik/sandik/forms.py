@@ -19,7 +19,7 @@ class SandikForm(CustomFlaskForm):
     contribution_amount = IntegerField(
         label="Aidat miktarı:",
         validators=[
-            Optional(),
+            input_required_validator("Aidat miktarı"),
             NumberRange(message="Aidat miktarını sayı olarak giriniz"),
         ],
         render_kw={"placeholder": "0"},
