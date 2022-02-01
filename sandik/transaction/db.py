@@ -155,19 +155,15 @@ def get_future_and_unpaid_installments(whose):
 
 
 def sum_of_unpaid_and_due_contributions(whose):
-    return select(c.unpaid_amount() for c in get_unpaid_and_due_contributions(whose=whose)).sum()
+    return select(c.get_unpaid_amount() for c in get_unpaid_and_due_contributions(whose=whose)).sum()
 
 
 def sum_of_unpaid_and_due_installments(whose):
-    return select(c.unpaid_amount() for c in get_unpaid_and_due_installments(whose=whose)).sum()
+    return select(c.get_unpaid_amount() for c in get_unpaid_and_due_installments(whose=whose)).sum()
 
 
 def sum_of_future_and_unpaid_installments(whose):
-    return select(c.unpaid_amount() for c in get_future_and_unpaid_installments(whose=whose)).sum()
-
-
-def sum_of_untreated_money_transactions(member):
-    return select(mt.untreated_amount() for mt in member.get_untreated_money_transactions()).sum()
+    return select(c.get_unpaid_amount() for c in get_future_and_unpaid_installments(whose=whose)).sum()
 
 
 def sign_money_transaction_as_fully_distributed(money_transaction, signed_by):
@@ -210,12 +206,13 @@ def create_piece_of_debts(debt, created_by):
 
     member = debt.share_ref.member_ref
     trusted_links = member.accepted_trust_links()
-    sorted_trusted_links = sorted(trusted_links, key=lambda tl: tl.other_member(whose=member).balance)
+    # TODO performans için get_balance bir defa çağrılarak bir lsitede tutulabilir
+    sorted_trusted_links = sorted(trusted_links, key=lambda tl: tl.other_member(whose=member).get_balance())
 
     remaining_amount = debt_amount
 
     # Önce kendinden borç almalı
-    temp_amount = member.balance if member.balance <= remaining_amount else remaining_amount
+    temp_amount = member.get_balance() if member.get_balance() <= remaining_amount else remaining_amount
     create_piece_of_debt(member=member, debt=debt, amount=temp_amount,
                          trust_relationship_for_log=None, created_by=created_by)
     remaining_amount -= temp_amount
@@ -230,7 +227,7 @@ def create_piece_of_debts(debt, created_by):
         temp_amount = temp_amount if temp_amount <= remaining_amount else remaining_amount
 
         other_member = link.other_member(whose=member)
-        temp_amount = temp_amount if temp_amount <= other_member.balance else other_member.balance
+        temp_amount = temp_amount if temp_amount <= other_member.get_balance() else other_member.get_balance()
 
         create_piece_of_debt(member=other_member, debt=debt, amount=temp_amount,
                              trust_relationship_for_log=link, created_by=created_by)

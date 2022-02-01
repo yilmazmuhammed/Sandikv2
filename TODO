@@ -1,15 +1,22 @@
+1- Sistemin işler hale getirilmesi
 TODO CRITICAL Her ay aidatlar oluşturulacak
 								- Aidatlar oluşturulurken işleme konmamış para varsa onunla ödeme de yapılsın
 								- Taksitler " " " " "?
 										=> Bu ikisi için şöyle bir yol izlenebilir. MoneyTransaction eklenirken, eklendikten sonraki
 										ödeme mekanizması ayrı bir fonksiyona taşınır ve bu çalıştırılırç
 
-TODO Exception'lar için Log mekanizması kullan.
-		- Exception oluştuğunda Log da oluşsun.
-		- Log oluşup oluşmayacağı Exception'a parametre olarak verilsin.
+TODO Log mekanizması oluştur.
+		- Logları görüntüleme sayfası oluştur
 
+2- Kuralların tamamının işler hale getirilmesi
 TODO piece_of_debt'te havuz (sandığın %10u) için de oluştur
 
+3- Üyeler için kullanışlı arayüz sunmak
+
+4- Banka entegrasyonu
+
+5- Performans iyileştirmeleri
+TODO member.balance özelliğini kaldır, get_balance() daha sağlıklı
 
 TASARIMLAR:
 - ...

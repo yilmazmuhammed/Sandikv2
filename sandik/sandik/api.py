@@ -18,4 +18,4 @@ def member_financial_status_api(sandik_id):
     return jsonify(result=True, member_id=member.id,
                    sum_of_unpaid_and_due_payments=utils.sum_of_unpaid_and_due_payments(whose=member),
                    sum_of_future_and_unpaid_payments=utils.sum_of_future_and_unpaid_payments(whose=member),
-                   untreated_amount=utils.untreated_amount(member=member))
+                   undistributed_amount=member.total_of_undistributed_amount())

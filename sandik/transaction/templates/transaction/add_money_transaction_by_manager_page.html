@@ -22,13 +22,13 @@
             }
           }
           else if($("#type").val() == {{ MoneyTransaction.TYPE.EXPENSE }}){
-            if(data.untreated_amount > 0) {
+            if(data.undistributed_amount > 0) {
               let msg;
-              if(data.untreated_amount >= $("#amount").val()) {
-                msg = "Üyenin sandıkta işleme konmamış parası (" + data.untreated_amount.toString() + " tl) bulunmakta. Üyeye borç verilirmesi yerine bu bakiye kullanılsın mı?\n\nNot: Vazgeç butonuna basılırsa üyenin sandıkta bulunan fazla parası kullanılmadan borç işlemi eklenir."
+              if(data.undistributed_amount >= $("#amount").val()) {
+                msg = "Üyenin sandıkta işleme konmamış parası (" + data.undistributed_amount.toString() + " tl) bulunmakta. Üyeye borç verilirmesi yerine bu bakiye kullanılsın mı?\n\nNot: Vazgeç butonuna basılırsa üyenin sandıkta bulunan fazla parası kullanılmadan borç işlemi eklenir."
               }
               else {
-                msg = "Üyenin sandıkta fazla parası (" + data.untreated_amount.toString() + " tl) bulunmakta. Üyeye borç verilirken önce bu para kullanılarak, kalan miktar borç olarak eklensin mi?\n\nNot: Vazgeç butonuna basılırsa üyenin sandıkta bulunan fazla parası kullanılmadan borç işlemi eklenir."
+                msg = "Üyenin sandıkta fazla parası (" + data.undistributed_amount.toString() + " tl) bulunmakta. Üyeye borç verilirken önce bu para kullanılarak, kalan miktar borç olarak eklensin mi?\n\nNot: Vazgeç butonuna basılırsa üyenin sandıkta bulunan fazla parası kullanılmadan borç işlemi eklenir."
               }
               if(confirm(msg)){
                 $("#use_untreated_amount").val(true);

@@ -36,7 +36,7 @@ jQuery(function($){
         {% set transaction_type='Aidat' %}
         {% set detail='' %}
       {% elif isinstance(p, Installment) %}
-        {% set id_prefix='d' %}
+        {% set id_prefix='i' %}
         {% set transaction_type='Taksit' %}
         {% set detail='Borç: #'+p.debt_ref.id|string %}
       {% else %}
@@ -50,7 +50,7 @@ jQuery(function($){
         "name_surname": "{{ p.member_ref.web_user_ref.name_surname }}",
         "transaction_type": `{{ transaction_type }}`,
         "amount": "{{ p.amount }} ₺",
-        "is_fully_paid": `{% if p.is_fully_paid %}Ödendi{% elif p.paid_amount()>0 %}Eksik{% else %}Ödenmedi{% endif %}`,
+        "is_fully_paid": `{% if p.is_fully_paid %}Ödendi{% elif p.get_paid_amount()>0 %}Eksik{% else %}Ödenmedi{% endif %}`,
         "sub_receipts": `
           {% if p.sub_receipts_set.count() == 0 %}
           İşlem yok
@@ -130,7 +130,7 @@ jQuery(function($){
         {% set transaction_type='Aidat' %}
         {% set detail='' %}
       {% elif isinstance(p, Installment) %}
-        {% set id_prefix='d' %}
+        {% set id_prefix='i' %}
         {% set transaction_type='Taksit' %}
         {% set detail='Borç: #'+p.debt_ref.id|string %}
       {% else %}
@@ -144,7 +144,7 @@ jQuery(function($){
         "name_surname": "{{ p.member_ref.web_user_ref.name_surname }}",
         "transaction_type": `{{ transaction_type }}`,
         "amount": "{{ p.amount }} ₺",
-        "is_fully_paid": `{% if p.is_fully_paid %}Ödendi{% elif p.paid_amount()>0 %}Eksik{% else %}Ödenmedi{% endif %}`,
+        "is_fully_paid": `{% if p.is_fully_paid %}Ödendi{% elif p.get_paid_amount()>0 %}Eksik{% else %}Ödenmedi{% endif %}`,
         "sub_receipts": `
           {% if p.sub_receipts_set.count() == 0 %}
           İşlem yok

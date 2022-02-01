@@ -21,10 +21,6 @@ def sum_of_future_and_unpaid_payments(whose):
     return db.sum_of_future_and_unpaid_installments(whose=whose)
 
 
-def untreated_amount(member):
-    return db.sum_of_untreated_money_transactions(member=member)
-
-
 def get_unpaid_and_due_payments(whose):
     contributions = db.get_unpaid_and_due_contributions(whose=whose)[:][:]
     installments = db.get_unpaid_and_due_installments(whose=whose)[:][:]
@@ -94,7 +90,7 @@ def add_revenue_transactions(money_transaction, pay_future_payments, created_by)
         payments += get_future_and_unpaid_payments(whose=member)
 
     for p in payments:
-        amount = p.unpaid_amount() if remaining_amount >= p.unpaid_amount() else remaining_amount
+        amount = p.get_unpaid_amount() if remaining_amount >= p.get_unpaid_amount() else remaining_amount
 
         if isinstance(p, Contribution):
             pay_contribution(contribution=p, amount=amount, money_transaction=money_transaction,
@@ -124,9 +120,9 @@ def add_expense_transactions(money_transaction, use_untreated_amount, created_by
     remaining_amount = money_transaction.amount
 
     if use_untreated_amount:
-        untreated_money_transactions = member.get_untreated_money_transactions()
+        untreated_money_transactions = member.get_revenue_money_transactions_are_not_fully_distributed()
         for mt in untreated_money_transactions:
-            amount = mt.untreated_amount() if remaining_amount >= mt.untreated_amount() else remaining_amount
+            amount = mt.undistributed_amount() if remaining_amount >= mt.undistributed_amount() else remaining_amount
             borrow_from_untreated_amount(untreated_money_transaction=mt, amount=amount,
                                          money_transaction=money_transaction, created_by=created_by)
             remaining_amount -= amount
