@@ -8,6 +8,7 @@ from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelatio
     MembershipApplicationAlreadyExist, WebUserIsAlreadyMember
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, member_required, \
     trust_relationship_required
+from sandik.transaction import db as transaction_db, utils as transaction_utils
 from sandik.utils import LayoutPI, get_next_url
 from sandik.utils.forms import flask_form_to_dict, FormPI
 
@@ -43,6 +44,15 @@ def sandik_detail_page(sandik_id):
 @sandik_page_bp.route("/<int:sandik_id>/ozet", methods=["GET", "POST"])
 @member_required
 def sandik_summary_page(sandik_id):
+    g.sum_of_unpaid_and_due_payments = transaction_utils.sum_of_unpaid_and_due_payments(whose=g.member)
+    sum_of_future_and_unpaid_payments = transaction_utils.sum_of_future_and_unpaid_payments(whose=g.member)
+    g.sum_of_payments = g.sum_of_unpaid_and_due_payments + sum_of_future_and_unpaid_payments
+    g.trusted_links = {
+        "total_paid_contributions": transaction_db.total_paid_contributions_of_trusted_links(member=g.member),
+        "total_loaned_amount": transaction_db.total_loaned_amount_of_trusted_links(member=g.member),
+        "total_balance": transaction_db.total_balance_of_trusted_links(member=g.member),
+        "total_paid_installments": transaction_db.total_paid_installments_of_trusted_links(member=g.member)
+    }
     return render_template("sandik/sandik_summary_page.html",
                            page_info=LayoutPI(title=g.sandik.name, active_dropdown="sandik"))
 

@@ -127,8 +127,15 @@ class Member(db.Entity):
         contributions_amount = select(sr.amount for sr in SubReceipt
                                       if sr.money_transaction_ref.member_ref == self and sr.contribution_ref).sum()
         undistributed_amount = self.total_of_undistributed_amount()
-        loaned_amount = select(pod.get_unpaid_amount() for pod in self.piece_of_debts_set if pod.debt_ref).sum()
-        return contributions_amount + undistributed_amount - loaned_amount
+        unpaid_amount_of_loaned = select(
+            pod.get_unpaid_amount() for pod in self.piece_of_debts_set if pod.debt_ref).sum()
+        return contributions_amount + undistributed_amount - unpaid_amount_of_loaned
+
+    def get_loaned_amount(self):
+        return select(pod.amount for pod in self.piece_of_debts_set if pod.debt_ref).sum()
+
+    def get_paid_amount_of_loaned(self):
+        return select(pod.paid_amount for pod in self.piece_of_debts_set if pod.debt_ref).sum()
 
     def shares_count(self, all_shares=False, is_active=True):
         if all_shares:
@@ -141,16 +148,22 @@ class Member(db.Entity):
         installment_count = select(i for i in Installment if i.share_ref.member_ref == self).count()
         return contribution_count + debt_count + installment_count
 
+    def sum_of_paid_contributions(self):
+        return select(sr.amount for sr in SubReceipt if
+                      sr.contribution_ref and sr.money_transaction_ref.member_ref == self).sum()
+
+    def sum_of_paid_installments(self):
+        return select(sr.amount for sr in SubReceipt if
+                      sr.installment_ref and sr.money_transaction_ref.member_ref == self).sum()
+
     def final_status(self, t_type):
         if t_type == "contribution":
-            return select(sr.amount for sr in SubReceipt if
-                          sr.contribution_ref and sr.money_transaction_ref.member_ref == self).sum()
+            return self.sum_of_paid_contributions()
         elif t_type == "debt":
             return select(sr.amount for sr in SubReceipt if
                           sr.debt_ref and sr.money_transaction_ref.member_ref == self).sum()
         elif t_type == "installment":
-            return select(sr.amount for sr in SubReceipt if
-                          sr.installment_ref and sr.money_transaction_ref.member_ref == self).sum()
+            return self.sum_of_paid_installments()
         elif t_type == "total":
             return "xxx"
             revenue = select(mt.amount for mt in self.money_transactions_set if
@@ -394,6 +407,9 @@ class Sandik(db.Entity):
 
     def get_money_transactions(self):
         return select(mt for mt in MoneyTransaction if mt.member_ref.sandik_ref == self)
+
+    def total_of_undistributed_amount(self):
+        return select(member.total_of_undistributed_amount() for member in self.members_set).sum()
 
 
 class TrustRelationship(db.Entity):

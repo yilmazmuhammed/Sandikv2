@@ -1,0 +1,191 @@
+{% extends "utils/layout.html" %}
+
+{% block js_block %}
+<script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+<script>
+jQuery(function($){
+	$('#all-debts-table').footable({
+    "toggleColumn": "first",
+    "paging": {
+      "enabled": true,
+      "size": 50
+    },
+    "filtering": {
+      "enabled": true,
+      "delay": 1,
+      "dropdownTitle": "Şu sütunlarda ara:"
+    },
+    "sorting": {
+      "enabled": true
+    },
+		"columns": [
+			{ "name": "id", "title": "#", "breakpoints": "xs sm"},
+			{ "name": "date", "title": "Tarih" },
+			{ "name": "name_surname", "title": "İsim Soyisim" },
+			{ "name": "amount", "title": "Miktar", },
+			{ "name": "status", "title": "Ödenme durumu", },
+			{ "name": "unpaid_amount", "title": "Kalan miktar", "breakpoints": "xs sm md", },
+			{ "name": "installments", "title": "", "breakpoints": "xs sm md lg", },
+			{# { "name": "action", "title": "", "breakpoints": "xs sm md lg", }, #}
+		],
+		"rows": [
+    {% for d in g.debts %}
+      {
+        "id": `<span title='ID: {{ d.id }}'>{{ loop.revindex }}</span>`,
+        "date": "{{ d.sub_receipt_ref.money_transaction_ref.date.strftime("%Y-%m-%d") }}",
+        "name_surname": "{{ d.member_ref.web_user_ref.name_surname }}",
+        "amount": "{{ d.amount }} ₺",
+        "status": `{% if d.get_unpaid_amount() == 0 %}<span class="text-success">Ödendi</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
+        "unpaid_amount": "{{ d.get_unpaid_amount() }} ₺",
+        "installments": `
+          <div class="table table-responsive">
+            <table class="table table-striped table-bordered text-center" id="installments-of-d{{ d.id }}-table">
+              <thead>
+              <tr>
+                <th class="text-center">#</th>
+                <th class="text-center">Ödeme dönemi</th>
+                <th class="text-center">Taksit miktarı</th>
+                <th class="text-center">Ödenme durumu</th>
+                <th class="text-center">Kalan Miktar</th>
+              </tr>
+              </thead>
+              <tbody>
+              {% for i in d.installments_set.order_by('lambda i: i.term') %}
+                <tr>
+                  <td>{{ loop.index }}</th>
+                  <td>{{ i.term }} ₺</td>
+                  <td>{{ i.amount }} ₺</td>
+                  <td class="{{ "text-success" if i.is_fully_paid else "text-danger" }}">{{ "Ödendi" if i.is_fully_paid else "Tamamlanmadı" }}</td>
+                  <td>{{ i.get_unpaid_amount() }} ₺</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        `,
+        "detail": "{{ detail }}",
+        {# "action":` #}
+        {#   <label class="i-switch m-t-xs m-r"> #}
+        {#     <a href="{% if web_user.is_active %}{{ url_for("auth_page_bp.block_web_user_page", web_user_id=web_user.id) }}{% else %}{{ url_for("auth_page_bp.confirm_web_user_page", web_user_id=web_user.id) }}{% endif %}"> #}
+        {#       <input id="is_timed" name="is_timed" {{ "checked=''" if web_user.is_active else "" }} type="checkbox" value="y"> #}
+        {#       <i></i> #}
+        {#     </a> #}
+        {#   </label> #}
+        {# ` #}
+      },
+    {% endfor %}
+		]
+	});
+
+	$('#unpaid-debts-table').footable({
+    "toggleColumn": "first",
+    "paging": {
+      "enabled": true,
+      "size": 50
+    },
+    "filtering": {
+      "enabled": true,
+      "delay": 1,
+      "dropdownTitle": "Şu sütunlarda ara:"
+    },
+    "sorting": {
+      "enabled": true
+    },
+		"columns": [
+			{ "name": "id", "title": "#", "breakpoints": "xs sm"},
+			{ "name": "date", "title": "Tarih" },
+			{ "name": "name_surname", "title": "İsim Soyisim" },
+			{ "name": "amount", "title": "Miktar", },
+			{ "name": "status", "title": "Ödenme durumu", },
+			{ "name": "unpaid_amount", "title": "Kalan miktar", "breakpoints": "xs sm md", },
+			{ "name": "installments", "title": "", "breakpoints": "xs sm md lg", },
+			{# { "name": "action", "title": "", "breakpoints": "xs sm md lg", }, #}
+		],
+		"rows": [
+    {% for d in g.unpaid_debts %}
+      {
+        "id": `<span title='ID: {{ d.id }}'>{{ loop.revindex }}</span>`,
+        "date": "{{ d.sub_receipt_ref.money_transaction_ref.date.strftime("%Y-%m-%d") }}",
+        "name_surname": "{{ d.member_ref.web_user_ref.name_surname }}",
+        "amount": "{{ d.amount }} ₺",
+        "status": `{% if d.get_unpaid_amount() == 0 %}<span class="text-success">Ödendi</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
+        "unpaid_amount": "{{ d.get_unpaid_amount() }} ₺",
+        "installments": `
+          <div class="table table-responsive">
+            <table class="table table-striped table-bordered text-center" id="installments-of-d{{ d.id }}-table">
+              <thead>
+              <tr>
+                <th class="text-center">#</th>
+                <th class="text-center">Ödeme dönemi</th>
+                <th class="text-center">Taksit miktarı</th>
+                <th class="text-center">Ödenme durumu</th>
+                <th class="text-center">Kalan Miktar</th>
+              </tr>
+              </thead>
+              <tbody>
+              {% for i in d.installments_set.order_by('lambda i: i.term') %}
+                <tr>
+                  <td>{{ loop.index }}</th>
+                  <td>{{ i.term }} ₺</td>
+                  <td>{{ i.amount }} ₺</td>
+                  <td class="{{ "text-success" if i.is_fully_paid else "text-danger" }}">{{ "Ödendi" if i.is_fully_paid else "Tamamlanmadı" }}</td>
+                  <td>{{ i.get_unpaid_amount() }} ₺</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        `,
+        "detail": "{{ detail }}",
+        {# "action":` #}
+        {#   <label class="i-switch m-t-xs m-r"> #}
+        {#     <a href="{% if web_user.is_active %}{{ url_for("auth_page_bp.block_web_user_page", web_user_id=web_user.id) }}{% else %}{{ url_for("auth_page_bp.confirm_web_user_page", web_user_id=web_user.id) }}{% endif %}"> #}
+        {#       <input id="is_timed" name="is_timed" {{ "checked=''" if web_user.is_active else "" }} type="checkbox" value="y"> #}
+        {#       <i></i> #}
+        {#     </a> #}
+        {#   </label> #}
+        {# ` #}
+      },
+    {% endfor %}
+		]
+	});
+
+});
+</script>
+{% endblock %}
+
+{% block content_block %}
+  <div class="bg-light lter b-b wrapper-md">
+    <h1 class="m-n font-thin h3">{{ page_info.title }}</h1>
+  </div>
+  <div class="wrapper-md">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        Ödemesi tamamlanmamış borçlar
+        <span class="pull-right">
+          {# {{ url_for('transaction_page_bp.add_sandik_transaction_by_manager_page', sandik_id=g.sandik.id) }} #}
+          <a href="#" class="btn btn-xs btn-primary">
+            <i class="fa fa-plus"></i>
+          </a>
+        </span>
+      </div>
+      <div class="table table-responsive">
+        <table class="table table-striped " id="unpaid-debts-table"></table>
+      </div>
+    </div>
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        Bütün borçlar
+        <span class="pull-right">
+          {# {{ url_for('transaction_page_bp.add_sandik_transaction_by_manager_page', sandik_id=g.sandik.id) }} #}
+          <a href="#" class="btn btn-xs btn-primary">
+            <i class="fa fa-plus"></i>
+          </a>
+        </span>
+      </div>
+      <div class="table table-responsive">
+        <table class="table table-striped " id="all-debts-table"></table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

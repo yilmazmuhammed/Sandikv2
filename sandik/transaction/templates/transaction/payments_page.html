@@ -50,7 +50,7 @@ jQuery(function($){
         "name_surname": "{{ p.member_ref.web_user_ref.name_surname }}",
         "transaction_type": `{{ transaction_type }}`,
         "amount": "{{ p.amount }} ₺",
-        "is_fully_paid": `{% if p.is_fully_paid %}Ödendi{% elif p.get_paid_amount()>0 %}Eksik{% else %}Ödenmedi{% endif %}`,
+        "is_fully_paid": `{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
         "sub_receipts": `
           {% if p.sub_receipts_set.count() == 0 %}
           İşlem yok
@@ -144,7 +144,7 @@ jQuery(function($){
         "name_surname": "{{ p.member_ref.web_user_ref.name_surname }}",
         "transaction_type": `{{ transaction_type }}`,
         "amount": "{{ p.amount }} ₺",
-        "is_fully_paid": `{% if p.is_fully_paid %}Ödendi{% elif p.get_paid_amount()>0 %}Eksik{% else %}Ödenmedi{% endif %}`,
+        "is_fully_paid": `{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
         "sub_receipts": `
           {% if p.sub_receipts_set.count() == 0 %}
           İşlem yok

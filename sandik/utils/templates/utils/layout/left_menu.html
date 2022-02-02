@@ -65,14 +65,20 @@
                     </a>
                   </li>
                   <li>
+                    <a href="{{ url_for('transaction_page_bp.money_transactions_of_member_page', sandik_id=g.sandik.id) }}">
+                      <span>Para giriş/çıkışları</span>
+                    </a>
+                  </li>
+                  <li>
                     <a href="{{ url_for('transaction_page_bp.payments_of_member_page', sandik_id=g.sandik.id) }}">
                       <b class="badge bg-danger pull-right">x</b>
                       <span>Ödemelerim</span>
                     </a>
                   </li>
                   <li>
-                    <a href="{{ url_for('transaction_page_bp.money_transactions_of_member_page', sandik_id=g.sandik.id) }}">
-                      <span>Para giriş/çıkışları</span>
+                    <a href="{{ url_for('transaction_page_bp.debts_of_member_page', sandik_id=g.sandik.id) }}">
+                      <b class="badge bg-danger pull-right">x</b>
+                      <span>Borçlarım</span>
                     </a>
                   </li>
                   <li>
@@ -128,7 +134,13 @@
                   </li>
                   <li>
                     <a href="{{ url_for('transaction_page_bp.payments_of_sandik_page', sandik_id=g.sandik.id) }}">
+                      <b class="badge bg-danger pull-right">x</b>
                       <span>Ödemeler</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{{ url_for('transaction_page_bp.debts_of_sandik_page', sandik_id=g.sandik.id) }}">
+                      <span>Borçlar</span>
                     </a>
                   </li>
                   <li>

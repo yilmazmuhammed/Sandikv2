@@ -57,9 +57,9 @@ jQuery(function($){
                 <tr>
                   <th class="text-center">Tarih</th>
                   <th class="text-center">İşlem türü</th>
-                  <th class="text-center">Ödeme dönemi</th>
+                  <th class="text-center">Dönem</th>
                   <th class="text-center">İşlem miktarı</th>
-                  <th class="text-center">Kalan miktar</th>
+                  <th class="text-center" title="Kalan miktar, bu para girişinden sonra kalan miktar değil, sandık işleminin güncel durumudur.">Kalan miktar</th>
                   <th class="text-center">Daha önce</th>
                   <th class="text-center">Miktar</th>
                   <th class="text-center">Bundan sonra</th>
@@ -70,7 +70,7 @@ jQuery(function($){
                     <td title='ID: {{ (sr.installment_ref or sr.contribution_ref).id }}'>{% if sr.installment_ref %}Taksit{% elif sr.contribution_ref %}Aidat{% elif sr.debt_ref %}Borç{% elif sr.revenue_retracted_ref %}Geri alınmış{% elif sr.expense_retracted_ref %}Geri alınmış{% else %}---{% endif %}</td>
                     <td>{% if sr.installment_ref or sr.contribution_ref %}{{ (sr.installment_ref or sr.contribution_ref).term }}{% elif sr.debt_ref %}{{ sr.money_transaction_ref.date.strftime("%Y-%m-%d") }}{% elif sr.revenue_retracted_ref or sr.expense_retracted_ref %}-{% else %}---{% endif %}</td>
                     <td>{{ (sr.installment_ref or sr.contribution_ref or sr.debt_ref or sr.revenue_retracted_ref or sr.expense_retracted_ref ).amount }} ₺</td>
-                    <td>{% if sr.installment_ref or sr.contribution_ref %}{{ (sr.installment_ref or sr.contribution_ref).get_unpaid_amount() }} ₺ {% else %}-{% endif %}</td>
+                    <td title="Kalan miktar, bu para girişinden sonra kalan miktar değil, sandık işleminin güncel durumudur.">{% if sr.installment_ref or sr.contribution_ref %}{{ (sr.installment_ref or sr.contribution_ref).get_unpaid_amount() }} ₺ {% else %}-{% endif %}</td>
                     <td>... ₺</td>
                     <td>{{ sr.amount }} ₺</td>
                     <td>... ₺</td>

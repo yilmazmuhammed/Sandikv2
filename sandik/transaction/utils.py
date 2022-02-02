@@ -279,3 +279,24 @@ def get_payments(whose):
     sorted_transactions = sorted(transactions, key=lambda t: t.term, reverse=True)
 
     return sorted_transactions
+
+
+def get_debts(whose, only_unpaid=False):
+    filter_str = "lambda d: d"
+    if isinstance(whose, Sandik):
+        filter_str += f" and d.sandik_ref == {whose}"
+    elif isinstance(whose, Member):
+        filter_str += f" and d.member_ref == {whose}"
+    elif isinstance(whose, Share):
+        filter_str += f" and d.share_ref == {whose}"
+    else:
+        raise InvalidWhoseType("whose 'Sandik', 'Member' veya 'Share' olmalıdır", errcode=3, create_log=True)
+
+    if only_unpaid:
+        filter_str += f" and d.get_unpaid_amount() > 0"
+
+    debts = db.select_debts(filter_str).order_by(
+        lambda d: (d.sub_receipt_ref.money_transaction_ref.date, d.id)
+    )
+
+    return debts

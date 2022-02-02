@@ -104,7 +104,6 @@ def transactions_of_member_page(sandik_id):
 def payments_of_sandik_page(sandik_id):
     g.payments = utils.get_payments(whose=g.sandik)
     g.due_and_unpaid_payments = utils.get_unpaid_and_due_payments(whose=g.sandik)
-    print(g.payments)
     return render_template("transaction/payments_page.html",
                            page_info=LayoutPI(title="Sandıktaki ödemeler", active_dropdown="transactions"))
 
@@ -114,6 +113,23 @@ def payments_of_sandik_page(sandik_id):
 def payments_of_member_page(sandik_id):
     g.payments = utils.get_payments(whose=g.member)
     g.due_and_unpaid_payments = utils.get_unpaid_and_due_payments(whose=g.member)
-    print(g.payments)
     return render_template("transaction/payments_page.html",
                            page_info=LayoutPI(title="Ödemelerim", active_dropdown="member-transactions"))
+
+
+@transaction_page_bp.route('s-borclar', methods=["GET", "POST"])
+@sandik_authorization_required("read")
+def debts_of_sandik_page(sandik_id):
+    g.unpaid_debts = utils.get_debts(whose=g.sandik, only_unpaid=True)
+    g.debts = utils.get_debts(whose=g.sandik)
+    return render_template("transaction/debts_page.html",
+                           page_info=LayoutPI(title="Sandıktaki borçlar", active_dropdown="transactions"))
+
+
+@transaction_page_bp.route('u-borclar', methods=["GET", "POST"])
+@member_required
+def debts_of_member_page(sandik_id):
+    g.unpaid_debts = utils.get_debts(whose=g.member, only_unpaid=True)
+    g.debts = utils.get_debts(whose=g.member)
+    return render_template("transaction/debts_page.html",
+                           page_info=LayoutPI(title="Borçlarım", active_dropdown="member-transactions"))

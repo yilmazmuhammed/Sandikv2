@@ -112,8 +112,16 @@
                 <td>{{ g.member.final_status("installment") }} ₺</td>
               </tr>
               <tr class="row">
-                <th>Son durum:</th>
-                <td>{{ g.member.final_status("total") }} ₺</td>
+                <th>İşleme konmamış:</th>
+                <td>{{ g.member.total_of_undistributed_amount() }} ₺</td>
+              </tr>
+              <tr class="row">
+                <th>Ay sonu:</th>
+                <td title="Ay sonu ödemeleri: {{ g.sum_of_unpaid_and_due_payments }}" class="font-bold {% if g.sum_of_unpaid_and_due_payments > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.member.total_of_undistributed_amount() - g.sum_of_unpaid_and_due_payments }} ₺</td>
+              </tr>
+              <tr class="row">
+                <th>Mil sonu:</th>
+                <td title="Mil sonu ödemeleri: {{ g.sum_of_payments }}" class="font-bold {% if g.sum_of_payments > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.member.total_of_undistributed_amount() - g.sum_of_payments}} ₺</td>
               </tr>
               </tbody>
             </table>
@@ -174,23 +182,46 @@
             <span>Güven halkam</span>
           </div>
           <div>
-            <table id="sandik-final-status" class="table">
+            <table id="trusted-links-status" class="table">
               <tbody>
               <tr class="row">
                 <th>Toplanan aidat:</th>
-                <td>xxx ₺</td>
+                <td>{{ g.trusted_links.total_paid_contributions }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Verilen borç:</th>
-                <td>xxx ₺</td>
+                <td>{{ g.trusted_links.total_loaned_amount }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Toplanan taksit:</th>
-                <td>xxx ₺</td>
+                <td>{{ g.trusted_links.total_paid_installments }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Son durum:</th>
-                <td>xxx ₺</td>
+                <td>{{ g.trusted_links.total_balance }} ₺</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            <span>Sandığa katkım</span>
+          </div>
+          <div>
+            <table id="from-me-status" class="table">
+              <tbody>
+              <tr class="row">
+                <th>Verilen borç:</th>
+                <td>{{ g.member.get_loaned_amount() }} ₺</td>
+              </tr>
+              <tr class="row">
+                <th>Toplanan taksit:</th>
+                <td>{{ g.member.get_paid_amount_of_loaned() }} ₺</td>
+              </tr>
+              <tr class="row">
+                <th>Şu an ki bakiye:</th>
+                <td>{{ g.member.get_balance() }} ₺</td>
               </tr>
               </tbody>
             </table>

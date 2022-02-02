@@ -282,3 +282,28 @@ def create_retracted(amount, untreated_money_transaction, money_transaction, cre
                                                    is_auto=True, created_by=created_by),
         logs_set=Log(web_user_ref=created_by, type=Log.TYPE.DEBT.CREATE, **logged_ref_items)
     )
+
+
+def total_paid_contributions_of_trusted_links(member):
+    total = member.sum_of_paid_contributions()
+    for link in member.accepted_trust_links():
+        total += link.other_member(whose=member).sum_of_paid_contributions()
+    return total
+
+
+def total_paid_installments_of_trusted_links(member):
+    total = member.get_paid_amount_of_loaned()
+    for link in member.accepted_trust_links():
+        total += link.other_member(whose=member).get_paid_amount_of_loaned()
+    return total
+
+
+def total_loaned_amount_of_trusted_links(member):
+    total = member.get_loaned_amount()
+    for link in member.accepted_trust_links():
+        total += link.other_member(whose=member).get_loaned_amount()
+    return total
+
+
+def total_balance_of_trusted_links(member):
+    return member.total_balance_from_accepted_trust_links()
