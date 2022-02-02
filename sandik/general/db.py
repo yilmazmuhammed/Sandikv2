@@ -19,6 +19,10 @@ def get_notification(**kwargs) -> Notification:
     return Notification.get(**kwargs)
 
 
+def get_bank_account(**kwargs) -> BankAccount:
+    return BankAccount.get(**kwargs)
+
+
 def read_notification(notification) -> Notification:
     notification.set(reading_time=datetime.now())
     return notification
@@ -26,3 +30,7 @@ def read_notification(notification) -> Notification:
 
 def create_notification(to_web_user, title, text, url) -> Notification:
     return Notification(web_user_ref=to_web_user, title=title, text=text, url=url)
+
+
+def delete_bank_account(bank_account):
+    bank_account.delete()

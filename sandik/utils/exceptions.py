@@ -14,6 +14,7 @@ class THOUSANDS:
     SandikException = 20
     TrustRelationshipException = 21
     MembershipException = 22
+    BankAccountException = 30
 
 
 class ErrcodeException(Exception):
@@ -23,7 +24,8 @@ class ErrcodeException(Exception):
 class Sandikv2Exception(Exception):
     ERRCODE_THOUSAND = THOUSANDS.Sandikv2Exception
 
-    def __init__(self, msg, errcode=1, create_log=False, log_level=None, errcode_thousand=ERRCODE_THOUSAND):
+    def __init__(self, msg, errcode=1, create_log=False, log_level=None, errcode_thousand=ERRCODE_THOUSAND,
+                 modify_msg=False):
         if not (0 < errcode < 1000):
             raise ErrcodeException()
 
@@ -37,13 +39,15 @@ class Sandikv2Exception(Exception):
             # TODO print yerine log mekanizması kullan
             log_level = log_level or Log.TYPE.LOG_LEVEL.INFO
             Log(web_user_ref=current_user,
-                type=log_level, special_type=str(self.errcode), detail=self.exception_message)
-            print("LOG -> ", datetime.now(), self.exception_message)
+                type=log_level, special_type=str(self.errcode), detail=self.modified_message())
+            print("LOG -> ", datetime.now(), self.modified_message())
 
-        super().__init__(self.exception_message)
+        if modify_msg:
+            super().__init__(self.modified_message())
+        else:
+            super().__init__(self.msg)
 
-    @property
-    def exception_message(self):
+    def modified_message(self):
         return f"ERRCODE: {self.errcode}, " \
                f"FUNCTION: {self.caller_function_name}, " \
                f"EXCEPTION: {self.exception_class} -> " \
@@ -54,7 +58,7 @@ class Sandikv2Exception(Exception):
             for line in frame_info[4]:
                 if "raise" in line:
                     self.caller_function_name = frame_info[3]
-                    self.exception_class = frame_info[4].split("(")[0].split("raise")[1].strip()
+                    self.exception_class = line.split("(")[0].split("raise")[1].strip()
 
 
 class Sandikv2UtilsException(Sandikv2Exception):

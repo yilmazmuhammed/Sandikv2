@@ -7,7 +7,6 @@ from decimal import Decimal
 from flask_login import UserMixin
 from pony.orm import *
 
-from sandik.general.exceptions import ThereIsAlreadyPrimaryBankAccount
 
 db = Database()
 
@@ -262,7 +261,7 @@ class WebUser(db.Entity, UserMixin):
         return set(query1[:] + query2[:])
 
     def my_unread_notifications(self):
-        return self.notifications_set.filter(lambda n: not bool(n.reading_time)).order_by(lambda n: n.creation_time)
+        return self.notifications_set.filter(lambda n: not bool(n.reading_time)).order_by(lambda n: desc(n.creation_time))
 
     def has_permission(self, sandik, permission):
         if permission not in ["write", "read", "admin"]:
@@ -455,6 +454,7 @@ class BankAccount(db.Entity):
         #  olabilir
         if self.is_primary and BankAccount.get(is_primary=True,
                                                web_user_ref=self.web_user_ref, sandik_ref=self.sandik_ref):
+            from sandik.general.exceptions import ThereIsAlreadyPrimaryBankAccount
             raise ThereIsAlreadyPrimaryBankAccount("Daha önce varsayılan (birincil) banka hesabı oluşturulmuş.")
 
 

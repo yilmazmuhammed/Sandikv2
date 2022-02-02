@@ -1,0 +1,64 @@
+{% extends "utils/layout.html" %}
+{% import "utils/parts/macros.html" as macros%}
+
+{% block js_block %}
+  <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+  <script>
+    jQuery(function($){
+      $('#bank-accounts-table').footable({
+        "toggleColumn": "first",
+        "paging": {
+          "enabled": true,
+        },
+        "columns": [
+          { "name": "index", "title": "#"},
+          { "name": "title", "title": "Başlık", },
+          { "name": "holder", "title": "Hesap sahibi", },
+          { "name": "iban", "title": "IBAN", },
+          { "name": "is_primary", "title": "Varsayılan", "classes": "text-center",  },
+          { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+        ],
+        "rows": [
+        {% for bank_account in g.bank_accounts %}
+          {
+            "index": `<span title='ID: {{ bank_account.id }}'>{{ loop.index }}</span>`,
+            "title": `{{ bank_account.title }}`,
+            "holder": `{{ bank_account.holder }}`,
+            "iban": `TR{{ bank_account.iban }}`,
+            {# Varsayılan olma özelliğini switch buton ile göster. #}
+            "is_primary": `{{ "Varsayılan" if bank_account.is_primary else "Standart" }}`,
+            "actions": `
+              <tr>
+                <td>{{ macros.button(url="#", icon='fa fa-pencil', type='info', size='xs', title='Düzenle') }}</td>
+                <td style='padding:5px;'></td>
+                <td>{{ macros.button(url=url_for("general_page_bp.delete_bank_account_page", bank_account_id=bank_account.id) , icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
+              </tr>`,
+          },
+        {% endfor %}
+        ]
+      });
+
+    });
+  </script>
+{% endblock %}
+
+{% block content_block %}
+  <div class="bg-light lter b-b wrapper-md">
+    <h1 class="m-n font-thin h3">{{ page_info.title }}</h1>
+  </div>
+  <div class="wrapper-md">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        {{ page_info.title }}
+        <span class="pull-right">
+          <a href="{{ url_for('general_page_bp.create_bank_account_page') }}" class="btn btn-xs btn-primary">
+            <i class="fa fa-plus"></i>
+          </a>
+        </span>
+      </div>
+      <div class="table table-responsive">
+        <table class="table" id="bank-accounts-table"></table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -9,7 +9,7 @@
           <i class="glyphicon glyphicon-align-justify"></i>
         </button>
         <!-- brand -->
-        <a href="{{ url_for('general_page_bp.index_page') }}" class="navbar-brand text-lt">
+        <a href="{{ url_for('general_page_bp.home_page') }}" class="navbar-brand text-lt">
 {#          <i class="fa fa-btc"></i>#}
           <img src="{{ url_for('static', filename='my_custom/img/logo.png') }}" alt="." style="border-radius: 30%; max-height: 30px;">
           <span class="hidden-folded m-l-xs">{{ page_info.short_website_name }}</span>
@@ -259,7 +259,7 @@
               <li>
                 <a href="">Profili güncelle</a>
               </li>
-              <li><a href="{{ url_for('general_page_bp.create_bank_account_page') }}">Banka hesabı ekle</a></li>
+              <li><a href="{{ url_for('general_page_bp.bank_accounts_page') }}">Banka hesaplarım</a></li>
               <li>
                 <a href>
                   <span class="badge bg-danger pull-right">30%</span>
