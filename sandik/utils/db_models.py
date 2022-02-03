@@ -702,21 +702,11 @@ class Retracted(db.Entity):
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL:
-    from pony.orm.dbproviders.postgres import PGProvider as Provider
-else:
-    from pony.orm.dbproviders.sqlite import SQLiteProvider as Provider
-
-
-class Provider2(Provider):
-    def get_default_entity_table_name(provider, entity):
-        return "Sandikv2_" + Provider.get_default_entity_table_name(provider, entity)
-
 
 if DATABASE_URL:
-    db.bind(provider=Provider2, dsn=DATABASE_URL)
+    db.bind(provider="postgres", dsn=DATABASE_URL)
 else:
-    db.bind(provider=Provider2, filename='database.sqlite', create_db=True)
+    db.bind(provider="sqlite", filename='database.sqlite', create_db=True)
 
 db.generate_mapping(create_tables=True)
 
