@@ -48,10 +48,10 @@ class Sandikv2Exception(Exception):
             super().__init__(self.msg)
 
     def modified_message(self):
-        return f"ERRCODE: {self.errcode}, " \
+        return f"{self.msg} " \
+               f"(ERRCODE: {self.errcode}, " \
                f"FUNCTION: {self.caller_function_name}, " \
-               f"EXCEPTION: {self.exception_class} -> " \
-               f"{self.msg}"
+               f"EXCEPTION: {self.exception_class} )"
 
     def detect_caller_function_name(self):
         for frame_info in inspect.stack():

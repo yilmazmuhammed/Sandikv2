@@ -1,3 +1,4 @@
+import inspect
 import math
 import os
 from datetime import date
@@ -6,7 +7,6 @@ from decimal import Decimal
 
 from flask_login import UserMixin
 from pony.orm import *
-
 
 db = Database()
 
@@ -261,7 +261,9 @@ class WebUser(db.Entity, UserMixin):
         return set(query1[:] + query2[:])
 
     def my_unread_notifications(self):
-        return self.notifications_set.filter(lambda n: not bool(n.reading_time)).order_by(lambda n: desc(n.creation_time))
+        return self.notifications_set.filter(lambda n: not bool(n.reading_time)).order_by(
+            lambda n: desc(n.creation_time)
+        )
 
     def has_permission(self, sandik, permission):
         if permission not in ["write", "read", "admin"]:
@@ -310,6 +312,20 @@ class Log(db.Entity):
         CONFIRM = 4
         OTHER = 5
 
+        @classmethod
+        def print_attributes(cls, searched_value, class_in_search=None , parent_name=""):
+            if class_in_search is None:
+                class_in_search = cls
+            for key, value in class_in_search.__dict__.items():
+                if value == searched_value:
+                    return parent_name + key
+                if inspect.isclass(value):
+                    ret = cls.print_attributes(class_in_search=value, searched_value=searched_value,
+                                               parent_name=parent_name + key + ".")
+                    if ret:
+                        return ret
+            return None
+
         class WEB_USER:
             first, last = 100, 199
             CONFIRM = first + 11
@@ -351,8 +367,13 @@ class Log(db.Entity):
             first, last = 900, 999
             CREATE = first + 1
 
-        class LOG_LEVEL:
+        class BANK_ACCOUNT:
             first, last = 1000, 1099
+            CREATE = first + 1
+            DELETE = first + 2
+
+        class LOG_LEVEL:
+            first, last = 10000, 10099
             INFO = first + 11
             WARNING = first + 12
             ERROR = first + 13

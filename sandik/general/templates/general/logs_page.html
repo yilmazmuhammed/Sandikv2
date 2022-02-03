@@ -1,0 +1,73 @@
+{% extends "utils/layout.html" %}
+{% import "utils/parts/macros.html" as macros%}
+
+{% block js_block %}
+  <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+  <script>
+    jQuery(function($){
+      $('#logs-table').footable({
+        "toggleColumn": "first",
+        "filtering": {
+          "enabled": true,
+        },
+        "paging": {
+          "enabled": true,
+          "size": 50,
+        },
+        "columns": [
+          { "name": "id", "title": "ID"},
+          { "name": "web_user_ref", "title": "Kullanıcı", },
+          { "name": "time", "title": "Oluşturulma zamanı", "classes": "text-center", },
+          { "name": "type", "title": "Tür", },
+          { "name": "special_type", "title": "Özel tür", "breakpoints": "xs sm",  },
+          { "name": "detail", "title": "Detay", "breakpoints": "xs sm md",  },
+          { "name": "exception_detail", "title": "Exception detay", "breakpoints": "xs sm md lg",  },
+          { "name": "logged_refs", "title": "İşaretlenen kayıtlar", "breakpoints": "xs sm md lg",  },
+          { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+        ],
+        "rows": [
+        {% for log in g.logs %}
+          {
+            "id": `{{ log.id }}`,
+            "web_user_ref": `<span title="E-posta: {{ log.web_user_ref.email_address }}">{{ log.web_user_ref.name_surname }}</span>`,
+            "time": `{{ log.time.strftime("%Y-%m-%d %H:%M:%S") }}`,
+            "type": `<span title='{{ log.type }}'>{{log.TYPE.print_attributes(log.type)}}</span>`,
+            "special_type": `{{ log.special_type }}`,
+            "detail": `{{ log.detail.split("(ERRCODE")[0] }}`,
+            "exception_detail": `{% if log.detail.find("(ERRCODE") >= 0 %}{{ ("ERRCODE"+log.detail.split("(ERRCODE")[1][:-1]).replace("ERRCODE:", "<strong>ERRCODE:</strong>").replace("FUNCTION:", "<br><strong>FUNCTION:</strong>").replace("EXCEPTION:", "<br><strong>EXCEPTION:</strong>") | safe }}{% endif %}`,
+            "logged_refs": `
+              {% for key, value in log.to_dict(related_objects=True, exclude=["id", 'web_user_ref', "time", "type", "special_type", "detail"]).items() %}
+                {% if value %}<span class="font-bold">{{ value }}</span> -> {{ value.title or value.name_surname or value.name }}<br>{% endif %}
+              {% endfor %}
+            `,
+            "actions": `
+              <tr>
+                <td>{{ macros.button(url="#", icon='fa fa-pencil', type='info', size='xs', title='Düzenle') }}</td>
+                <td style='padding:5px;'></td>
+                <td>{{ macros.button(url="#" , icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
+              </tr>
+            `,
+          },
+        {% endfor %}
+        ]
+      });
+
+    });
+  </script>
+{% endblock %}
+
+{% block content_block %}
+  <div class="bg-light lter b-b wrapper-md">
+    <h1 class="m-n font-thin h3">{{ page_info.title }}</h1>
+  </div>
+  <div class="wrapper-md">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        {{ page_info.title }}
+      </div>
+      <div class="table table-responsive">
+        <table class="table" id="logs-table"></table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

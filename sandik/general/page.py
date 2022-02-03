@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, flash, url_for, g
 from flask_login import current_user
+from pony.orm import desc
 
-from sandik.auth.requirement import login_required
+from sandik.auth.requirement import login_required, admin_required
 from sandik.general import forms, db, utils
 from sandik.general.exceptions import BankAccountException
 from sandik.general.requirement import notification_required
@@ -50,7 +51,7 @@ def bank_accounts_page():
 @login_required
 def delete_bank_account_page(bank_account_id):
     try:
-        utils.remove_bank_account(bank_account_id=bank_account_id)
+        utils.remove_bank_account(bank_account_id=bank_account_id, deleted_by=current_user)
     except BankAccountException as e:
         flash(str(e), "danger")
     return redirect(request.referrer or url_for("general_page_bp.bank_accounts_page"))
@@ -101,5 +102,11 @@ def read_notification_page(notification_id):
 @general_page_bp.route("/bildirimler")
 @login_required
 def notifications_page():
-    return render_template("general/notifications_page.html",
-                           page_info=LayoutPI(title="Bildirimler"))
+    return render_template("general/notifications_page.html", page_info=LayoutPI(title="Bildirimler"))
+
+
+@general_page_bp.route("/seyir-defteri")
+@admin_required
+def logs_page():
+    g.logs = db.select_logs().order_by(lambda l: desc(l.time))
+    return render_template("general/logs_page.html", page_info=LayoutPI(title="Bildirimler", active_dropdown="logs"))
