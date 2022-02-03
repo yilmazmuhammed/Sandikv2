@@ -46,3 +46,24 @@ class WebUserIsAlreadyMember(MembershipException):
 
 class ThereIsNoMember(Sandikv2UtilsException):
     pass
+
+
+class SandikAuthorityException(SandikException):
+    ERRCODE_THOUSAND = THOUSANDS.SandikAuthorityException
+
+    def __init__(self, msg="", errcode=1, create_log=False, **kwargs):
+        super().__init__(msg=msg, errcode=errcode, create_log=create_log,
+                         errcode_thousand=kwargs.pop("errcode_thousand", self.ERRCODE_THOUSAND),
+                         **kwargs)
+
+
+class WebUserIsAlreadyAuthorized(SandikAuthorityException):
+    pass
+
+
+class ThereIsNotSandikAuthority(SandikAuthorityException):
+    pass
+
+
+class ThereIsNotAuthorizedOfSandik(SandikAuthorityException):
+    pass

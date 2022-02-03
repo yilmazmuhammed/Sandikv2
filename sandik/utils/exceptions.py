@@ -14,6 +14,7 @@ class THOUSANDS:
     SandikException = 20
     TrustRelationshipException = 21
     MembershipException = 22
+    SandikAuthorityException = 23
     BankAccountException = 30
 
 
