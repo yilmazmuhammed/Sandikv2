@@ -1,5 +1,5 @@
-from wtforms import StringField, IntegerField, TextAreaField, SubmitField, SelectField, BooleanField
-from wtforms.validators import NumberRange, Optional
+from wtforms import StringField, IntegerField, TextAreaField, SubmitField, SelectField, BooleanField, EmailField
+from wtforms.validators import NumberRange, Optional, Email
 
 from sandik.sandik import db
 from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator
@@ -103,3 +103,40 @@ class SandikAuthorityForm(CustomFlaskForm):
 
     def __init__(self, form_title='Sandık yetkisi formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
+
+
+class AddAuthorizedForm(CustomFlaskForm):
+    member = SelectField(
+        label="Üye:",
+        validators=[
+            Optional(),
+        ],
+        choices=[("", "Üye seçiniz...")],
+        coerce=str,
+    )
+
+    email_address = EmailField(
+        "E-posta adresi:",
+        validators=[
+            Optional(),
+            max_length_validator("E-posta adresi", 40),
+            Email("Geçerli bir e-posta adresi giriniz")
+        ],
+        render_kw={"placeholder": "Email address"}
+    )
+
+    authority = SelectField(
+        label="Sandık yetkisi:",
+        validators=[
+            input_required_validator("Sandık yetkisi")
+        ],
+        choices=[("", "Sandık yetkisi seçiniz...")],
+        coerce=str,
+    )
+
+    submit = SubmitField(label="Gönder")
+
+    def __init__(self, sandik, form_title='Sandık yetkisi formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
+        self.member.choices += db.members_form_choices(sandik=sandik)
+        self.authority.choices += db.sandik_authorities_form_choices(sandik=sandik)

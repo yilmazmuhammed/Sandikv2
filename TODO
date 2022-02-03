@@ -5,12 +5,6 @@ TODO CRITICAL Her ay aidatlar oluşturulacak
 										=> Bu ikisi için şöyle bir yol izlenebilir. MoneyTransaction eklenirken, eklendikten sonraki
 										ödeme mekanizması ayrı bir fonksiyona taşınır ve bu çalıştırılırç
 
-TODO Sandık yetkileri
-			- Sandık yetkileri sayfası
-				- Sandık yetkisi ekleme
-			- Yetkililer sayfası
-				- Yetkili ekleme
-
 TODO Member'dan iban sütunu kaldırılacak
 
 2- Kuralların tamamının işler hale getirilmesi
