@@ -32,6 +32,7 @@ def confirm_web_user(web_user_id, updated_by) -> WebUser:
 
 
 def block_web_user(web_user_id, updated_by) -> WebUser:
+    # TODO Admin engellenemez
     web_user = get_web_user(id=web_user_id)
     web_user.set(is_active_=False)
     web_user.logs_set.add(Log(web_user_ref=updated_by, type=Log.TYPE.WEB_USER.BLOCK))
