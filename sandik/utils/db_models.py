@@ -265,17 +265,20 @@ class WebUser(db.Entity, UserMixin):
             lambda n: desc(n.creation_time)
         )
 
+    def get_sandik_authority(self, sandik):
+        return self.sandik_authority_types_set.filter(sandik_ref=sandik).get()
+
     def has_permission(self, sandik, permission):
         if permission not in ["write", "read", "admin"]:
             raise Exception("Yanlış izin yetkisi girildi")
-        authorities = self.sandik_authority_types_set.filter(sandik_ref=sandik)
-        for authority in authorities:
-            if permission == "admin" and authority.is_admin:
-                return True
-            if permission == "write" and (authority.can_write or authority.is_admin):
-                return True
-            if permission == "read" and (authority.can_read or authority.can_write or authority.is_admin):
-                return True
+
+        authority = self.get_sandik_authority(sandik=sandik)
+        if permission == "admin" and authority.is_admin:
+            return True
+        if permission == "write" and (authority.can_write or authority.is_admin):
+            return True
+        if permission == "read" and (authority.can_read or authority.can_write or authority.is_admin):
+            return True
         return False
 
     def get_primary_bank_account(self):
@@ -370,7 +373,14 @@ class Log(db.Entity):
         class BANK_ACCOUNT:
             first, last = 1000, 1099
             CREATE = first + 1
-            DELETE = first + 2
+            DELETE = first + 3
+
+        class SANDIK_AUTHORITY_TYPE:
+            first, last = 1100, 1199
+            CREATE = first + 1
+            DELETE = first + 3
+            ADD_AUTHORIZED = first + 11
+            REMOVE_AUTHORIZED = first + 13
 
         class LOG_LEVEL:
             first, last = 10000, 10099
