@@ -313,7 +313,7 @@ class Log(db.Entity):
         OTHER = 5
 
         @classmethod
-        def print_attributes(cls, searched_value, class_in_search=None , parent_name=""):
+        def print_attributes(cls, searched_value, class_in_search=None, parent_name=""):
             if class_in_search is None:
                 class_in_search = cls
             for key, value in class_in_search.__dict__.items():
