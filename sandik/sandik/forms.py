@@ -1,4 +1,4 @@
-from wtforms import StringField, IntegerField, TextAreaField, SubmitField, SelectField
+from wtforms import StringField, IntegerField, TextAreaField, SubmitField, SelectField, BooleanField
 from wtforms.validators import NumberRange, Optional
 
 from sandik.sandik import db
@@ -72,3 +72,34 @@ class SelectMemberForm(CustomFlaskForm):
     def __init__(self, sandik, form_title='Üye seç', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.member.choices += db.members_form_choices(sandik=sandik)
+
+
+class SandikAuthorityForm(CustomFlaskForm):
+    name = StringField(
+        "Yetki başlığı",
+        validators=[
+            input_required_validator("Yetki başlığı"),
+            max_length_validator("Yetki başlığı", 100),
+        ],
+        render_kw={"placeholder": "Yetki başlığı"}
+    )
+
+    is_primary = BooleanField(
+        label="Yönetici mi?",
+        default=False
+    )
+
+    can_read = BooleanField(
+        label="Okuma izni",
+        default=False
+    )
+
+    can_write = BooleanField(
+        label="Yazma izni",
+        default=False
+    )
+
+    submit = SubmitField(label="Gönder")
+
+    def __init__(self, form_title='Sandık yetkisi formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)

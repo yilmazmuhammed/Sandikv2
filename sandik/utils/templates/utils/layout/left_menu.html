@@ -189,7 +189,7 @@
                   </li>
                 </ul>
               </li>
-              <li id="authority-types-dropdown">
+              <li id="sandik-authorities-dropdown">
                 <a href="#" class="auto">
                   <span class="pull-right text-muted">
                     <i class="fa fa-fw fa-angle-right text"></i>
@@ -205,8 +205,8 @@
                     </a>
                   </li>
                   <li>
-                    <a href="#">
-                      <span>Üye yetkileri</span>
+                    <a href="{{ url_for('sandik_page_bp.sandik_authorities_page', sandik_id=g.sandik.id) }}">
+                      <span>Sandık yetkileri</span>
                     </a>
                   </li>
                   <li>

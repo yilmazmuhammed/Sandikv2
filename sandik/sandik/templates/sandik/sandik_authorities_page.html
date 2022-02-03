@@ -1,0 +1,81 @@
+{% extends "utils/layout.html" %}
+{% import "utils/parts/macros.html" as macros%}
+
+{% block css_block %}
+<style>
+  .i-switch i::before {
+    background-color: red;
+    border: 0px solid #f0f0f0;
+  }
+</style>
+{% endblock %}
+
+{% block js_block %}
+  <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+  <script>
+    jQuery(function($){
+      $('#sandik-authorities-table').footable({
+        "toggleColumn": "first",
+        "columns": [
+          { "name": "index", "title": "#"},
+          { "name": "name", "title": "Sandık yetkisi" },
+          { "name": "web_user_count", "title": "Kullanıcı sayısı", "classes":"text-center", },
+          { "name": "is_admin", "title": "Yönetici", "breakpoints": "xs sm", },
+          { "name": "can_read", "title": "Okuma", "breakpoints": "xs sm", },
+          { "name": "can_write", "title": "Yazma", "breakpoints": "xs sm",  },
+          { "name": "web_users_set", "title": "Kullanıcılar", "breakpoints": "xs sm md lg",  },
+          {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
+          { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+          {% endif %}
+        ],
+        "rows": [
+        {% for authority in g.authorities %}
+          {
+            "index": `<span title='ID: {{ authority.id }}'>{{ loop.index }}</span>`,
+            "name": `{{ authority.name }}`,
+            "web_user_count": `{{ authority.web_users_set.count() }}`,
+            "is_admin": `{{ macros.switch_button(is_checked=authority.is_admin, is_disabled=True) }}`,
+            "can_read": `{{ macros.switch_button(is_checked=authority.can_read, is_disabled=True) }}`,
+            "can_write": `{{ macros.switch_button(is_checked=authority.can_write, is_disabled=True) }}`,
+            "web_users_set": `
+            {% for wu in authority.web_users_set.order_by("lambda wu: wu.name_surname") %}
+              {{ wu.name_surname }} &lt;{{ wu.email_address }}&gt; <br>
+            {% endfor %}
+            `,
+            {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
+            "actions": `
+              <tr>
+                <td>{{ macros.button(url="#", icon='fa fa-pencil', type='info', size='xs', title='Düzenle') }}</td>
+                <td style='padding:5px;'></td>
+                <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
+              </tr>`,
+            {% endif %}
+          },
+        {% endfor %}
+        ]
+      });
+
+    });
+  </script>
+{% endblock %}
+
+{% block content_block %}
+  <div class="bg-light lter b-b wrapper-md">
+    <h1 class="m-n font-thin h3">{{ page_info.title }}</h1>
+  </div>
+  <div class="wrapper-md">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        {{ page_info.title }}
+        <span class="pull-right">
+          <a href="{{ url_for('sandik_page_bp.create_sandik_authority_page', sandik_id=g.sandik.id) }}" class="btn btn-xs btn-primary">
+            <i class="fa fa-plus"></i>
+          </a>
+        </span>
+      </div>
+      <div class="table table-responsive">
+        <table class="table" id="sandik-authorities-table"></table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -11,7 +11,14 @@ def save():
     flush()
 
 
-def create_sandik_authority_type(created_by, **kwargs) -> SandikAuthorityType:
+"""
+########################################################################################################################
+###########################################  Sandık yetkileri fonksiyonları  ###########################################
+########################################################################################################################
+"""
+
+
+def create_sandik_authority(created_by, **kwargs) -> SandikAuthorityType:
     log = Log(web_user_ref=created_by, type=Log.TYPE.CREATE)
     return SandikAuthorityType(logs_set=log, **kwargs)
 
@@ -19,8 +26,8 @@ def create_sandik_authority_type(created_by, **kwargs) -> SandikAuthorityType:
 def create_sandik(created_by, **kwargs) -> Sandik:
     log = Log(web_user_ref=created_by, type=Log.TYPE.CREATE)
     sandik = Sandik(logs_set=log, **kwargs)
-    create_sandik_authority_type(created_by=created_by, is_admin=True, name="Yönetici", sandik_ref=sandik,
-                                 web_users_set=created_by)
+    create_sandik_authority(created_by=created_by, is_admin=True, name="Yönetici", sandik_ref=sandik,
+                            web_users_set=created_by)
     return sandik
 
 
@@ -31,6 +38,13 @@ def get_sandik(**kwargs) -> Sandik:
 def sandiks_form_choices():
     choices = [(s.id, s.name) for s in Sandik.select()]
     return choices
+
+
+"""
+########################################################################################################################
+############################################  Sandık üyeliği fonksiyonları  ############################################
+########################################################################################################################
+"""
 
 
 def apply_for_membership(sandik, applied_by):
@@ -84,6 +98,13 @@ def members_form_choices(sandik):
     return choices
 
 
+"""
+########################################################################################################################
+##############################################  Güven bağı fonksiyonları  ##############################################
+########################################################################################################################
+"""
+
+
 def get_trust_relationship_between_two_member(member1, member2) -> TrustRelationship:
     return TrustRelationship.get(lambda tr:
                                  tr.status in [TrustRelationship.STATUS.WAITING, TrustRelationship.STATUS.ACCEPTED]
@@ -120,3 +141,8 @@ def get_trust_relationship(**kwargs) -> TrustRelationship:
     return TrustRelationship.get(**kwargs)
 
 
+"""
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+"""
