@@ -275,6 +275,8 @@ class WebUser(db.Entity, UserMixin):
             raise Exception("Yanlış izin yetkisi girildi")
 
         authority = self.get_sandik_authority(sandik=sandik)
+        if not authority:
+            return False
         if permission == "admin" and authority.is_admin:
             return True
         if permission == "write" and (authority.can_write or authority.is_admin):
