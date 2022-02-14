@@ -189,7 +189,7 @@
                   </li>
                 </ul>
               </li>
-              <li id="authority-types-dropdown">
+              <li id="sandik-authorities-dropdown">
                 <a href="#" class="auto">
                   <span class="pull-right text-muted">
                     <i class="fa fa-fw fa-angle-right text"></i>
@@ -205,12 +205,12 @@
                     </a>
                   </li>
                   <li>
-                    <a href="#">
-                      <span>Üye yetkileri</span>
+                    <a href="{{ url_for('sandik_page_bp.sandik_authorities_page', sandik_id=g.sandik.id) }}">
+                      <span>Sandık yetkileri</span>
                     </a>
                   </li>
                   <li>
-                    <a href="#">
+                    <a href="{{ url_for('sandik_page_bp.authorized_web_users_of_sandik_page', sandik_id=g.sandik.id) }}">
                       <span>Yetkili üyeler</span>
                     </a>
                   </li>
@@ -253,7 +253,7 @@
               <li id="logs-dropdown">
                 <a href="{{ url_for('general_page_bp.logs_page') }}">
                   <i class="glyphicon glyphicon-envelope icon text-info-lter"></i>
-                  <span class="font-bold">Seyir defteri</span>
+                  <span>Seyir defteri</span>
                 </a>
               </li>
               {% endif %}

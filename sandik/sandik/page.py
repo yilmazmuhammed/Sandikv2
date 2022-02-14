@@ -2,10 +2,11 @@ from flask import Blueprint, request, url_for, render_template, flash, g, abort
 from flask_login import current_user
 from werkzeug.utils import redirect
 
+from sandik.auth import db as auth_db
 from sandik.auth.requirement import login_required, web_user_required
 from sandik.sandik import forms, db, utils
 from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelationshipCreationException, \
-    MembershipApplicationAlreadyExist, WebUserIsAlreadyMember
+    MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, SandikAuthorityException
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, member_required, \
     trust_relationship_required
 from sandik.transaction import db as transaction_db, utils as transaction_utils
@@ -16,6 +17,12 @@ sandik_page_bp = Blueprint(
     'sandik_page_bp', __name__,
     template_folder='templates', static_folder='static', static_url_path='assets'
 )
+
+"""
+########################################################################################################################
+###############################################  Temel sandık sayfaları  ###############################################
+########################################################################################################################
+"""
 
 
 @sandik_page_bp.route("/olustur", methods=["GET", "POST"])
@@ -73,6 +80,13 @@ def sandik_index_page(sandik_id):
         return redirect(url_for("sandik_page_bp.sandik_detail_page", sandik_id=sandik_id))
 
 
+"""
+########################################################################################################################
+################################################  Güven bağı sayfaları  ################################################
+########################################################################################################################
+"""
+
+
 @sandik_page_bp.route("/<int:sandik_id>/güven-halkam", methods=["GET", "POST"])
 @member_required
 def trust_links_page(sandik_id):
@@ -108,6 +122,7 @@ def request_trust_link_page(sandik_id):
 @login_required
 @trust_relationship_required
 def accept_trust_relationship_request_page(trust_relationship_id):
+  
     if g.trust_relationship.receiver_member_ref.web_user_ref != current_user:
         abort(403)
 
@@ -124,6 +139,13 @@ def reject_trust_relationship_request_page(trust_relationship_id):
 
     db.reject_trust_relationship_request(trust_relationship=g.trust_relationship, rejected_by=current_user)
     return redirect(request.referrer)
+
+
+"""
+########################################################################################################################
+##############################################  Sandık üyeliği sayfaları  ##############################################
+########################################################################################################################
+"""
 
 
 @sandik_page_bp.route("/uyelik-basvurusu", methods=["GET", "POST"])
@@ -183,3 +205,107 @@ def members_of_sandik_page(sandik_id):
 def membership_applications_to_sandik_page(sandik_id):
     return render_template("sandik/membership_applications_to_sandik_page.html",
                            page_info=LayoutPI(title="Üyelik başvuruları", active_dropdown="members"))
+
+
+"""
+########################################################################################################################
+#############################################  Sandık yetkileri sayfaları  #############################################
+########################################################################################################################
+"""
+
+
+@sandik_page_bp.route("/<int:sandik_id>/sandik-yetkileri")
+@sandik_authorization_required(permission="read")
+def sandik_authorities_page(sandik_id):
+    g.authorities = g.sandik.sandik_authority_types_set.order_by(lambda sat: sat.name)
+    return render_template("sandik/sandik_authorities_page.html",
+                           page_info=LayoutPI(title="Sandık yetkileri", active_dropdown="sandik-authorities"))
+
+
+@sandik_page_bp.route("/<int:sandik_id>/sandik-yetkisi-ekle", methods=["GET", "POST"])
+@sandik_authorization_required(permission="admin")
+def create_sandik_authority_page(sandik_id):
+    form = forms.SandikAuthorityForm()
+
+    if form.validate_on_submit():
+        form_data = flask_form_to_dict(request_form=request.form, boolean_fields=["is_admin", "can_read", "can_write"])
+        db.create_sandik_authority(created_by=current_user, sandik_ref=g.sandik, **form_data)
+        return redirect(url_for("sandik_page_bp.sandik_authorities_page", sandik_id=sandik_id))
+
+    return render_template(
+        "utils/form_layout.html",
+        page_info=FormPI(title="Sandık yetkisi oluştur", form=form, active_dropdown='sandik-authorities')
+    )
+
+
+@sandik_page_bp.route("/<int:sandik_id>/sandik-yetkileri/<int:sandik_authority_id>/sil", methods=["GET", "POST"])
+@sandik_authorization_required(permission="admin")
+def delete_sandik_authority_page(sandik_id, sandik_authority_id):
+    authority = db.get_sandik_authority(id=sandik_authority_id, sandik_ref=g.sandik)
+    if not authority:
+        abort(404)
+        
+    db.delete_sandik_authority(sandik_authority=authority, deleted_by=current_user)
+    return redirect(request.referrer)
+
+
+@sandik_page_bp.route("/<int:sandik_id>/yetkili-kullanicilar")
+@sandik_authorization_required(permission="read")
+def authorized_web_users_of_sandik_page(sandik_id):
+    g.authorized_web_users = db.select_authorized_web_users_of_sandik(sandik=g.sandik)
+    return render_template("sandik/authorized_web_users_of_sandik_page.html",
+                           page_info=LayoutPI(title="Sandık yetkileri", active_dropdown="sandik-authorities"))
+
+
+@sandik_page_bp.route("/<int:sandik_id>/yetkili-ekle", methods=["GET", "POST"])
+@sandik_authorization_required(permission="admin")
+def add_authorized_to_sandik_page(sandik_id):
+    form = forms.AddAuthorizedForm(sandik=g.sandik)
+
+    if form.validate_on_submit():
+        try:
+            if form.email_address.data and form.member.data:
+                raise SandikAuthorityException("Lütfen e-posta adresi ve sandık üyesinden birini doldurunuz.")
+            elif form.email_address.data:
+                web_user = auth_db.get_web_user(email_address=form.email_address.data)
+                if not web_user:
+                    raise SandikAuthorityException("Bu e-posta adresine tanımlı kullanıcı bulunamadı.")
+            elif form.member.data:
+                member = db.get_member(id=form.member.data)
+                if not member:
+                    raise SandikAuthorityException("Üye yanlış seçildi.", create_log=True)
+                web_user = member.web_user_ref
+            else:
+                raise SandikAuthorityException("Lütfen e-posta adresi ve sandık üyesinden birini doldurunuz.")
+
+            authority = db.get_sandik_authority(id=form.authority.data)
+
+            db.add_authorized_to_sandik(connected_by=current_user, web_user=web_user, sandik_authority=authority)
+
+            return redirect(url_for("sandik_page_bp.authorized_web_users_of_sandik_page", sandik_id=sandik_id))
+        except SandikAuthorityException as e:
+            flash(str(e), "danger")
+
+    return render_template(
+        "utils/form_layout.html",
+        page_info=FormPI(title="Sandığa yetkili ekle", form=form, active_dropdown='sandik-authorities')
+    )
+
+
+@sandik_page_bp.route("/<int:sandik_id>/sandik-yetkilileri/<int:web_user_id>/kaldir", methods=["GET", "POST"])
+@sandik_authorization_required(permission="admin")
+@web_user_required
+def remove_authorized_from_sandik_page(sandik_id, web_user_id):
+    authority = g.web_user.get_sandik_authority(sandik=g.sandik)
+    if not authority:
+        abort(404)
+
+    db.delete_authorized_from_sandik(sandik_authority=authority, web_user=g.web_user, removed_by=current_user)
+    return redirect(request.referrer)
+
+
+"""
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+"""

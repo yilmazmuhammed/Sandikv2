@@ -22,6 +22,7 @@ class RegisterForm(CustomFlaskForm):
         ],
         render_kw={"placeholder": "Soyisim"}
     )
+
     email_address = EmailField(
         "E-posta adresi:",
         validators=[
