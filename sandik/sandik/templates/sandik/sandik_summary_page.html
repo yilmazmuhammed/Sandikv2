@@ -47,6 +47,78 @@
         ]
       });
 
+      $('#my-upcoming-payments-table').footable({
+        "toggleColumn": "first",
+        "paging": {
+          "enabled": true,
+          "size": 10
+        },
+        "columns": [
+          { "name": "id", "title": "#", "breakpoints": "xs sm"},
+          { "name": "term", "title": "Tarih" },
+          { "name": "transaction_type", "title": "Tür", "breakpoints": "xs", },
+          { "name": "amount", "title": "Ödenmemiş", },
+          { "name": "is_fully_paid", "title": "Durum", "breakpoints": "xs sm md", },
+          { "name": "detail", "title": "Detay", "breakpoints": "xs sm md", },
+        ],
+        "rows": [
+        {% for p in g.my_upcoming_payments %}
+          {% if isinstance(p, Contribution) %}
+            {% set id_prefix='c' %}
+            {% set transaction_type='Aidat' %}
+            {% set detail='' %}
+          {% elif isinstance(p, Installment) %}
+            {% set id_prefix='i' %}
+            {% set transaction_type='Taksit' %}
+            {% set detail='Borç: #'+p.debt_ref.id|string %}
+          {% else %}
+            {% set id_prefix='UNKNOWN' %}
+            {% set transaction_type='UNKNOWN' %}
+            {% set detail='' %}
+          {% endif %}
+          {
+            "id": `<span title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.revindex }}</span>`,
+            "term": "{{ p.term }}",
+            "transaction_type": `{{ transaction_type }}`,
+            "amount": `<span title="Toplam miktar:\t{{ p.amount }} \nKalan miktar:\t{{ p.get_unpaid_amount() }}">{{ p.get_unpaid_amount() }} ₺</span>`,
+            "is_fully_paid": `{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
+            "detail": "{{ detail }}",
+          },
+        {% endfor %}
+        ]
+      });
+    });
+
+    $('#my-latest-money-transactions-table').footable({
+      "toggleColumn": "first",
+      "paging": {
+        "enabled": true,
+        "size": 10
+      },
+      "columns": [
+          { "name": "id", "title": "#"},
+          { "name": "date", "title": "Tarih" },
+          { "name": "amount", "title": "Miktar", },
+          { "name": "type", "title": "İşlem türü", },
+          { "name": "detail", "title": "Detay", },
+          { "name": "is_fully_distributed", "title": "Hepsi işleme sokulmuş mu?", "breakpoints": "xs sm md lg", },
+          { "name": "creation_type", "title": "Oluşturulma türü", "breakpoints": "xs sm md lg", },
+          { "name": "bank_transaction", "title": "Banka işlemi", "breakpoints": "xs sm md lg", },
+      ],
+      "rows": [
+        {% for mt in g.my_latest_money_transactions %}
+          {
+            "id": "<span title='ID: {{ mt.id }}'>{{ loop.revindex }}</span>",
+            "date": "{{ mt.date.strftime("%Y-%m-%d") }}",
+            "amount": "{{ mt.amount }} ₺",
+            "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}"Para girişi"{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}"Para çıkışı"{% else %}"---"{% endif %},
+            "detail": "{{ mt.detail }}",
+            "is_fully_distributed": "{{ "Evet" if mt.is_fully_distributed else "Hayır" }}",
+            "creation_type": {% if mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}"Manuel"{% elif mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}"Otomatik"{% else %}"---"{% endif %},
+            "bank_transaction": "{{ "Var" if mt.bank_transaction_ref else "Yok" }}",
+          },
+        {% endfor %}
+      ]
     });
   </script>
 {% endblock %}
@@ -66,7 +138,6 @@
               {{ macros.button("#", "glyphicon glyphicon-plus") }}
             </span>
           </div>
-          <div class="panel-body"><span>Geçmiş ödemeler ve ayın son x günü bu ayki ödemeler için popup yap</span></div>
           <div>
             <table id="my-upcoming-payments-table" class="table"></table>
           </div>
@@ -82,7 +153,7 @@
               {{ macros.button("#", "glyphicon glyphicon-plus") }}
             </span>
           </div>
-            <table id="my-latest-transactions-table" class="table"></table>
+            <table id="my-latest-money-transactions-table" class="table"></table>
           </div>
         </div>
 
@@ -122,6 +193,22 @@
               <tr class="row">
                 <th>Mil sonu:</th>
                 <td title="Mil sonu ödemeleri: {{ g.sum_of_payments }}" class="font-bold {% if g.sum_of_payments > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.member.total_of_undistributed_amount() - g.sum_of_payments}} ₺</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            <span>Alabileceğim borç miktarı</span>
+          </div>
+          <div>
+            <table class="table">
+              <tbody>
+              <tr class="row text-center">
+                <th>Alabileceğim miktar:</th>
+                <td class="font-bold text-primary">{{ g.member.max_amount_can_borrow(use_untreated_amount=False) }} ₺</td>
               </tr>
               </tbody>
             </table>
@@ -219,10 +306,10 @@
                 <th>Toplanan taksit:</th>
                 <td>{{ g.member.get_paid_amount_of_loaned() }} ₺</td>
               </tr>
-              <tr class="row">
-                <th>Şu an ki bakiye:</th>
-                <td>{{ g.member.get_balance() }} ₺</td>
-              </tr>
+              {# <tr class="row"> #}
+              {#   <th>Şu an ki bakiye:</th> #}
+              {#   <td>{{ g.member.get_balance() }} ₺</td> #}
+              {# </tr> #}
               </tbody>
             </table>
           </div>

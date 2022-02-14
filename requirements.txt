@@ -1,8 +1,8 @@
 gunicorn
 Flask==2.0.2
 Flask-WTF==1.0.0
-WTForms==3.0.1
-pony~=0.7.14
+WTForms==3.0.0
+pony==0.7.14
 Werkzeug==2.0.2
 psycopg2
 phonenumbers~=8.12.17

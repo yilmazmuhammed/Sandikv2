@@ -1,7 +1,10 @@
+from pony.orm import desc  # ponyorm order_by icin lambda string'inde kullaniliyor
+
 from sandik.transaction import db
 from sandik.utils import period as period_utils
 from sandik.utils.db_models import Share, Member, MoneyTransaction, Contribution, Installment, Sandik, Debt
 from sandik.utils.exceptions import InvalidWhoseType
+from sandik.utils.period import NotValidPeriod
 
 
 def sum_of_unpaid_and_due_payments(whose):
@@ -19,25 +22,6 @@ def sum_of_future_and_unpaid_payments(whose):
     if not isinstance(whose, Share) and not isinstance(whose, Member):
         raise Exception("'whose' sadece 'Member' yada 'Share' olabilir.")
     return db.sum_of_future_and_unpaid_installments(whose=whose)
-
-
-def get_unpaid_and_due_payments(whose):
-    contributions = db.get_unpaid_and_due_contributions(whose=whose)[:][:]
-    installments = db.get_unpaid_and_due_installments(whose=whose)[:][:]
-    payments = []
-    while len(contributions) > 0 and len(installments) > 0:
-        if contributions[0].term <= installments[0].term:
-            payments.append(contributions.pop(0))
-        else:
-            payments.append(installments.pop(0))
-    payments += contributions
-    payments += installments
-    return payments
-
-
-def get_future_and_unpaid_payments(whose):
-    installments = db.get_future_and_unpaid_installments(whose=whose)[:]
-    return installments
 
 
 def pay_contribution(contribution, amount, money_transaction, created_by):
@@ -85,9 +69,9 @@ def borrow_from_untreated_amount(untreated_money_transaction, amount, money_tran
 def add_revenue_transactions(money_transaction, pay_future_payments, created_by):
     member = money_transaction.member_ref
     remaining_amount = money_transaction.amount
-    payments = get_unpaid_and_due_payments(whose=member)
+    payments = get_payments(whose=member, is_fully_paid=False, is_due=True)
     if pay_future_payments:
-        payments += get_future_and_unpaid_payments(whose=member)
+        payments += get_payments(whose=member, is_fully_paid=False, is_due=False)
 
     for p in payments:
         amount = p.get_unpaid_amount() if remaining_amount >= p.get_unpaid_amount() else remaining_amount
@@ -158,25 +142,6 @@ def add_money_transaction(member, created_by, use_untreated_amount, pay_future_p
     return money_transaction
 
 
-# def due_all_contributions_periods(whose):
-#     if isinstance(whose, Share):
-#         return get_periods_between_two_period(date_to_period(whose.date_of_opening), current_period())
-#     elif isinstance(whose, Member):
-#         ret = []
-#         for share in whose.shares_set:
-#             ret += [(share.id, period) for period in due_all_contributions_periods(share)]
-#         return ret
-#     else:
-#         raise Exception("'whose' sadece 'Member' yada 'Share' olabilir.")
-#
-#
-# def total_amount_of_due_unpaid_contributions(whose):
-#     half_paid_contribution = db.get_due_contribution(whose=whose)
-#     paid_contributions = db.get_paid_contributions(whose=whose)
-#     old_contribution_periods = due_all_contributions_periods(whose=whose)
-#     for c in paid_contributions:
-#         old_contribution_periods.remove((c.share_ref.id, c.period))
-#     return
 def create_due_contributions_for_the_share(share, created_by, created_from=""):
     print(f"START: Creating contributions for '{share}'...")
     first_period = period_utils.date_to_period(share.date_of_opening)
@@ -255,28 +220,44 @@ def get_transactions(whose):
     return ret
 
 
-def get_payments(whose):
-    # TODO ödenmiş-ödenmemiş ve vadesi gelmiş-gelmemiş durumları için yapı oluştur ve
-    #  get_unpaid_and_due_payments, get_future_and_unpaid_payments fonksiyonlarını kaldır
+def get_payments(whose, is_fully_paid: bool = None, is_due: bool = None, periods: list = None):
+    filter_str = "lambda p: p"
+    order_str = "lambda p: (p.term, p.member_ref.web_user_ref.name_surname, p.id)"
     if isinstance(whose, Sandik):
-        whose_filter_ref = "sandik_ref"
+        filter_str += f" and p.sandik_ref == {whose}"
     elif isinstance(whose, Member):
-        whose_filter_ref = "member_ref"
+        filter_str += f" and p.member_ref == {whose}"
     elif isinstance(whose, Share):
-        whose_filter_ref = "share_ref"
+        filter_str += f" and p.share_ref == {whose}"
     else:
         raise InvalidWhoseType("whose 'Sandik', 'Member' veya 'Share' olmalıdır", errcode=2, create_log=True)
-    print("get_transactions -> whose_filter_ref:", whose_filter_ref, "whose:", whose)
 
-    contributions = db.select_contributions(f"lambda c: c.{whose_filter_ref} == {whose}").order_by(
-        lambda c: (c.term, c.member_ref.web_user_ref.name_surname, c.id)
-    )[:][:]
-    installment = db.select_installments(f"lambda i: i.{whose_filter_ref} == {whose}").order_by(
-        lambda i: (i.term, i.member_ref.web_user_ref.name_surname, i.id)
-    )[:][:]
+    if periods is None:
+        pass
+    elif not isinstance(periods, list):
+        raise InvalidWhoseType("periods liste olmalıdır")
+    else:
+        for period in periods:
+            if not period_utils.is_valid_period(period=period):
+                raise NotValidPeriod(f"'{period}' geçerli bir periyod değil'")
+        filter_str += f" and p.term in {periods} "
 
-    transactions = contributions + installment
-    sorted_transactions = sorted(transactions, key=lambda t: t.term, reverse=True)
+    if is_due is True:
+        filter_str += f" and p.term <= '{period_utils.current_period()}' "
+    elif is_due is False:
+        filter_str += f" and p.term > '{period_utils.current_period()}' "
+
+    if is_fully_paid in [True, False]:
+        filter_str += f"and p.is_fully_paid == {is_fully_paid}"
+
+    print("get_payments -> filter_str:", filter_str)
+    print("get_payments -> order_str:", order_str)
+
+    contributions = db.select_contributions(filter_str).order_by(order_str)
+    installment = db.select_installments(filter_str).order_by(order_str)
+
+    transactions = contributions[:][:] + installment[:][:]
+    sorted_transactions = sorted(transactions, key=lambda t: t.term)
 
     return sorted_transactions
 
@@ -300,3 +281,28 @@ def get_debts(whose, only_unpaid=False):
     )
 
     return debts
+
+
+def get_latest_money_transactions(whose, periods_count: int = 0):
+    filter_str = "lambda mt: mt"
+    order_str = "lambda mt: desc(mt.date)"
+
+    if isinstance(whose, Sandik):
+        filter_str += f" and mt.sandik_ref == {whose}"
+    elif isinstance(whose, Member):
+        filter_str += f" and mt.member_ref == {whose}"
+    else:
+        raise InvalidWhoseType("whose 'Sandik' veya 'Member' olmalıdır", errcode=2, create_log=True)
+
+    # if periods_count > 0:
+    #     filter_str += f" and mt.date >= {period_utils.period_to_date(period_utils.previous_period(prev_count=periods_count))}"
+
+    money_transactions = db.select_money_transactions(filter_str)
+
+    if periods_count > 0:
+        money_transactions = money_transactions.filter(lambda mt: mt.date >= period_utils.period_to_date(
+            period_utils.previous_period(prev_count=periods_count - 1)))
+
+    money_transactions = money_transactions.order_by(order_str)
+
+    return money_transactions
