@@ -81,12 +81,13 @@ class Share(db.Entity):
 
     def max_amount_can_borrow(self, use_untreated_amount=False):
         amount = self.member_ref.total_balance_from_accepted_trust_links()
-        if use_untreated_amount:
-            amount += self.member_ref.total_of_undistributed_amount()
 
         from sandik.utils import sandik_preferences
         remaining_debt_amount = sandik_preferences.remaining_debt_balance(sandik=self.member_ref.sandik_ref, whose=self)
         amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
+
+        if use_untreated_amount:
+            amount += self.member_ref.total_of_undistributed_amount()
 
         return amount
 
@@ -191,12 +192,13 @@ class Member(db.Entity):
 
     def max_amount_can_borrow(self, use_untreated_amount):
         amount = self.total_balance_from_accepted_trust_links()
-        if use_untreated_amount:
-            amount += self.total_of_undistributed_amount()
 
         from sandik.utils import sandik_preferences
         remaining_debt_amount = sandik_preferences.remaining_debt_balance(sandik=self.sandik_ref, whose=self)
         amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
+
+        if use_untreated_amount:
+            amount += self.total_of_undistributed_amount()
 
         return amount
 

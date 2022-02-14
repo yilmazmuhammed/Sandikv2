@@ -103,7 +103,7 @@ def transactions_of_member_page(sandik_id):
 @sandik_authorization_required("read")
 def payments_of_sandik_page(sandik_id):
     g.payments = utils.get_payments(whose=g.sandik)
-    g.due_and_unpaid_payments = utils.get_unpaid_and_due_payments(whose=g.sandik)
+    g.due_and_unpaid_payments = utils.get_payments(whose=g.sandik, is_fully_paid=False, is_due=True)
     return render_template("transaction/payments_page.html",
                            page_info=LayoutPI(title="Sandıktaki ödemeler", active_dropdown="transactions"))
 
@@ -112,7 +112,7 @@ def payments_of_sandik_page(sandik_id):
 @member_required
 def payments_of_member_page(sandik_id):
     g.payments = utils.get_payments(whose=g.member)
-    g.due_and_unpaid_payments = utils.get_unpaid_and_due_payments(whose=g.member)
+    g.due_and_unpaid_payments = utils.get_payments(whose=g.member, is_fully_paid=False, is_due=True)
     return render_template("transaction/payments_page.html",
                            page_info=LayoutPI(title="Ödemelerim", active_dropdown="member-transactions"))
 

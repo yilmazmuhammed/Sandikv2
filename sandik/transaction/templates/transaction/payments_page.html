@@ -24,6 +24,7 @@ jQuery(function($){
 			{ "name": "name_surname", "title": "İsim Soyisim" },
 			{ "name": "transaction_type", "title": "İşlem türü", "breakpoints": "xs", },
 			{ "name": "amount", "title": "Miktar", },
+			{ "name": "remaining_amount", "title": "Ödenmemiş miktar", },
 			{ "name": "is_fully_paid", "title": "Ödenme durumu", "breakpoints": "xs sm md", },
 			{ "name": "detail", "title": "Detay", "breakpoints": "xs sm md", },
 			{ "name": "sub_receipts", "title": "", "breakpoints": "xs sm md lg", },
@@ -50,6 +51,7 @@ jQuery(function($){
         "name_surname": "{{ p.member_ref.web_user_ref.name_surname }}",
         "transaction_type": `{{ transaction_type }}`,
         "amount": "{{ p.amount }} ₺",
+        "remaining_amount": `<span class="{% if p.is_fully_paid %}text-success{% else %}text-danger{% endif %}">{{ p.get_unpaid_amount() }} ₺</span>`,
         "is_fully_paid": `{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
         "sub_receipts": `
           {% if p.sub_receipts_set.count() == 0 %}
@@ -96,7 +98,7 @@ jQuery(function($){
       },
     {% endfor %}
     ]
-	});
+  });
 
   $('#due-and-unpaid-payments-table').footable({
     "toggleColumn": "first",
@@ -118,6 +120,7 @@ jQuery(function($){
 			{ "name": "name_surname", "title": "İsim Soyisim" },
 			{ "name": "transaction_type", "title": "İşlem türü", "breakpoints": "xs", },
 			{ "name": "amount", "title": "Miktar", },
+			{ "name": "remaining_amount", "title": "Ödenmemiş miktar", },
 			{ "name": "is_fully_paid", "title": "Ödenme durumu", "breakpoints": "xs sm md", },
 			{ "name": "detail", "title": "Detay", "breakpoints": "xs sm md", },
 			{ "name": "sub_receipts", "title": "", "breakpoints": "xs sm md lg", },
@@ -144,6 +147,7 @@ jQuery(function($){
         "name_surname": "{{ p.member_ref.web_user_ref.name_surname }}",
         "transaction_type": `{{ transaction_type }}`,
         "amount": "{{ p.amount }} ₺",
+        "remaining_amount": `<span class="{% if p.is_fully_paid %}text-success{% else %}text-danger{% endif %}">{{ p.get_unpaid_amount() }} ₺</span>`,
         "is_fully_paid": `{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
         "sub_receipts": `
           {% if p.sub_receipts_set.count() == 0 %}

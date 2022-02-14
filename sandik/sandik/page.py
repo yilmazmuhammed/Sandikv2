@@ -9,7 +9,7 @@ from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelatio
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, member_required, \
     trust_relationship_required
 from sandik.transaction import db as transaction_db, utils as transaction_utils
-from sandik.utils import LayoutPI, get_next_url
+from sandik.utils import LayoutPI, get_next_url, period as period_utils
 from sandik.utils.forms import flask_form_to_dict, FormPI
 
 sandik_page_bp = Blueprint(
@@ -53,6 +53,11 @@ def sandik_summary_page(sandik_id):
         "total_balance": transaction_db.total_balance_of_trusted_links(member=g.member),
         "total_paid_installments": transaction_db.total_paid_installments_of_trusted_links(member=g.member)
     }
+    g.my_upcoming_payments = transaction_utils.get_payments(
+        whose=g.member,
+        is_fully_paid=False,
+        periods=[period_utils.current_period(),
+                 period_utils.get_last_period(start_period=period_utils.current_period(), period_count=2)])
     return render_template("sandik/sandik_summary_page.html",
                            page_info=LayoutPI(title=g.sandik.name, active_dropdown="sandik"))
 
