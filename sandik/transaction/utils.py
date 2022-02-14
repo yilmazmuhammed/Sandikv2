@@ -285,7 +285,7 @@ def get_debts(whose, only_unpaid=False):
 
 def get_latest_money_transactions(whose, periods_count: int = 0):
     filter_str = "lambda mt: mt"
-    order_str = "lambda mt: desc(mt.date)"
+    order_str = "lambda mt: (desc(mt.date), desc(mt.id))"
 
     if isinstance(whose, Sandik):
         filter_str += f" and mt.sandik_ref == {whose}"
