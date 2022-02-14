@@ -14,8 +14,16 @@ def date_to_period(period_date):
     return period_date.strftime(period_format_string)
 
 
+def previous_period(prev_count=1):
+    return get_period_by_difference(start_period=current_period(), diff_count=-prev_count)
+
+
 def current_period():
     return date_to_period(date.today())
+
+
+def next_period(next_count=1):
+    return get_period_by_difference(start_period=current_period(), diff_count=next_count)
 
 
 def is_valid_period(period):
@@ -47,7 +55,11 @@ def get_periods_between_two_period(first_period: str, last_period: str):
     return periods
 
 
-def get_last_period(start_period, period_count):
+def get_period_by_difference(start_period, diff_count):
     start_date = period_to_date(start_period)
-    finish_date = start_date + relativedelta(months=period_count - 1)
+    finish_date = start_date + relativedelta(months=diff_count)
     return date_to_period(finish_date)
+
+
+def get_last_installment_period(start_period, period_count):
+    return get_period_by_difference(start_period=start_period, diff_count=period_count - 1)

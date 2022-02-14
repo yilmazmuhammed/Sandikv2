@@ -54,10 +54,10 @@ def sandik_summary_page(sandik_id):
         "total_paid_installments": transaction_db.total_paid_installments_of_trusted_links(member=g.member)
     }
     g.my_upcoming_payments = transaction_utils.get_payments(
-        whose=g.member,
-        is_fully_paid=False,
-        periods=[period_utils.current_period(),
-                 period_utils.get_last_period(start_period=period_utils.current_period(), period_count=2)])
+        whose=g.member, is_fully_paid=False, periods=[period_utils.current_period(), period_utils.next_period()]
+    )
+    g.my_latest_money_transactions = transaction_utils.get_latest_money_transactions(whose=g.member, periods_count=2)
+
     return render_template("sandik/sandik_summary_page.html",
                            page_info=LayoutPI(title=g.sandik.name, active_dropdown="sandik"))
 
@@ -108,9 +108,6 @@ def request_trust_link_page(sandik_id):
 @login_required
 @trust_relationship_required
 def accept_trust_relationship_request_page(trust_relationship_id):
-    print(current_user)
-    print([g.trust_relationship.receiver_member_ref.web_user_ref,
-                            g.trust_relationship.requester_member_ref.web_user_ref])
     if g.trust_relationship.receiver_member_ref.web_user_ref != current_user:
         abort(403)
 

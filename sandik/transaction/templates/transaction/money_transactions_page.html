@@ -4,7 +4,7 @@
 <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
 <script>
 jQuery(function($){
-	$('#money-transactions-table').footable({
+  $('#money-transactions-table').footable({
     "toggleColumn": "first",
     "paging": {
       "enabled": true,
@@ -18,20 +18,20 @@ jQuery(function($){
     "sorting": {
       "enabled": true
     },
-		"columns": [
-			{ "name": "id", "title": "#"},
-			{ "name": "date", "title": "Tarih" },
-			{ "name": "amount", "title": "Miktar", },
-			{ "name": "name_surname", "title": "İsim Soyisim" },
-			{ "name": "type", "title": "İşlem türü", },
-			{ "name": "detail", "title": "Detay", },
-			{ "name": "is_fully_distributed", "title": "Hepsi işleme sokulmuş mu?", "breakpoints": "xs sm md lg", },
-			{ "name": "creation_type", "title": "Oluşturulma türü", "breakpoints": "xs sm md lg", },
-			{ "name": "bank_transaction", "title": "Banka işlemi", "breakpoints": "xs sm md lg", },
-			{ "name": "sub_receipts", "title": "", "breakpoints": "xs sm md lg", },
-			{# { "name": "action", "title": "", "breakpoints": "xs sm md lg", }, #}
-		],
-		"rows": [
+    "columns": [
+        { "name": "id", "title": "#"},
+        { "name": "date", "title": "Tarih" },
+        { "name": "amount", "title": "Miktar", },
+        { "name": "name_surname", "title": "İsim Soyisim" },
+        { "name": "type", "title": "İşlem türü", },
+        { "name": "detail", "title": "Detay", },
+        { "name": "is_fully_distributed", "title": "Hepsi işleme sokulmuş mu?", "breakpoints": "xs sm md lg", },
+        { "name": "creation_type", "title": "Oluşturulma türü", "breakpoints": "xs sm md lg", },
+        { "name": "bank_transaction", "title": "Banka işlemi", "breakpoints": "xs sm md lg", },
+        { "name": "sub_receipts", "title": "", "breakpoints": "xs sm md lg", },
+        {# { "name": "action", "title": "", "breakpoints": "xs sm md lg", }, #}
+    ],
+    "rows": [
     {% for mt in g.money_transactions %}
       {
         "id": "<span title='ID: {{ mt.id }}'>{{ loop.revindex }}</span>",
@@ -96,7 +96,7 @@ jQuery(function($){
       },
     {% endfor %}
     ]
-	});
+  });
 });
 </script>
 {% endblock %}

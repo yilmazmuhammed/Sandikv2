@@ -88,6 +88,38 @@
         ]
       });
     });
+
+    $('#my-latest-money-transactions-table').footable({
+      "toggleColumn": "first",
+      "paging": {
+        "enabled": true,
+        "size": 10
+      },
+      "columns": [
+          { "name": "id", "title": "#"},
+          { "name": "date", "title": "Tarih" },
+          { "name": "amount", "title": "Miktar", },
+          { "name": "type", "title": "İşlem türü", },
+          { "name": "detail", "title": "Detay", },
+          { "name": "is_fully_distributed", "title": "Hepsi işleme sokulmuş mu?", "breakpoints": "xs sm md lg", },
+          { "name": "creation_type", "title": "Oluşturulma türü", "breakpoints": "xs sm md lg", },
+          { "name": "bank_transaction", "title": "Banka işlemi", "breakpoints": "xs sm md lg", },
+      ],
+      "rows": [
+        {% for mt in g.my_latest_money_transactions %}
+          {
+            "id": "<span title='ID: {{ mt.id }}'>{{ loop.revindex }}</span>",
+            "date": "{{ mt.date.strftime("%Y-%m-%d") }}",
+            "amount": "{{ mt.amount }} ₺",
+            "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}"Para girişi"{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}"Para çıkışı"{% else %}"---"{% endif %},
+            "detail": "{{ mt.detail }}",
+            "is_fully_distributed": "{{ "Evet" if mt.is_fully_distributed else "Hayır" }}",
+            "creation_type": {% if mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}"Manuel"{% elif mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}"Otomatik"{% else %}"---"{% endif %},
+            "bank_transaction": "{{ "Var" if mt.bank_transaction_ref else "Yok" }}",
+          },
+        {% endfor %}
+      ]
+    });
   </script>
 {% endblock %}
 
@@ -109,7 +141,6 @@
           <div>
             <table id="my-upcoming-payments-table" class="table"></table>
           </div>
-            <div class="panel-body"><span>Geçmiş ödemeler ve ayın son x günü bu ayki ödemeler için popup yap</span></div>
         </div>
       </div>
 
@@ -122,7 +153,7 @@
               {{ macros.button("#", "glyphicon glyphicon-plus") }}
             </span>
           </div>
-            <table id="my-latest-transactions-table" class="table"></table>
+            <table id="my-latest-money-transactions-table" class="table"></table>
           </div>
         </div>
 

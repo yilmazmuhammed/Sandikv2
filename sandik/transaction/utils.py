@@ -1,3 +1,5 @@
+from pony.orm import desc  # ponyorm order_by icin lambda string'inde kullaniliyor
+
 from sandik.transaction import db
 from sandik.utils import period as period_utils
 from sandik.utils.db_models import Share, Member, MoneyTransaction, Contribution, Installment, Sandik, Debt
@@ -279,3 +281,28 @@ def get_debts(whose, only_unpaid=False):
     )
 
     return debts
+
+
+def get_latest_money_transactions(whose, periods_count: int = 0):
+    filter_str = "lambda mt: mt"
+    order_str = "lambda mt: desc(mt.date)"
+
+    if isinstance(whose, Sandik):
+        filter_str += f" and mt.sandik_ref == {whose}"
+    elif isinstance(whose, Member):
+        filter_str += f" and mt.member_ref == {whose}"
+    else:
+        raise InvalidWhoseType("whose 'Sandik' veya 'Member' olmalıdır", errcode=2, create_log=True)
+
+    # if periods_count > 0:
+    #     filter_str += f" and mt.date >= {period_utils.period_to_date(period_utils.previous_period(prev_count=periods_count))}"
+
+    money_transactions = db.select_money_transactions(filter_str)
+
+    if periods_count > 0:
+        money_transactions = money_transactions.filter(lambda mt: mt.date >= period_utils.period_to_date(
+            period_utils.previous_period(prev_count=periods_count - 1)))
+
+    money_transactions = money_transactions.order_by(order_str)
+
+    return money_transactions

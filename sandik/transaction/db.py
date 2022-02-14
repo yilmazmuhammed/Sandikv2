@@ -180,7 +180,7 @@ def create_installments_of_debt(debt, created_by):
 
     remaining_amount = debt_amount
     installment_amount = ceil(debt_amount / number_of_installment)
-    for i in range(number_of_installment):
+    for i in range(1, number_of_installment + 1):
         if remaining_amount <= 0:
             raise UnexpectedValue(f"RA: {remaining_amount}, "
                                   f"MSG: Beklenmedik bir hata ile karşılaşıldı. Düzeltilmesi için "
@@ -188,7 +188,7 @@ def create_installments_of_debt(debt, created_by):
                                   errcode=15, create_log=True)
 
         temp_amount = installment_amount if remaining_amount >= installment_amount else remaining_amount
-        installment_term = period_utils.get_last_period(start_period, i + 1)
+        installment_term = period_utils.get_last_installment_period(start_period, i)
         create_installment(amount=temp_amount, term=installment_term, debt=debt, created_by=created_by)
         remaining_amount -= temp_amount
 
@@ -248,7 +248,7 @@ def create_debt(amount, share, money_transaction, created_by, start_period=None,
     if start_period is None:
         start_period = sandik_preferences.get_start_period(sandik=sandik, debt_date=money_transaction.date)
 
-    due_term = period_utils.get_last_period(start_period, number_of_installment)
+    due_term = period_utils.get_last_installment_period(start_period, number_of_installment)
 
     logged_ref_items = {
         "logged_money_transaction_ref": money_transaction,
