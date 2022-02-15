@@ -109,7 +109,7 @@ def reject_membership_application(sandik, web_user, rejected_by) -> Sandik:
 
 def create_member(sandik, web_user, created_by=None, confirmed_by=None, **kwargs) -> Member:
     if get_member(sandik_ref=sandik, web_user_ref=web_user):
-        raise WebUserIsAlreadyMember()
+        raise WebUserIsAlreadyMember("Bu kullanıcı zaten sandığa üye")
 
     logs = []
     if confirmed_by:

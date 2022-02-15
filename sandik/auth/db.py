@@ -41,5 +41,5 @@ def block_web_user(web_user_id, updated_by) -> WebUser:
 
 
 def web_users_form_choices():
-    choices = [(wu.id, wu.display_name()) for wu in WebUser.select()]
+    choices = [(wu.id, f"{wu.name_surname} <{wu.email_address}>") for wu in WebUser.select()]
     return choices

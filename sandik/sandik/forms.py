@@ -1,7 +1,12 @@
-from wtforms import StringField, IntegerField, TextAreaField, SubmitField, SelectField, BooleanField, EmailField
+from datetime import datetime
+
+from wtforms import StringField, IntegerField, TextAreaField, SubmitField, SelectField, BooleanField, EmailField, \
+    DateField, DecimalField
 from wtforms.validators import NumberRange, Optional, Email
 
+from sandik.auth import db as auth_db
 from sandik.sandik import db
+from sandik.utils import sandik_preferences
 from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator
 
 
@@ -140,3 +145,71 @@ class AddAuthorizedForm(CustomFlaskForm):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.member.choices += db.members_form_choices(sandik=sandik)
         self.authority.choices += db.sandik_authorities_form_choices(sandik=sandik)
+
+
+class AddMemberForm(CustomFlaskForm):
+    web_user = SelectField(
+        label="Site kullanıcısı:",
+        validators=[
+            Optional(),
+        ],
+        choices=[("", "Kullanıcı seçiniz...")],
+        coerce=str,
+    )
+
+    email_address = EmailField(
+        "E-posta adresi:",
+        validators=[
+            Optional(),
+            max_length_validator("E-posta adresi", 80),
+            Email("Geçerli bir e-posta adresi giriniz")
+        ],
+        render_kw={"placeholder": "Email address"}
+    )
+
+    date_of_membership = DateField(
+        label="Üyelik tarihi:",
+        validators=[
+            input_required_validator("Üyelik tarihi"),
+        ],
+        default=datetime.today()
+    )
+
+    contribution_amount = DecimalField(
+        label="Aidat miktarı:",
+        validators=[
+            input_required_validator("Aidat miktarı"),
+            NumberRange(message="Aidat miktarı 0'dan büyük bir sayı olmalıdır", min=0.001),
+        ],
+        render_kw={"placeholder": "100"},
+    )
+
+    number_of_share = IntegerField(
+        label="Hisse sayısı:",
+        validators=[
+            input_required_validator("Hisse sayısı"),
+            NumberRange(message="Hisse sayısı en az 1 olmalıdır.", min=1),
+        ],
+        default=1,
+        render_kw={"placeholder": "5"},
+    )
+
+    detail = TextAreaField(
+        label="Detay:",
+        validators=[
+            Optional(),
+            max_length_validator("Detay", 1000),
+        ],
+        render_kw={"placeholder": "Detay"}
+    )
+
+    submit = SubmitField(label="Gönder")
+
+    def __init__(self, sandik, form_title='Üye ekleme formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
+        self.web_user.choices += auth_db.web_users_form_choices()
+        self.contribution_amount.data = sandik.contribution_amount
+        max_share = sandik_preferences.get_max_number_of_share(sandik=sandik)
+        self.number_of_share.validators.append(
+            NumberRange(message=f"Hisse sayısı {max_share}'dan fazla olamaz", max=max_share)
+        )

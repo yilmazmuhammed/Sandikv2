@@ -114,7 +114,6 @@ class Member(db.Entity):
     sandik_ref = Required('Sandik')
     date_of_membership = Required(date, default=lambda: date.today())
     contribution_amount = Required(Decimal)
-    iban = Required(str)
     detail = Optional(str)
     is_active = Required(bool, default=True)
     balance = Required(Decimal, default=0)
