@@ -98,7 +98,7 @@
               </li>
               {% endif %}
 
-              {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="read") %}
+              {% if g.sandik and current_user.has_permission(sandik=g.sandik, permission="read") %}
               <li class="line dk"></li>
               <!-- Sandık yönetimi menüleri-->
               <li class="hidden-folded padder m-t m-b-sm text-muted text-xs">
