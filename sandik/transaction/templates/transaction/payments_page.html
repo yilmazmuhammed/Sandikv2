@@ -20,7 +20,7 @@ jQuery(function($){
     },
 		"columns": [
 			{ "name": "id", "title": "#", "breakpoints": "xs sm"},
-			{ "name": "term", "title": "Tarih" },
+			{ "name": "term", "title": "Dönem" },
 			{ "name": "name_surname", "title": "İsim Soyisim" },
 			{ "name": "transaction_type", "title": "İşlem türü", "breakpoints": "xs", },
 			{ "name": "amount", "title": "Miktar", },
@@ -48,7 +48,7 @@ jQuery(function($){
       {
         "id": `<span title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.revindex }}</span>`,
         "term": "{{ p.term }}",
-        "name_surname": "{{ p.member_ref.web_user_ref.name_surname }}",
+        "name_surname": "{{ p.member_ref.web_user_ref.name_surname }} - {{ p.share_ref.share_order_of_member }}",
         "transaction_type": `{{ transaction_type }}`,
         "amount": "{{ p.amount }} ₺",
         "remaining_amount": `<span class="{% if p.is_fully_paid %}text-success{% else %}text-danger{% endif %}">{{ p.get_unpaid_amount() }} ₺</span>`,
@@ -144,7 +144,7 @@ jQuery(function($){
       {
         "id": `<span title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.revindex }}</span>`,
         "term": "{{ p.term }}",
-        "name_surname": "{{ p.member_ref.web_user_ref.name_surname }}",
+        "name_surname": "{{ p.member_ref.web_user_ref.name_surname }} - {{ p.share_ref.share_order_of_member }}",
         "transaction_type": `{{ transaction_type }}`,
         "amount": "{{ p.amount }} ₺",
         "remaining_amount": `<span class="{% if p.is_fully_paid %}text-success{% else %}text-danger{% endif %}">{{ p.get_unpaid_amount() }} ₺</span>`,

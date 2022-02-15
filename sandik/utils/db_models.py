@@ -65,9 +65,12 @@ class Share(db.Entity):
     contributions_set = Set('Contribution')
     debts_set = Set('Debt')
 
+    def sum_of_paid_contributions(self):
+        return select(sr.amount for sr in self.sub_receipts_set if sr.contribution_ref).sum()
+
     def final_status(self, t_type):
         if t_type == "contribution":
-            return select(sr.amount for sr in self.sub_receipts_set if sr.contribution_ref).sum()
+            return self.sum_of_paid_contributions()
         elif t_type == "debt":
             return select(sr.amount for sr in self.sub_receipts_set if sr.debt_ref).sum()
         elif t_type == "installment":
@@ -111,7 +114,6 @@ class Member(db.Entity):
     sandik_ref = Required('Sandik')
     date_of_membership = Required(date, default=lambda: date.today())
     contribution_amount = Required(Decimal)
-    iban = Required(str)
     detail = Optional(str)
     is_active = Required(bool, default=True)
     balance = Required(Decimal, default=0)
@@ -222,6 +224,9 @@ class Member(db.Entity):
             c.amount for c in Contribution if c.share_ref.member_ref == self and c.is_fully_paid is True
         ).sum()
         return total_of_half_paid_contributions + total_of_fully_paid_contributions
+
+    def get_unpaid_debts(self):
+        return select(d for d in Debt if d.member_ref == self)
 
 
 class WebUser(db.Entity, UserMixin):

@@ -16,6 +16,7 @@ class THOUSANDS:
     MembershipException = 22
     SandikAuthorityException = 23
     BankAccountException = 30
+    AuthException = 40
 
 
 class ErrcodeException(Exception):

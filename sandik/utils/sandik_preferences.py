@@ -35,3 +35,7 @@ def remaining_debt_balance(sandik, whose):
         return sum(remaining_debt_balance(sandik=sandik, whose=share) for share in whose.shares_set)
     else:
         raise Exception("whose 'Share' yada 'Member' olmalıdır")
+
+
+def get_max_number_of_share(sandik):
+    return 5

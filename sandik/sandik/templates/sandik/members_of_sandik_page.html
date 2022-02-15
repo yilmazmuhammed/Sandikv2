@@ -65,10 +65,7 @@
       <div class="panel-heading">
         {{ page_info.title }}
         <span class="pull-right">
-          {# {{ url_for('sandik_page_bp.add_member_page', sandik_id=g.sandik.id) }} #}
-          <a href="#" class="btn btn-xs btn-primary">
-            <i class="fa fa-plus"></i>
-          </a>
+          {{ macros.button(url=url_for('sandik_page_bp.add_member_to_sandik_page', sandik_id=g.sandik.id), icon='fa fa-plus', type='primary', size='xs', title='Üye ekle') }}
         </span>
       </div>
       <div class="table table-responsive">

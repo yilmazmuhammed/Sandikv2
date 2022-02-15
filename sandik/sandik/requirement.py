@@ -19,6 +19,9 @@ def sandik_required(func):
             abort(404)
 
         g.sandik = sandik
+        if current_user.is_authenticated:
+            g.member = db.get_member(sandik_ref=g.sandik, web_user_ref=current_user)
+
         return func(*args, **kwargs)
 
     return decorated_view

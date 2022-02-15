@@ -6,7 +6,7 @@ from sandik.auth import db as auth_db
 from sandik.auth.requirement import login_required, web_user_required
 from sandik.sandik import forms, db, utils
 from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelationshipCreationException, \
-    MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, SandikAuthorityException
+    MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, SandikAuthorityException, AddMemberException
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, member_required, \
     trust_relationship_required
 from sandik.transaction import db as transaction_db, utils as transaction_utils
@@ -41,8 +41,7 @@ def create_sandik_page():
 
 
 @sandik_page_bp.route("/<int:sandik_id>/detay", methods=["GET", "POST"])
-@login_required
-@sandik_required
+@member_required
 def sandik_detail_page(sandik_id):
     return render_template("sandik/sandik_detail_page.html",
                            page_info=LayoutPI(title="Sandık detayı", active_dropdown="sandik"))
@@ -50,7 +49,7 @@ def sandik_detail_page(sandik_id):
 
 @sandik_page_bp.route("/<int:sandik_id>/ozet", methods=["GET", "POST"])
 @member_required
-def sandik_summary_page(sandik_id):
+def sandik_summary_for_member_page(sandik_id):
     g.sum_of_unpaid_and_due_payments = transaction_utils.sum_of_unpaid_and_due_payments(whose=g.member)
     sum_of_future_and_unpaid_payments = transaction_utils.sum_of_future_and_unpaid_payments(whose=g.member)
     g.sum_of_payments = g.sum_of_unpaid_and_due_payments + sum_of_future_and_unpaid_payments
@@ -65,7 +64,7 @@ def sandik_summary_page(sandik_id):
     )
     g.my_latest_money_transactions = transaction_utils.get_latest_money_transactions(whose=g.member, periods_count=2)
 
-    return render_template("sandik/sandik_summary_page.html",
+    return render_template("sandik/sandik_summary_for_member_page.html",
                            page_info=LayoutPI(title=g.sandik.name, active_dropdown="sandik"))
 
 
@@ -75,8 +74,9 @@ def sandik_summary_page(sandik_id):
 def sandik_index_page(sandik_id):
     member = db.get_member(sandik_ref=g.sandik, web_user_ref=current_user)
     if member:
-        return redirect(url_for("sandik_page_bp.sandik_summary_page", sandik_id=sandik_id))
+        return redirect(url_for("sandik_page_bp.sandik_summary_for_member_page", sandik_id=sandik_id))
     else:
+        # TODO yönetici icin sandik ozeti sayfasi veya sandik detayi sayfasi
         return redirect(url_for("sandik_page_bp.sandik_detail_page", sandik_id=sandik_id))
 
 
@@ -122,7 +122,6 @@ def request_trust_link_page(sandik_id):
 @login_required
 @trust_relationship_required
 def accept_trust_relationship_request_page(trust_relationship_id):
-  
     if g.trust_relationship.receiver_member_ref.web_user_ref != current_user:
         abort(403)
 
@@ -170,6 +169,43 @@ def apply_for_membership_page():
 
     return render_template("utils/form_layout.html",
                            page_info=FormPI(title="Üyelik başvurusu yap", form=form, active_dropdown='sandik'))
+
+
+@sandik_page_bp.route("/<int:sandik_id>/uye-ekle", methods=["GET", "POST"])
+@sandik_authorization_required(permission="write")
+def add_member_to_sandik_page(sandik_id):
+    form = forms.AddMemberForm(sandik=g.sandik)
+
+    if form.validate_on_submit():
+        try:
+            if form.email_address.data and form.web_user.data:
+                raise AddMemberException("Lütfen e-posta adresi ve site kullanıcısından birini doldurunuz.")
+            elif not form.email_address.data and not form.web_user.data:
+                raise AddMemberException("Lütfen e-posta adresi ve site kullanıcısından birini doldurunuz.")
+
+            web_user = None
+            if form.email_address.data:
+                web_user = auth_db.get_web_user(email_address=form.email_address.data)
+            elif form.web_user.data:
+                web_user = auth_db.get_web_user(id=form.web_user.data)
+            if not web_user:
+                raise AddMemberException("Site kullanıcısı bulunamadı.")
+
+            utils.add_member_to_sandik(sandik=g.sandik, web_user=web_user, added_by=current_user,
+                                       date_of_membership=form.date_of_membership.data,
+                                       contribution_amount=form.contribution_amount.data,
+                                       detail=form.detail.data,
+                                       number_of_share=form.number_of_share.data)
+            utils.Notification.MembershipApplication.send_confirming_notification(sandik=g.sandik, web_user=web_user)
+
+            return redirect(url_for("sandik_page_bp.members_of_sandik_page", sandik_id=sandik_id))
+        except AddMemberException as e:
+            flash(str(e), "danger")
+        except WebUserIsAlreadyMember as e:
+            flash(str(e), "danger")
+
+    return render_template("utils/form_layout.html",
+                           page_info=FormPI(title="Sandığa üye ekle", form=form, active_dropdown='sandik'))
 
 
 @sandik_page_bp.route("/<int:sandik_id>/basvuru-onayla/<int:web_user_id>")
@@ -244,7 +280,7 @@ def delete_sandik_authority_page(sandik_id, sandik_authority_id):
     authority = db.get_sandik_authority(id=sandik_authority_id, sandik_ref=g.sandik)
     if not authority:
         abort(404)
-        
+
     db.delete_sandik_authority(sandik_authority=authority, deleted_by=current_user)
     return redirect(request.referrer)
 
