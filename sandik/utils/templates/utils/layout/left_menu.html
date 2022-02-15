@@ -4,7 +4,7 @@
           <!-- nav -->
           <nav ui-nav class="navi clearfix">
             <ul class="nav">
-              {% if g.member %}
+              {% if current_user.get_member_of_sandik(sandik=g.sandik) %}
               <!-- Sandık menüleri-->
               <li class="hidden-folded padder m-t m-b-sm text-muted text-xs">
                 <span>{{ g.sandik.name }}</span>

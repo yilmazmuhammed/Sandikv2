@@ -275,6 +275,9 @@ class WebUser(db.Entity, UserMixin):
     def get_sandik_authority(self, sandik):
         return self.sandik_authority_types_set.filter(sandik_ref=sandik).get()
 
+    def get_member_of_sandik(self, sandik):
+        return Member.get(sandik_ref=sandik, web_user_ref=self)
+
     def has_permission(self, sandik, permission):
         if permission not in ["write", "read", "admin"]:
             raise Exception("Yanlış izin yetkisi girildi")

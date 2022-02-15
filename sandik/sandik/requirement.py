@@ -29,7 +29,7 @@ def member_required(func):
     @login_required
     @sandik_required
     def decorated_view(*args, **kwargs):
-        member = db.get_member(sandik_ref=g.sandik, web_user_ref=current_user)
+        member = current_user.get_member_of_sandik(sandik=g.sandik)
         if not member:
             abort(404)
 
