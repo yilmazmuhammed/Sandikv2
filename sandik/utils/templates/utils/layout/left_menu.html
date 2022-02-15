@@ -96,6 +96,7 @@
                   {# </li> #}
                 </ul>
               </li>
+              {% endif %}
 
               {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="read") %}
               <li class="line dk"></li>
@@ -220,7 +221,6 @@
               </li>
               {% endif %}
 
-              {% endif %}
 
 
               {% if current_user.is_admin()  %}

@@ -76,6 +76,7 @@ def sandik_index_page(sandik_id):
     if member:
         return redirect(url_for("sandik_page_bp.sandik_summary_for_member_page", sandik_id=sandik_id))
     else:
+        # TODO yönetici icin sandik ozeti sayfasi veya sandik detayi sayfasi
         return redirect(url_for("sandik_page_bp.sandik_detail_page", sandik_id=sandik_id))
 
 
