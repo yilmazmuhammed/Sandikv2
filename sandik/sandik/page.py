@@ -3,10 +3,12 @@ from flask_login import current_user
 from werkzeug.utils import redirect
 
 from sandik.auth import db as auth_db
+from sandik.auth.exceptions import WebUserNotFound
 from sandik.auth.requirement import login_required, web_user_required
 from sandik.sandik import forms, db, utils
 from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelationshipCreationException, \
-    MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, SandikAuthorityException, AddMemberException
+    MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, SandikAuthorityException, AddMemberException, \
+    MembershipException
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, member_required, \
     trust_relationship_required
 from sandik.transaction import db as transaction_db, utils as transaction_utils
@@ -203,6 +205,44 @@ def add_member_to_sandik_page(sandik_id):
             flash(str(e), "danger")
         except WebUserIsAlreadyMember as e:
             flash(str(e), "danger")
+
+    if request.method == "GET":
+        form.contribution_amount.data = g.sandik.contribution_amount
+
+    return render_template("utils/form_layout.html",
+                           page_info=FormPI(title="Sandığa üye ekle", form=form, active_dropdown='sandik'))
+
+
+@sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/guncelle", methods=["GET", "POST"])
+@sandik_authorization_required(permission="write")
+def update_member_of_sandik_page(sandik_id, member_id):
+    member = db.get_member(id=member_id, sandik_ref=g.sandik)
+    if not member:
+        abort(404, "Üye bulunamadı")
+
+    form = forms.EditMemberForm()
+
+    if form.validate_on_submit():
+        try:
+            updated_values = {
+                "detail": form.detail.data,
+                "date_of_membership": form.date_of_membership.data,
+                "contribution_amount": form.contribution_amount.data
+            }
+            if form.email_address.data != member.web_user_ref.email_address:
+                web_user = auth_db.get_web_user(email_address=form.email_address.data)
+                if not web_user:
+                    raise WebUserNotFound("Site kullanıcısı bulunamadı.")
+                updated_values["web_user_ref"] = web_user
+
+            utils.update_member_of_sandik(member=member, updated_by=current_user, **updated_values)
+
+            return redirect(url_for("sandik_page_bp.members_of_sandik_page", sandik_id=sandik_id))
+        except (WebUserNotFound, MembershipException) as e:
+            flash(str(e), "danger")
+
+    if request.method == "GET":
+        form.fill_values_with_member(member=member)
 
     return render_template("utils/form_layout.html",
                            page_info=FormPI(title="Sandığa üye ekle", form=form, active_dropdown='sandik'))

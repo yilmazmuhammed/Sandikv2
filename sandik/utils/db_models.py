@@ -391,6 +391,16 @@ class Log(db.Entity):
             ADD_AUTHORIZED = first + 11
             REMOVE_AUTHORIZED = first + 13
 
+        class SHARE:
+            first, last = 1200, 1299
+            CREATE = first + 1
+            UPDATE = first + 2
+
+        class MEMBER:
+            first, last = 1300, 1399
+            CREATE = first + 1
+            UPDATE = first + 2
+
         class LOG_LEVEL:
             first, last = 10000, 10099
             INFO = first + 11

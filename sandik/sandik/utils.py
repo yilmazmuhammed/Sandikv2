@@ -1,9 +1,8 @@
-from datetime import date
-
 from flask import url_for
 
 from sandik.general import db as general_db
 from sandik.sandik import db
+from sandik.sandik.exceptions import UpdateMemberException
 from sandik.transaction import utils as transaction_utils
 
 
@@ -22,6 +21,20 @@ def add_member_to_sandik(sandik, web_user, date_of_membership, contribution_amou
         transaction_utils.create_due_contributions_for_the_share(share, created_by=added_by)
 
     return member
+
+
+def update_member_of_sandik(member, updated_by, date_of_membership=None, **kwargs):
+    if date_of_membership and date_of_membership != member.date_of_membership:
+        if date_of_membership < member.date_of_membership:
+            for share in member.shares_set.filter(date_of_opening=member.date_of_membership):
+                db.update_share(share=share, updated_by=updated_by, date_of_opening=date_of_membership)
+                transaction_utils.create_due_contributions_for_the_share(share, created_by=updated_by)
+        else:
+            # TODO ödenmemiş aidatları sil
+            raise UpdateMemberException("Üyelik tarihi ileriye alınamaz.")
+        kwargs["date_of_membership"] = date_of_membership
+
+    return db.update_member(member=member, updated_by=updated_by, **kwargs)
 
 
 def confirm_membership_application(sandik, web_user, confirmed_by):

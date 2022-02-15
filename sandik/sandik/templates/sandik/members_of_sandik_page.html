@@ -42,7 +42,7 @@
             {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
             "actions": `
               <tr>
-                <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
+                <td>{{ macros.button(url=url_for("sandik_page_bp.update_member_of_sandik_page", member_id=member.id, sandik_id=g.sandik.id), icon='fa fa-pencil', type='info', size='xs', title='Sil') }}</td>
                 <td style='padding:5px;'></td>
                 <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
               </tr>`,
