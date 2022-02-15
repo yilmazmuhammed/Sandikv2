@@ -41,8 +41,7 @@ def create_sandik_page():
 
 
 @sandik_page_bp.route("/<int:sandik_id>/detay", methods=["GET", "POST"])
-@login_required
-@sandik_required
+@member_required
 def sandik_detail_page(sandik_id):
     return render_template("sandik/sandik_detail_page.html",
                            page_info=LayoutPI(title="Sandık detayı", active_dropdown="sandik"))
@@ -50,7 +49,7 @@ def sandik_detail_page(sandik_id):
 
 @sandik_page_bp.route("/<int:sandik_id>/ozet", methods=["GET", "POST"])
 @member_required
-def sandik_summary_page(sandik_id):
+def sandik_summary_for_member_page(sandik_id):
     g.sum_of_unpaid_and_due_payments = transaction_utils.sum_of_unpaid_and_due_payments(whose=g.member)
     sum_of_future_and_unpaid_payments = transaction_utils.sum_of_future_and_unpaid_payments(whose=g.member)
     g.sum_of_payments = g.sum_of_unpaid_and_due_payments + sum_of_future_and_unpaid_payments
@@ -65,7 +64,7 @@ def sandik_summary_page(sandik_id):
     )
     g.my_latest_money_transactions = transaction_utils.get_latest_money_transactions(whose=g.member, periods_count=2)
 
-    return render_template("sandik/sandik_summary_page.html",
+    return render_template("sandik/sandik_summary_for_member_page.html",
                            page_info=LayoutPI(title=g.sandik.name, active_dropdown="sandik"))
 
 
@@ -75,7 +74,7 @@ def sandik_summary_page(sandik_id):
 def sandik_index_page(sandik_id):
     member = db.get_member(sandik_ref=g.sandik, web_user_ref=current_user)
     if member:
-        return redirect(url_for("sandik_page_bp.sandik_summary_page", sandik_id=sandik_id))
+        return redirect(url_for("sandik_page_bp.sandik_summary_for_member_page", sandik_id=sandik_id))
     else:
         return redirect(url_for("sandik_page_bp.sandik_detail_page", sandik_id=sandik_id))
 

@@ -4,7 +4,7 @@
           <!-- nav -->
           <nav ui-nav class="navi clearfix">
             <ul class="nav">
-              {% if g.sandik %}
+              {% if g.member %}
               <!-- Sandık menüleri-->
               <li class="hidden-folded padder m-t m-b-sm text-muted text-xs">
                 <span>{{ g.sandik.name }}</span>
@@ -26,7 +26,7 @@
                     </a>
                   </li>
                   <li>
-                    <a href="{{ url_for('sandik_page_bp.sandik_summary_page', sandik_id=g.sandik.id) }}">
+                    <a href="{{ url_for('sandik_page_bp.sandik_summary_for_member_page', sandik_id=g.sandik.id) }}">
                       <span>Özet</span>
                     </a>
                   </li>
@@ -77,25 +77,27 @@
                   </li>
                   <li>
                     <a href="{{ url_for('transaction_page_bp.debts_of_member_page', sandik_id=g.sandik.id) }}">
-                      <b class="badge bg-danger pull-right">x</b>
+                      {% if g.member.get_unpaid_debts().count() > 0 %}
+                      <b class="badge bg-danger pull-right">{{ g.member.get_unpaid_debts().count() }}</b>
+                      {% endif %}
                       <span>Borçlarım</span>
                     </a>
                   </li>
-                  <li>
-                    <a href="{{ url_for('transaction_page_bp.transactions_of_member_page', sandik_id=g.sandik.id) }}">
-                      <span>Sandık işlemlerim</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#">
-                      <b class="badge bg-info pull-right">x</b>
-                      <span>Onay bekleyenler</span>
-                    </a>
-                  </li>
+                  {# <li> #}
+                  {#   <a href="{{ url_for('transaction_page_bp.transactions_of_member_page', sandik_id=g.sandik.id) }}"> #}
+                  {#     <span>Sandık işlemlerim</span> #}
+                  {#   </a> #}
+                  {# </li> #}
+                  {# <li> #}
+                  {#   <a href="#"> #}
+                  {#     <b class="badge bg-info pull-right">x</b> #}
+                  {#     <span>Onay bekleyenler</span> #}
+                  {#   </a> #}
+                  {# </li> #}
                 </ul>
               </li>
 
-              {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
+              {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="read") %}
               <li class="line dk"></li>
               <!-- Sandık yönetimi menüleri-->
               <li class="hidden-folded padder m-t m-b-sm text-muted text-xs">

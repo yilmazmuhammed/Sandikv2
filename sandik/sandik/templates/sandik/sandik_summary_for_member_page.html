@@ -33,9 +33,9 @@
         {% endfor %}
         {
           "order": `<span title='Member ID: {{ g.member.id }}'>Üye Durumu</span>`,
-          "total_contribution": `{{ g.member.final_status("contribution") }}`,
+          "total_contribution": `{{ g.member.sum_of_paid_contributions() }}`,
           "total_debt": `{{ g.member.final_status("debt") }}`,
-          "total_installment": `{{ g.member.final_status("installment") }}`,
+          "total_installment": `{{ g.member.sum_of_paid_installments() }}`,
           "final_status": `{{ g.member.final_status("total") }}`,
           "actions": `
             <tr>
@@ -172,7 +172,7 @@
               <tbody>
               <tr class="row">
                 <th>Ödenen aidat:</th>
-                <td>{{ g.member.final_status("contribution") }} ₺</td>
+                <td>{{ g.member.sum_of_paid_contributions() }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Alınan borç:</th>
@@ -180,7 +180,7 @@
               </tr>
               <tr class="row">
                 <th>Ödenen taksit:</th>
-                <td>{{ g.member.final_status("installment") }} ₺</td>
+                <td>{{ g.member.sum_of_paid_installments() }} ₺</td>
               </tr>
               <tr class="row">
                 <th>İşleme konmamış:</th>

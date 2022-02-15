@@ -33,7 +33,7 @@ class Notification:
                     )
             general_db.create_notification(
                 to_web_user=web_user, title=f"Üyelik başvurunuz onaylandı", text=sandik.name,
-                url=url_for("sandik_page_bp.sandik_summary_page", sandik_id=sandik.id)
+                url=url_for("sandik_page_bp.sandik_summary_for_member_page", sandik_id=sandik.id)
             )
 
         @staticmethod
