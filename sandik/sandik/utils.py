@@ -4,12 +4,19 @@ from flask import url_for
 
 from sandik.general import db as general_db
 from sandik.sandik import db
+from sandik.sandik.exceptions import UpdateMemberException, MaxShareCountExceed
+from sandik.transaction import utils as transaction_utils, db as transaction_db
+from sandik.utils import period as period_utils, sandik_preferences
 from sandik.sandik.exceptions import UpdateMemberException
 from sandik.transaction import utils as transaction_utils, db as transaction_db
 from sandik.utils import period as period_utils
 
 
 def add_share_to_member(member, added_by, **kwargs):
+    max_share_count = sandik_preferences.get_max_number_of_share(sandik=member.sandik_ref)
+    if member.shares_set.select(lambda s: s.is_active).count() >= max_share_count:
+        raise MaxShareCountExceed(f"Bir üyenin en fazla {max_share_count} adet hissesi olabilir.")
+
     order = db.get_last_share_order(member) + 1
     share = db.create_share(member=member, created_by=added_by, share_order_of_member=order, **kwargs)
     transaction_utils.create_due_contributions_for_the_share(share, created_by=added_by)
@@ -111,7 +118,9 @@ def get_member_summary_page(member):
     sum_of_future_and_unpaid_payments = transaction_utils.sum_of_future_and_unpaid_payments(whose=member)
     sum_of_payments = sum_of_unpaid_and_due_payments + sum_of_future_and_unpaid_payments
     my_upcoming_payments = transaction_utils.get_payments(
-        whose=member, is_fully_paid=False, periods=[period_utils.current_period(), period_utils.next_period()]
+        whose=member, is_fully_paid=False, is_due=True
+    ) + transaction_utils.get_payments(
+        whose=member, is_fully_paid=False, periods=[period_utils.next_period()]
     )
     my_latest_money_transactions = transaction_utils.get_latest_money_transactions(whose=member, periods_count=2)
     trusted_links = {
