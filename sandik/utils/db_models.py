@@ -499,6 +499,9 @@ class BankAccount(db.Entity):
     bank_transactions_set = Set(BankTransaction)
     is_primary = Required(bool)
 
+    def get_iban_string(self):
+        return f"TR{self.iban[0:2]} {self.iban[2:6]} {self.iban[6:10]} {self.iban[10:14]} {self.iban[14:18]} {self.iban[18:22]} {self.iban[22:24]}"
+
     def before_insert(self):
         # TODO test et: Aynı kullanıcının veya sandığın aynı anca sadece bir tane primary (öncelikli) banka hesabı
         #  olabilir

@@ -260,3 +260,24 @@ class EditMemberForm(CustomFlaskForm):
         self.contribution_amount.data = member.contribution_amount
         self.date_of_membership.data = member.date_of_membership
         self.detail.data = member.detail
+
+
+class AddShareForm(CustomFlaskForm):
+
+    share_order_of_member = IntegerField(
+        label="Hisse no:",
+        render_kw={"disabled": ""},
+    )
+
+    date_of_opening = DateField(
+        label="Hisse açılış tarihi:",
+        validators=[
+            input_required_validator("Hisse açılış tarihi"),
+        ],
+        default=datetime.today()
+    )
+
+    submit = SubmitField(label="Kaydet")
+
+    def __init__(self, form_title='Hisse ekleme formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)

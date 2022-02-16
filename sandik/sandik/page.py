@@ -11,8 +11,7 @@ from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelatio
     MembershipException
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, member_required, \
     trust_relationship_required
-from sandik.transaction import db as transaction_db, utils as transaction_utils
-from sandik.utils import LayoutPI, get_next_url, period as period_utils
+from sandik.utils import LayoutPI, get_next_url
 from sandik.utils.forms import flask_form_to_dict, FormPI
 
 sandik_page_bp = Blueprint(
@@ -52,19 +51,7 @@ def sandik_detail_page(sandik_id):
 @sandik_page_bp.route("/<int:sandik_id>/ozet", methods=["GET", "POST"])
 @member_required
 def sandik_summary_for_member_page(sandik_id):
-    g.sum_of_unpaid_and_due_payments = transaction_utils.sum_of_unpaid_and_due_payments(whose=g.member)
-    sum_of_future_and_unpaid_payments = transaction_utils.sum_of_future_and_unpaid_payments(whose=g.member)
-    g.sum_of_payments = g.sum_of_unpaid_and_due_payments + sum_of_future_and_unpaid_payments
-    g.trusted_links = {
-        "total_paid_contributions": transaction_db.total_paid_contributions_of_trusted_links(member=g.member),
-        "total_loaned_amount": transaction_db.total_loaned_amount_of_trusted_links(member=g.member),
-        "total_balance": transaction_db.total_balance_of_trusted_links(member=g.member),
-        "total_paid_installments": transaction_db.total_paid_installments_of_trusted_links(member=g.member)
-    }
-    g.my_upcoming_payments = transaction_utils.get_payments(
-        whose=g.member, is_fully_paid=False, periods=[period_utils.current_period(), period_utils.next_period()]
-    )
-    g.my_latest_money_transactions = transaction_utils.get_latest_money_transactions(whose=g.member, periods_count=2)
+    g.summary_data = utils.get_member_summary_page(member=g.member)
 
     return render_template("sandik/sandik_summary_for_member_page.html",
                            page_info=LayoutPI(title=g.sandik.name, active_dropdown="sandik"))
@@ -281,6 +268,46 @@ def members_of_sandik_page(sandik_id):
 def membership_applications_to_sandik_page(sandik_id):
     return render_template("sandik/membership_applications_to_sandik_page.html",
                            page_info=LayoutPI(title="Üyelik başvuruları", active_dropdown="members"))
+
+
+@sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/ozet", methods=["GET", "POST"])
+@sandik_authorization_required(permission="read")
+def member_summary_for_management_page(sandik_id, member_id):
+    member = db.get_member(id=member_id, sandik_ref=g.sandik)
+    if not member:
+        abort(404, "Üye bulunamadı")
+
+    g.member = member
+    g.summary_data = utils.get_member_summary_page(member=g.member)
+
+    page_title = f"Üye özeti: {g.member.web_user_ref.name_surname}"
+    return render_template("sandik/sandik_summary_for_member_page.html",
+                           page_info=LayoutPI(title=page_title, active_dropdown="sandik"))
+
+
+@sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/hisse-ekle", methods=["GET", "POST"])
+@sandik_authorization_required(permission="write")
+def add_share_to_member_page(sandik_id, member_id):
+    member = db.get_member(id=member_id, sandik_ref=g.sandik)
+    if not member:
+        abort(404, "Üye bulunamadı")
+
+    form = forms.AddShareForm()
+    form.share_order_of_member.data = db.get_last_share_order(member) + 1
+
+    if form.validate_on_submit():
+        utils.add_share_to_member(member=member, date_of_opening=form.date_of_opening.data,
+                                  added_by=current_user)
+        utils.Notification.MembershipApplication.send_adding_share_notification(sandik=g.sandik,
+                                                                                web_user=member.web_user_ref)
+
+        return redirect(
+            url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=sandik_id, member_id=member_id)
+        )
+
+    return render_template("utils/form_layout.html",
+                           page_info=FormPI(title="Hisse ekle", form=form, active_dropdown='sandik'))
+
 
 
 """

@@ -5,7 +5,7 @@
   <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
   <script>
     jQuery(function($){
-      $('#member-details').footable({
+      $('#shares-table').footable({
         "toggleColumn": "first",
         "columns": [
           { "name": "order", "title": "Hisse", "classes": "text-center font-bold", },
@@ -19,13 +19,13 @@
         {% for share in g.member.shares_set.order_by("lambda s: s.share_order_of_member") %}
           {
             "order": `<span title='ID: {{ share.id }}'>{{ share.share_order_of_member }}</span>`,
-            "total_contribution": `{{ share.final_status("contribution") }}`,
-            "total_debt": `{{ share.final_status("debt") }}`,
-            "total_installment": `{{ share.final_status("installment") }}`,
-            "final_status": `{{ share.final_status("total") }}`,
+            "total_contribution": `xxx{{ share.final_status("contribution") }}`,
+            "total_debt": `xxx{{ share.final_status("debt") }}`,
+            "total_installment": `xxx{{ share.final_status("installment") }}`,
+            "final_status": `xxx{{ share.final_status("total") }}`,
             "actions": `
               <tr>
-                <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
+                <td>{{ macros.button(url="#", icon='fa fa-pencil', type='info', size='xs', title='Düzenle') }}</td>
                 <td style='padding:5px;'></td>
                 <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
               </tr>`,
@@ -33,16 +33,11 @@
         {% endfor %}
         {
           "order": `<span title='Member ID: {{ g.member.id }}'>Üye Durumu</span>`,
-          "total_contribution": `{{ g.member.sum_of_paid_contributions() }}`,
-          "total_debt": `{{ g.member.final_status("debt") }}`,
-          "total_installment": `{{ g.member.sum_of_paid_installments() }}`,
-          "final_status": `{{ g.member.final_status("total") }}`,
-          "actions": `
-            <tr>
-              <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
-              <td style='padding:5px;'></td>
-              <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
-            </tr>`,
+          "total_contribution": `xxx{{ g.member.sum_of_paid_contributions() }}`,
+          "total_debt": `xxx{{ g.member.final_status("debt") }}`,
+          "total_installment": `xxx{{ g.member.sum_of_paid_installments() }}`,
+          "final_status": `xxx{{ g.member.final_status("total") }}`,
+          "actions": ``,
         },
         ]
       });
@@ -62,7 +57,7 @@
           { "name": "detail", "title": "Detay", "breakpoints": "xs sm md", },
         ],
         "rows": [
-        {% for p in g.my_upcoming_payments %}
+        {% for p in g.summary_data.my_upcoming_payments %}
           {% if isinstance(p, Contribution) %}
             {% set id_prefix='c' %}
             {% set transaction_type='Aidat' %}
@@ -106,7 +101,7 @@
           { "name": "bank_transaction", "title": "Banka işlemi", "breakpoints": "xs sm md lg", },
       ],
       "rows": [
-        {% for mt in g.my_latest_money_transactions %}
+        {% for mt in g.summary_data.my_latest_money_transactions %}
           {
             "id": "<span title='ID: {{ mt.id }}'>{{ loop.revindex }}</span>",
             "date": "{{ mt.date.strftime("%Y-%m-%d") }}",
@@ -134,9 +129,6 @@
         <div class="panel panel-default">
           <div class="panel-heading font-bold">
             <span>Yaklaşan ödemelerim</span>
-            <span class="pull-right">
-              {{ macros.button("#", "glyphicon glyphicon-plus") }}
-            </span>
           </div>
           <div>
             <table id="my-upcoming-payments-table" class="table"></table>
@@ -149,9 +141,6 @@
         <div class="panel panel-default">
           <div class="panel-heading font-bold">
             <span>Son işlemlerim</span>
-            <span class="pull-right">
-              {{ macros.button("#", "glyphicon glyphicon-plus") }}
-            </span>
           </div>
             <table id="my-latest-money-transactions-table" class="table"></table>
           </div>
@@ -188,11 +177,11 @@
               </tr>
               <tr class="row">
                 <th>Ay sonu:</th>
-                <td title="Ay sonu ödemeleri: {{ g.sum_of_unpaid_and_due_payments }}" class="font-bold {% if g.sum_of_unpaid_and_due_payments > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.member.total_of_undistributed_amount() - g.sum_of_unpaid_and_due_payments }} ₺</td>
+                <td title="Ay sonu ödemeleri: {{ g.summary_data.sum_of_unpaid_and_due_payments }}" class="font-bold {% if g.summary_data.sum_of_unpaid_and_due_payments > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.member.total_of_undistributed_amount() - g.summary_data.sum_of_unpaid_and_due_payments }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Mil sonu:</th>
-                <td title="Mil sonu ödemeleri: {{ g.sum_of_payments }}" class="font-bold {% if g.sum_of_payments > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.member.total_of_undistributed_amount() - g.sum_of_payments}} ₺</td>
+                <td title="Mil sonu ödemeleri: {{ g.summary_data.sum_of_payments }}" class="font-bold {% if g.summary_data.sum_of_payments > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.member.total_of_undistributed_amount() - g.summary_data.sum_of_payments}} ₺</td>
               </tr>
               </tbody>
             </table>
@@ -222,12 +211,16 @@
           <div class="panel-heading font-bold">
             <span>Üye bilgileri</span>
             <span class="pull-right">
-              {{ macros.button("#", "glyphicon glyphicon-pencil") }}
+              {{ macros.button(url=url_for("sandik_page_bp.update_member_of_sandik_page", member_id=g.member.id, sandik_id=g.sandik.id), icon='fa fa-pencil', type='default', size='sm', title='Düzenle') }}
             </span>
           </div>
           <div>
-            <table id="memebr-details" class="table">
+            <table id="member-details" class="table">
               <tbody>
+              <tr class="row">
+                <th>Üye ismi:</th>
+                <td title="{{ g.member.web_user_ref.email_address }}">{{ g.member.web_user_ref.name_surname }}</td>
+              </tr>
               <tr class="row">
                 <th>Sandık ismi:</th>
                 <td>{{ g.member.sandik_ref.name }}</td>
@@ -244,17 +237,21 @@
                 <th>Hisse sayısı:</th>
                 <td>{{ g.member.shares_count() }}</td>
               </tr>
-              <tr class="row">
-                <th>İşlem sayısı:</th>
-                <td>{{ g.member.transactions_count() }}</td>
-              </tr>
+              {# <tr class="row"> #}
+              {#   <th>İşlem sayısı:</th> #}
+              {#   <td>{{ g.member.transactions_count() }}</td> #}
+              {# </tr> #}
               <tr class="row">
                 <th>Üyelik durumu:</th>
                 <td>{% if g.member.is_active %}Aktif{% else %}Pasif{% endif %}</td>
               </tr>
               <tr class="row">
-                <th>Varsayılan hesap:</th>
-                <td>{{ g.member.iban }}</td>
+                <th>Birincil<br>banka hesabı:</th>
+                <td>
+                  <span title="Hesap başlığı">{{ g.member.web_user_ref.get_primary_bank_account().title }}</span><br>
+                  <span title="Hesap sahibi">{{ g.member.web_user_ref.get_primary_bank_account().holder }}</span><br>
+                  <span title="IBAN ">{{ g.member.web_user_ref.get_primary_bank_account().get_iban_string() }}</span>
+                </td>
               </tr>
               </tbody>
             </table>
@@ -273,19 +270,19 @@
               <tbody>
               <tr class="row">
                 <th>Toplanan aidat:</th>
-                <td>{{ g.trusted_links.total_paid_contributions }} ₺</td>
+                <td>{{ g.summary_data.trusted_links.total_paid_contributions }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Verilen borç:</th>
-                <td>{{ g.trusted_links.total_loaned_amount }} ₺</td>
+                <td>{{ g.summary_data.trusted_links.total_loaned_amount }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Toplanan taksit:</th>
-                <td>{{ g.trusted_links.total_paid_installments }} ₺</td>
+                <td>{{ g.summary_data.trusted_links.total_paid_installments }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Son durum:</th>
-                <td>{{ g.trusted_links.total_balance }} ₺</td>
+                <td>{{ g.summary_data.trusted_links.total_balance }} ₺</td>
               </tr>
               </tbody>
             </table>
@@ -325,9 +322,12 @@
         <div class="panel panel-default">
           <div class="panel-heading font-bold">
             <span>Hisseler</span>
+            <span class="pull-right">
+              {{ macros.button(url=url_for("sandik_page_bp.add_share_to_member_page", member_id=g.member.id, sandik_id=g.sandik.id), icon='glyphicon glyphicon-plus', type='default', size='sm', title='Düzenle') }}
+            </span>
           </div>
           <div>
-            <table id="member-details" class="table"></table>
+            <table id="shares-table" class="table"></table>
           </div>
         </div>
       </div>
