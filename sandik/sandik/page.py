@@ -52,7 +52,7 @@ def sandik_detail_page(sandik_id):
 @member_required
 def sandik_summary_for_member_page(sandik_id):
     g.summary_data = utils.get_member_summary_page(member=g.member)
-    g.type = "member"
+
     return render_template("sandik/sandik_summary_for_member_page.html",
                            page_info=LayoutPI(title=g.sandik.name, active_dropdown="sandik"))
 
