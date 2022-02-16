@@ -391,6 +391,16 @@ class Log(db.Entity):
             ADD_AUTHORIZED = first + 11
             REMOVE_AUTHORIZED = first + 13
 
+        class SHARE:
+            first, last = 1200, 1299
+            CREATE = first + 1
+            UPDATE = first + 2
+
+        class MEMBER:
+            first, last = 1300, 1399
+            CREATE = first + 1
+            UPDATE = first + 2
+
         class LOG_LEVEL:
             first, last = 10000, 10099
             INFO = first + 11
@@ -488,6 +498,9 @@ class BankAccount(db.Entity):
     sandik_ref = Optional(Sandik)
     bank_transactions_set = Set(BankTransaction)
     is_primary = Required(bool)
+
+    def get_iban_string(self):
+        return f"TR{self.iban[0:2]} {self.iban[2:6]} {self.iban[6:10]} {self.iban[10:14]} {self.iban[14:18]} {self.iban[18:22]} {self.iban[22:24]}"
 
     def before_insert(self):
         # TODO test et: Aynı kullanıcının veya sandığın aynı anca sadece bir tane primary (öncelikli) banka hesabı

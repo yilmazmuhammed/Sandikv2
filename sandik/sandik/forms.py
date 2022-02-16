@@ -208,8 +208,76 @@ class AddMemberForm(CustomFlaskForm):
     def __init__(self, sandik, form_title='Üye ekleme formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.web_user.choices += auth_db.web_users_form_choices()
-        self.contribution_amount.data = sandik.contribution_amount
         max_share = sandik_preferences.get_max_number_of_share(sandik=sandik)
         self.number_of_share.validators.append(
             NumberRange(message=f"Hisse sayısı {max_share}'dan fazla olamaz", max=max_share)
         )
+
+
+class EditMemberForm(CustomFlaskForm):
+    email_address = EmailField(
+        "E-posta adresi:",
+        validators=[
+            input_required_validator("E-posta adresi"),
+            max_length_validator("E-posta adresi", 80),
+            Email("Geçerli bir e-posta adresi giriniz")
+        ],
+        render_kw={"placeholder": "Email address"}
+    )
+
+    date_of_membership = DateField(
+        label="Üyelik tarihi:",
+        validators=[
+            input_required_validator("Üyelik tarihi"),
+        ],
+    )
+
+    contribution_amount = DecimalField(
+        label="Aidat miktarı:",
+        validators=[
+            input_required_validator("Aidat miktarı"),
+            NumberRange(message="Aidat miktarı 0'dan büyük bir sayı olmalıdır", min=0.001),
+        ],
+        render_kw={"placeholder": "100"},
+    )
+
+    detail = TextAreaField(
+        label="Detay:",
+        validators=[
+            Optional(),
+            max_length_validator("Detay", 1000),
+        ],
+        render_kw={"placeholder": "Detay"}
+    )
+
+    submit = SubmitField(label="Gönder")
+
+    def __init__(self, form_title='Üye düzenleme formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
+
+    def fill_values_with_member(self, member):
+        self.email_address.data = member.web_user_ref.email_address
+        self.contribution_amount.data = member.contribution_amount
+        self.date_of_membership.data = member.date_of_membership
+        self.detail.data = member.detail
+
+
+class AddShareForm(CustomFlaskForm):
+
+    share_order_of_member = IntegerField(
+        label="Hisse no:",
+        render_kw={"disabled": ""},
+    )
+
+    date_of_opening = DateField(
+        label="Hisse açılış tarihi:",
+        validators=[
+            input_required_validator("Hisse açılış tarihi"),
+        ],
+        default=datetime.today()
+    )
+
+    submit = SubmitField(label="Kaydet")
+
+    def __init__(self, form_title='Hisse ekleme formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)

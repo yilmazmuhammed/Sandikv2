@@ -117,7 +117,7 @@ def create_member(sandik, web_user, created_by=None, confirmed_by=None, **kwargs
                         logged_sandik_ref=sandik, logged_web_user_ref=web_user,
                         detail=f"Üyelik başvurusu onaylandı: '{web_user.name_surname}'"))
     sandik.applicant_web_users_set.remove(web_user)
-    logs.append(Log(web_user_ref=created_by or confirmed_by, type=Log.TYPE.CREATE, logged_sandik_ref=sandik,
+    logs.append(Log(web_user_ref=created_by or confirmed_by, type=Log.TYPE.MEMBER.CREATE, logged_sandik_ref=sandik,
                     logged_web_user_ref=web_user, detail=f"Üye oluşturuldu: '{web_user.name_surname}'"))
     member = Member(sandik_ref=sandik, web_user_ref=web_user, logs_set=logs, **kwargs)
     return member
@@ -128,8 +128,20 @@ def get_last_share_order(member):
 
 
 def create_share(member, created_by, **kwargs) -> Share:
-    log = Log(web_user_ref=created_by, type=Log.TYPE.CREATE)
+    log = Log(web_user_ref=created_by, type=Log.TYPE.SHARE.CREATE)
     return Share(logs_set=log, member_ref=member, **kwargs)
+
+
+def update_share(share, updated_by, **kwargs):
+    Log(web_user_ref=updated_by, type=Log.TYPE.SHARE.UPDATE, logged_share_ref=share, detail=str(kwargs))
+    share.set(**kwargs)
+    return share
+
+
+def update_member(member, updated_by, **kwargs):
+    Log(web_user_ref=updated_by, type=Log.TYPE.MEMBER.UPDATE, logged_member_ref=member, detail=str(kwargs))
+    member.set(**kwargs)
+    return member
 
 
 def get_member(**kwargs) -> Member:
