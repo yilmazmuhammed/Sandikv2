@@ -12,6 +12,7 @@ from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelatio
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, member_required, \
     trust_relationship_required
 from sandik.utils import LayoutPI, get_next_url, sandik_preferences
+
 from sandik.utils.forms import flask_form_to_dict, FormPI
 
 sandik_page_bp = Blueprint(
@@ -52,7 +53,7 @@ def sandik_detail_page(sandik_id):
 @member_required
 def sandik_summary_for_member_page(sandik_id):
     g.summary_data = utils.get_member_summary_page(member=g.member)
-
+    g.type = "member"
     return render_template("sandik/sandik_summary_for_member_page.html",
                            page_info=LayoutPI(title=g.sandik.name, active_dropdown="sandik"))
 
