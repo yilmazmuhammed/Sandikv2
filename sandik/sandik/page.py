@@ -8,10 +8,10 @@ from sandik.auth.requirement import login_required, web_user_required
 from sandik.sandik import forms, db, utils
 from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelationshipCreationException, \
     MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, SandikAuthorityException, AddMemberException, \
-    MembershipException
+    MembershipException, MaxShareCountExceed
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, member_required, \
     trust_relationship_required
-from sandik.utils import LayoutPI, get_next_url
+from sandik.utils import LayoutPI, get_next_url, sandik_preferences
 from sandik.utils.forms import flask_form_to_dict, FormPI
 
 sandik_page_bp = Blueprint(
@@ -52,7 +52,7 @@ def sandik_detail_page(sandik_id):
 @member_required
 def sandik_summary_for_member_page(sandik_id):
     g.summary_data = utils.get_member_summary_page(member=g.member)
-
+    g.type = "member"
     return render_template("sandik/sandik_summary_for_member_page.html",
                            page_info=LayoutPI(title=g.sandik.name, active_dropdown="sandik"))
 
@@ -279,10 +279,11 @@ def member_summary_for_management_page(sandik_id, member_id):
 
     g.member = member
     g.summary_data = utils.get_member_summary_page(member=g.member)
+    g.type = "management"
 
     page_title = f"Üye özeti: {g.member.web_user_ref.name_surname}"
     return render_template("sandik/sandik_summary_for_member_page.html",
-                           page_info=LayoutPI(title=page_title, active_dropdown="sandik"))
+                           page_info=LayoutPI(title=page_title, active_dropdown="members"))
 
 
 @sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/hisse-ekle", methods=["GET", "POST"])
@@ -292,21 +293,30 @@ def add_share_to_member_page(sandik_id, member_id):
     if not member:
         abort(404, "Üye bulunamadı")
 
+    max_share_count = sandik_preferences.get_max_number_of_share(sandik=member.sandik_ref)
+    if member.shares_set.select(lambda s: s.is_active).count() >= max_share_count:
+        flash(f"Bir üyenin en fazla {max_share_count} adet hissesi olabilir.", "danger")
+        return redirect(request.referrer or url_for("sandik_page_bp.member_summary_for_management_page",
+                                                    sandik_id=sandik_id, member_id=member_id))
+
     form = forms.AddShareForm()
     form.share_order_of_member.data = db.get_last_share_order(member) + 1
 
     if form.validate_on_submit():
-        utils.add_share_to_member(member=member, date_of_opening=form.date_of_opening.data,
-                                  added_by=current_user)
-        utils.Notification.MembershipApplication.send_adding_share_notification(sandik=g.sandik,
-                                                                                web_user=member.web_user_ref)
+        try:
+            utils.add_share_to_member(member=member, date_of_opening=form.date_of_opening.data,
+                                      added_by=current_user)
+            utils.Notification.MembershipApplication.send_adding_share_notification(sandik=g.sandik,
+                                                                                    web_user=member.web_user_ref)
 
-        return redirect(
-            url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=sandik_id, member_id=member_id)
-        )
+            return redirect(
+                url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=sandik_id, member_id=member_id)
+            )
+        except MaxShareCountExceed as e:
+            flash(str(e), "danger")
 
     return render_template("utils/form_layout.html",
-                           page_info=FormPI(title="Hisse ekle", form=form, active_dropdown='sandik'))
+                           page_info=FormPI(title="Hisse ekle", form=form, active_dropdown='members'))
 
 
 

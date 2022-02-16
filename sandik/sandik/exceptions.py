@@ -48,6 +48,10 @@ class UpdateMemberException(MembershipException):
     pass
 
 
+class MaxShareCountExceed(MembershipException):
+    pass
+
+
 class WebUserIsAlreadyMember(MembershipException):
     pass
 

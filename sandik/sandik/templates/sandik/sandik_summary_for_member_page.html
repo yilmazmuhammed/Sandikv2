@@ -13,7 +13,9 @@
           { "name": "total_debt", "title": "Alınan borçlar", "classes": "text-center", },
           { "name": "total_installment", "title": "Ödenen taksitler", "classes": "text-center",  },
           { "name": "final_status", "title": "Son durum", "classes": "text-center", },
+          {% if g.type == "management" %}
           { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+          {% endif %}
         ],
         "rows": [
         {% for share in g.member.shares_set.order_by("lambda s: s.share_order_of_member") %}
@@ -23,12 +25,14 @@
             "total_debt": `xxx{{ share.final_status("debt") }}`,
             "total_installment": `xxx{{ share.final_status("installment") }}`,
             "final_status": `xxx{{ share.final_status("total") }}`,
+            {% if g.type == "management" %}
             "actions": `
               <tr>
                 <td>{{ macros.button(url="#", icon='fa fa-pencil', type='info', size='xs', title='Düzenle') }}</td>
                 <td style='padding:5px;'></td>
                 <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
               </tr>`,
+            {% endif %}
           },
         {% endfor %}
         {
@@ -37,7 +41,9 @@
           "total_debt": `xxx{{ g.member.final_status("debt") }}`,
           "total_installment": `xxx{{ g.member.sum_of_paid_installments() }}`,
           "final_status": `xxx{{ g.member.final_status("total") }}`,
+          {% if g.type == "management" %}
           "actions": ``,
+          {% endif %}
         },
         ]
       });
@@ -72,7 +78,7 @@
             {% set detail='' %}
           {% endif %}
           {
-            "id": `<span title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.revindex }}</span>`,
+            "id": `<span title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.index }}</span>`,
             "term": "{{ p.term }}",
             "transaction_type": `{{ transaction_type }}`,
             "amount": `<span title="Toplam miktar:\t{{ p.amount }} \nKalan miktar:\t{{ p.get_unpaid_amount() }}">{{ p.get_unpaid_amount() }} ₺</span>`,
@@ -103,7 +109,7 @@
       "rows": [
         {% for mt in g.summary_data.my_latest_money_transactions %}
           {
-            "id": "<span title='ID: {{ mt.id }}'>{{ loop.revindex }}</span>",
+            "id": "<span title='ID: {{ mt.id }}'>{{ loop.index }}</span>",
             "date": "{{ mt.date.strftime("%Y-%m-%d") }}",
             "amount": "{{ mt.amount }} ₺",
             "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}"Para girişi"{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}"Para çıkışı"{% else %}"---"{% endif %},
@@ -128,7 +134,11 @@
       <div class="col-md-6">
         <div class="panel panel-default">
           <div class="panel-heading font-bold">
+            {% if g.type == "member" %}
             <span>Yaklaşan ödemelerim</span>
+            {% elif g.type == "management" %}
+            <span>Üyenin yaklaşan ödemeleri</span>
+            {% endif %}
           </div>
           <div>
             <table id="my-upcoming-payments-table" class="table"></table>
@@ -140,7 +150,11 @@
       <div class="col-md-6">
         <div class="panel panel-default">
           <div class="panel-heading font-bold">
+            {% if g.type == "member" %}
             <span>Son işlemlerim</span>
+            {% elif g.type == "management" %}
+            <span>Üyenin son işlemleri</span>
+            {% endif %}
           </div>
             <table id="my-latest-money-transactions-table" class="table"></table>
           </div>
@@ -190,7 +204,11 @@
 
         <div class="panel panel-default">
           <div class="panel-heading font-bold">
+            {% if g.type == "member" %}
             <span>Alabileceğim borç miktarı</span>
+            {% elif g.type == "management" %}
+            <span>Üyenin alabileceğim borç miktarı</span>
+            {% endif %}
           </div>
           <div>
             <table class="table">
@@ -210,9 +228,11 @@
         <div class="panel panel-default">
           <div class="panel-heading font-bold">
             <span>Üye bilgileri</span>
+            {% if g.type == "management" %}
             <span class="pull-right">
               {{ macros.button(url=url_for("sandik_page_bp.update_member_of_sandik_page", member_id=g.member.id, sandik_id=g.sandik.id), icon='fa fa-pencil', type='default', size='sm', title='Düzenle') }}
             </span>
+            {% endif %}
           </div>
           <div>
             <table id="member-details" class="table">
@@ -261,9 +281,14 @@
 
       <!-- Güven halkam -->
       <div class="col-md-3 col-md-offset-1">
+        <!-- Güven halkam -->
         <div class="panel panel-default">
           <div class="panel-heading font-bold">
+            {% if g.type == "member" %}
             <span>Güven halkam</span>
+            {% elif g.type == "management" %}
+            <span>Üyenin güven halkası</span>
+            {% endif %}
           </div>
           <div>
             <table id="trusted-links-status" class="table">
@@ -288,9 +313,14 @@
             </table>
           </div>
         </div>
+        <!-- Sandığa katkım -->
         <div class="panel panel-default">
           <div class="panel-heading font-bold">
+            {% if g.type == "member" %}
             <span>Sandığa katkım</span>
+            {% elif g.type == "management" %}
+            <span>Üyenin sandığa katkısı</span>
+            {% endif %}
           </div>
           <div>
             <table id="from-me-status" class="table">
@@ -322,9 +352,11 @@
         <div class="panel panel-default">
           <div class="panel-heading font-bold">
             <span>Hisseler</span>
+            {% if g.type == "management" %}
             <span class="pull-right">
               {{ macros.button(url=url_for("sandik_page_bp.add_share_to_member_page", member_id=g.member.id, sandik_id=g.sandik.id), icon='glyphicon glyphicon-plus', type='default', size='sm', title='Düzenle') }}
             </span>
+            {% endif %}
           </div>
           <div>
             <table id="shares-table" class="table"></table>
