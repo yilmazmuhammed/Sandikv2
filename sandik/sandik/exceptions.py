@@ -47,7 +47,7 @@ class AddMemberException(MembershipException):
 class UpdateMemberException(MembershipException):
     pass
 
-
+  
 class WebUserIsAlreadyMember(MembershipException):
     pass
 
