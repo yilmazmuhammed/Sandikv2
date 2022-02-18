@@ -60,13 +60,11 @@
                     </a>
                   </li>
                   <li>
-                    <a href="#">
-                      <span>İşlem ekle</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a href="{{ url_for('transaction_page_bp.money_transactions_of_member_page', sandik_id=g.sandik.id) }}">
-                      <span>Para giriş/çıkışları</span>
+                    <a href="{{ url_for('transaction_page_bp.debts_of_member_page', sandik_id=g.sandik.id) }}">
+                      {% if g.member.get_unpaid_debts().count() > 0 %}
+                      <b class="badge bg-danger pull-right">{{ g.member.get_unpaid_debts().count() }}</b>
+                      {% endif %}
+                      <span>Borçlarım</span>
                     </a>
                   </li>
                   <li>
@@ -76,24 +74,10 @@
                     </a>
                   </li>
                   <li>
-                    <a href="{{ url_for('transaction_page_bp.debts_of_member_page', sandik_id=g.sandik.id) }}">
-                      {% if g.member.get_unpaid_debts().count() > 0 %}
-                      <b class="badge bg-danger pull-right">{{ g.member.get_unpaid_debts().count() }}</b>
-                      {% endif %}
-                      <span>Borçlarım</span>
+                    <a href="{{ url_for('transaction_page_bp.money_transactions_of_member_page', sandik_id=g.sandik.id) }}">
+                      <span>Para giriş/çıkışları</span>
                     </a>
                   </li>
-                  {# <li> #}
-                  {#   <a href="{{ url_for('transaction_page_bp.transactions_of_member_page', sandik_id=g.sandik.id) }}"> #}
-                  {#     <span>Sandık işlemlerim</span> #}
-                  {#   </a> #}
-                  {# </li> #}
-                  {# <li> #}
-                  {#   <a href="#"> #}
-                  {#     <b class="badge bg-info pull-right">x</b> #}
-                  {#     <span>Onay bekleyenler</span> #}
-                  {#   </a> #}
-                  {# </li> #}
                 </ul>
               </li>
               {% endif %}
@@ -131,11 +115,6 @@
                     </a>
                   </li>
                   <li>
-                    <a href="{{ url_for('transaction_page_bp.transactions_of_sandik_page', sandik_id=g.sandik.id) }}">
-                      <span>Sandık işlemleri</span>
-                    </a>
-                  </li>
-                  <li>
                     <a href="{{ url_for('transaction_page_bp.payments_of_sandik_page', sandik_id=g.sandik.id) }}">
                       <b class="badge bg-danger pull-right">x</b>
                       <span>Ödemeler</span>
@@ -152,13 +131,18 @@
                       <span>Onay bekleyenler</span>
                     </a>
                   </li>
+                  <li>
+                    <a href="{{ url_for('transaction_page_bp.transactions_of_sandik_page', sandik_id=g.sandik.id) }}">
+                      <span>Sandık işlemleri</span>
+                    </a>
+                  </li>
                   <li id="add-custom-transaction-dropdown">
                     <a href="#" class="auto">
                       <span class="pull-right text-muted">
                         <i class="fa fa-fw fa-angle-right text"></i>
                         <i class="fa fa-fw fa-angle-down text-active"></i>
                       </span>
-                      <span>Manuel işlem ekle</span>
+                      <span>Sandık işlemi ekle</span>
                     </a>
                     <ul class="nav nav-sub dk">
                       <li class="nav-sub-header">
