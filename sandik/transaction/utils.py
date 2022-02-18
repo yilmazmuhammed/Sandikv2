@@ -306,3 +306,9 @@ def get_latest_money_transactions(whose, periods_count: int = 0):
     money_transactions = money_transactions.order_by(order_str)
 
     return money_transactions
+
+
+def add_custom_contribution(amount, period, share, created_by):
+    if not period_utils.is_valid_period(period=period):
+        raise NotValidPeriod(f"'{period}' geçerli bir aidat dönemi değil. Lütfen YYYY-AA (Yıl-Ay) formatında giriniz.")
+    db.create_contribution(share=share, period=period, amount=amount, created_by=created_by)

@@ -60,6 +60,10 @@ class ThereIsNoMember(Sandikv2UtilsException):
     pass
 
 
+class ThereIsNoShare(Sandikv2UtilsException):
+    pass
+
+
 class SandikAuthorityException(SandikException):
     ERRCODE_THOUSAND = THOUSANDS.SandikAuthorityException
 

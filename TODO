@@ -5,14 +5,9 @@ TODO CRITICAL   Her ay aidatlar oluşturulacak
                             => Bu ikisi için şöyle bir yol izlenebilir. MoneyTransaction eklenirken, eklendikten sonraki
                             ödeme mekanizması ayrı bir fonksiyona taşınır ve bu çalıştırılırç
 
-TODO CRITICAL   Manuel aidat ekleme sayfası eklenecek
-                    - Özel aidat için de bu sayfa kullanılacak
+TODO MAJOR      Üyeler sayfası, her üye için hisse hisse ne yaptı ne etti
 
-TODO            Member'dan iban sütunu kaldırılacak
-
-TODO            Üyeler sayfası, her üye için hisse hisse ne yaptı ne etti
-
-TODO            Sandık özeti (sandık yönetimi) sayfası
+TODO MAJOR      Sandık özeti (sandık yönetimi) sayfası
                     - Her üye için bu ay ne kadar ödemesi lazım vs..
 
 2- Kuralların tamamının işler hale getirilmesi

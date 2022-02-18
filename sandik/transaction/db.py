@@ -47,9 +47,11 @@ def create_installment(debt, created_by, **kwargs) -> Installment:
     )
 
 
-def create_contribution(share, period, created_by, log_detail):
+def create_contribution(share, period, created_by, amount=None, log_detail=""):
+    if amount is None:
+        amount = share.member_ref.contribution_amount
     return Contribution(
-        amount=share.member_ref.contribution_amount, term=period, share_ref=share,
+        amount=amount, term=period, share_ref=share,
         logs_set=Log(web_user_ref=created_by, type=Log.TYPE.CONTRIBUTION.CREATE, detail=log_detail)
     )
 

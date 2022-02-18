@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from wtforms import TextAreaField, SelectField, SubmitField, DecimalField, DateField, HiddenField
+from wtforms import TextAreaField, SelectField, SubmitField, DecimalField, DateField, HiddenField, StringField
 from wtforms.validators import NumberRange, Optional
 
 from sandik.sandik import db as sandik_db
@@ -61,4 +61,49 @@ class MoneyTransactionForm(CustomFlaskForm):
     def __init__(self, sandik, form_title='Para işlemi formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.type.choices += [(key, value) for key, value in MoneyTransaction.TYPE.strings.items()]
+        self.member.choices += sandik_db.members_form_choices(sandik=sandik)
+
+
+class ContributionForm(CustomFlaskForm):
+    member = SelectField(
+        label="Üye:",
+        validators=[
+            input_required_validator("Üye")
+        ],
+        choices=[("", "Üye seçiniz...")],
+        coerce=str,
+    )
+
+    share = SelectField(
+        label="Hisse:",
+        validators=[
+            input_required_validator("Hisse")
+        ],
+        choices=[("", "Hisse seçiniz...")],
+        coerce=str,
+        validate_choice=False
+    )
+
+    amount = DecimalField(
+        label="İşlem miktarı:",
+        validators=[
+            input_required_validator("İşlem miktarı"),
+            NumberRange(message="İşlem miktarı 0'dan büyük bir sayı olmalıdır", min=0.001),
+        ],
+        render_kw={"placeholder": "0.01"},
+    )
+
+    period = StringField(
+        label="Aidat dönemi:",
+        validators=[
+            input_required_validator("Aidat dönemi"),
+            max_length_validator("Aidat dönemi", 7),
+        ],
+        render_kw={"placeholder": "YYYY-AA"}
+    )
+
+    submit = SubmitField(label="Kaydet")
+
+    def __init__(self, sandik, form_title='Aidat formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
         self.member.choices += sandik_db.members_form_choices(sandik=sandik)

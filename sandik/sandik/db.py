@@ -42,9 +42,9 @@ def sandik_authorities_form_choices(sandik):
 def add_authorized_to_sandik(web_user, sandik_authority, connected_by):
     if web_user.get_sandik_authority(sandik=sandik_authority.sandik_ref):
         raise ThereIsNotSandikAuthority("Bu kullanızı zaten bu sandıkta yetkili. "
-                                         "Aynı kullanıcı bir sandıkta sadece bir yetkiye sahip olabilir. "
-                                         "Kullanıcının yetkisini değiştirmek istiyorsanız, "
-                                         "lütfen önceki yetkiyi siliniz.")
+                                        "Aynı kullanıcı bir sandıkta sadece bir yetkiye sahip olabilir. "
+                                        "Kullanıcının yetkisini değiştirmek istiyorsanız, "
+                                        "lütfen önceki yetkiyi siliniz.")
     Log(web_user_ref=connected_by, type=Log.TYPE.SANDIK_AUTHORITY_TYPE.ADD_AUTHORIZED,
         logged_web_user_ref=web_user, logged_sandik_authority_type_ref=sandik_authority)
     sandik_authority.web_users_set.add(web_user)
@@ -146,6 +146,10 @@ def update_member(member, updated_by, **kwargs):
 
 def get_member(**kwargs) -> Member:
     return Member.get(**kwargs)
+
+
+def get_share(**kwargs) -> Share:
+    return Share.get(**kwargs)
 
 
 def members_form_choices(sandik):

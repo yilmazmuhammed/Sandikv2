@@ -3,15 +3,19 @@ from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import MONTHLY, rrule
 
-period_format_string = "%Y-%m"
+PERIOD_FORMAT_STRING = "%Y-%m"
 
 
 class NotValidPeriod(Exception):
     pass
 
 
+def period_to_date(period):
+    return datetime.strptime(period, PERIOD_FORMAT_STRING).date()
+
+
 def date_to_period(period_date):
-    return period_date.strftime(period_format_string)
+    return period_date.strftime(PERIOD_FORMAT_STRING)
 
 
 def previous_period(prev_count=1):
@@ -36,10 +40,6 @@ def is_valid_period(period):
         return True
     except Exception:
         return False
-
-
-def period_to_date(period):
-    return datetime.strptime(period, period_format_string).date()
 
 
 def get_periods_between_two_period(first_period: str, last_period: str):
