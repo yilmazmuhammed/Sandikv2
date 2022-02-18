@@ -106,7 +106,7 @@ def create_due_contributions_for_all_members_page(sandik_id):
 @transaction_page_bp.route('s-para-giris-cikislari')
 @sandik_authorization_required("read")
 def money_transactions_of_sandik_page(sandik_id):
-    g.money_transactions = g.sandik.get_money_transactions().order_by(lambda mt: desc(mt.id))
+    g.money_transactions = g.sandik.get_money_transactions().order_by(lambda mt: (desc(mt.date), desc(mt.id)))
     return render_template("transaction/money_transactions_page.html",
                            page_info=LayoutPI(title="Para giriş/çıkış işlemleri",
                                               active_dropdown="management-transactions"))
@@ -115,7 +115,7 @@ def money_transactions_of_sandik_page(sandik_id):
 @transaction_page_bp.route('u-para-giris-cikislari')
 @member_required
 def money_transactions_of_member_page(sandik_id):
-    g.money_transactions = g.member.money_transactions_set.order_by(lambda mt: desc(mt.id))
+    g.money_transactions = g.member.money_transactions_set.order_by(lambda mt: (desc(mt.date), desc(mt.id)))
     return render_template(
         "transaction/money_transactions_page.html",
         page_info=LayoutPI(title="Para giriş/çıkış işlemlerim", active_dropdown="member-transactions")

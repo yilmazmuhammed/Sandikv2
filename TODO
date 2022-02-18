@@ -10,6 +10,8 @@ TODO MAJOR      Üyeler sayfası, her üye için hisse hisse ne yaptı ne etti
 TODO MAJOR      Sandık özeti (sandık yönetimi) sayfası
                     - Her üye için bu ay ne kadar ödemesi lazım vs..
 
+TODO MINOR      İşlem silinince ödenmemiş durumuna düşen ödemeleri ,işleme konmamış paradan öde
+
 2- Kuralların tamamının işler hale getirilmesi
 TODO            piece_of_debt'te havuz (sandığın %10u) için de oluştur
 TODO            Borç alınırken önce kendi parasından borç alsın, sonra güven halkasından alsın

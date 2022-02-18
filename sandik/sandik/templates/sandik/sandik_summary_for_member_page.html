@@ -268,9 +268,11 @@
               <tr class="row">
                 <th>Birincil<br>banka hesabı:</th>
                 <td>
+                  {% if g.member.web_user_ref.get_primary_bank_account() %}
                   <span title="Hesap başlığı">{{ g.member.web_user_ref.get_primary_bank_account().title }}</span><br>
                   <span title="Hesap sahibi">{{ g.member.web_user_ref.get_primary_bank_account().holder }}</span><br>
                   <span title="IBAN ">{{ g.member.web_user_ref.get_primary_bank_account().get_iban_string() }}</span>
+                  {% endif %}
                 </td>
               </tr>
               </tbody>
