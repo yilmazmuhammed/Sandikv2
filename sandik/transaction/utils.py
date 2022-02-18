@@ -258,7 +258,7 @@ def get_payments(whose, is_fully_paid: bool = None, is_due: bool = None, periods
     installment = db.select_installments(filter_str).order_by(order_str)
 
     transactions = contributions[:][:] + installment[:][:]
-    sorted_transactions = sorted(transactions, key=lambda t: t.term)
+    sorted_transactions = sorted(transactions, key=lambda t: t.term, reverse=True)
 
     return sorted_transactions
 

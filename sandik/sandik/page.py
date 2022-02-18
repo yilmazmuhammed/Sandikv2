@@ -198,7 +198,7 @@ def add_member_to_sandik_page(sandik_id):
         form.contribution_amount.data = g.sandik.contribution_amount
 
     return render_template("utils/form_layout.html",
-                           page_info=FormPI(title="Sandığa üye ekle", form=form, active_dropdown='sandik'))
+                           page_info=FormPI(title="Sandığa üye ekle", form=form, active_dropdown='members'))
 
 
 @sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/guncelle", methods=["GET", "POST"])
@@ -225,7 +225,8 @@ def update_member_of_sandik_page(sandik_id, member_id):
 
             utils.update_member_of_sandik(member=member, updated_by=current_user, **updated_values)
 
-            return redirect(url_for("sandik_page_bp.members_of_sandik_page", sandik_id=sandik_id))
+            return redirect(url_for("sandik_page_bp.member_summary_for_management_page",
+                                    sandik_id=sandik_id, member_id=member_id))
         except (WebUserNotFound, MembershipException) as e:
             flash(str(e), "danger")
 
@@ -233,7 +234,7 @@ def update_member_of_sandik_page(sandik_id, member_id):
         form.fill_values_with_member(member=member)
 
     return render_template("utils/form_layout.html",
-                           page_info=FormPI(title="Sandığa üye ekle", form=form, active_dropdown='sandik'))
+                           page_info=FormPI(title="Sandığa üye ekle", form=form, active_dropdown='members'))
 
 
 @sandik_page_bp.route("/<int:sandik_id>/basvuru-onayla/<int:web_user_id>")
