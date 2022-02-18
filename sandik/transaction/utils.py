@@ -223,7 +223,7 @@ def get_transactions(whose):
 
 def get_payments(whose, is_fully_paid: bool = None, is_due: bool = None, periods: list = None):
     filter_str = "lambda p: p"
-    order_str = "lambda p: (p.term, p.member_ref.web_user_ref.name_surname, p.id)"
+    order_str = "lambda p: (p.is_fully_paid, p.term, p.member_ref.web_user_ref.name_surname, p.id)"
     if isinstance(whose, Sandik):
         filter_str += f" and p.sandik_ref == {whose}"
     elif isinstance(whose, Member):

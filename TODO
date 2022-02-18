@@ -12,7 +12,7 @@ TODO MAJOR      Sandık özeti (sandık yönetimi) sayfası
 
 TODO MINOR      İşlem silinince ödenmemiş durumuna düşen ödemeleri ,işleme konmamış paradan öde
 
-TODO MINOR      get_primary_bank_account() çalışmıyor
+TODO MAJOR      Ay gelmeden manuel olarak aidat girilirse, her ayın başındaki aidat oluşturulurken o aidat tekrar oluşturulmasın
 
 2- Kuralların tamamının işler hale getirilmesi
 TODO            piece_of_debt'te havuz (sandığın %10u) için de oluştur
