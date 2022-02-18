@@ -357,10 +357,12 @@ class Log(db.Entity):
         class SUB_RECEIPT:
             first, last = 400, 499
             CREATE = first + 1
+            DELETE = first + 3
 
         class MONEY_TRANSACTION:
             first, last = 500, 599
             CREATE = first + 1
+            DELETE = first + 3
             SIGN_FULLY_DISTRIBUTED = first + 11
 
         class DEBT:
@@ -547,6 +549,18 @@ class Contribution(db.Entity):
     def get_unpaid_amount(self):
         return self.amount - self.get_paid_amount()
 
+    def recalculate_is_fully_paid(self):
+        unpaid_amount = self.get_unpaid_amount()
+        if unpaid_amount == 0:
+            self.is_fully_paid = True
+        elif unpaid_amount > 0:
+            self.is_fully_paid = False
+        else:
+            print("recalculate_is_fully_paid:", unpaid_amount)
+            rollback()
+            from sandik.utils.exceptions import UnexpectedValue
+            raise UnexpectedValue("ERRCODE: 0010, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+
 
 class Debt(db.Entity):
     id = PrimaryKey(int, auto=True)
@@ -575,6 +589,8 @@ class Debt(db.Entity):
         return self.amount - self.get_paid_amount()
 
     def update_pieces_of_debt(self):
+        # TODO ilgili borç tamamen ödendiyse PieceOfDebt'leri sil
+        # TODO ilgili borç tamamen ödenmediyse PieceOfDebt'leri güncelle
         paid_amount = self.get_paid_amount()
         undistributed_paid_amount = paid_amount
         for piece in self.piece_of_debts_set:
@@ -617,6 +633,18 @@ class Installment(db.Entity):
     def get_unpaid_amount(self):
         return self.amount - self.get_paid_amount()
 
+    def recalculate_is_fully_paid(self):
+        unpaid_amount = self.get_unpaid_amount()
+        if unpaid_amount == 0:
+            self.is_fully_paid = True
+        elif unpaid_amount > 0:
+            self.is_fully_paid = False
+        else:
+            print("Installment.recalculate_is_fully_paid:", unpaid_amount)
+            rollback()
+            from sandik.utils.exceptions import UnexpectedValue
+            raise UnexpectedValue("ERRCODE: 0011, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+
 
 class SubReceipt(db.Entity):
     """TODO - Bir SubReceipt aynı anda Contribution, Debt veya Installment'ten biriyle ilişkili olmak zorundadır. Daha az veya daha fazlası olamaz."""
@@ -647,24 +675,11 @@ class SubReceipt(db.Entity):
     def after_insert(self):
         # TODO test et
         if self.contribution_ref:
-            unpaid_amount = self.contribution_ref.get_unpaid_amount()
-            if unpaid_amount == 0:
-                self.contribution_ref.is_fully_paid = True
-            elif unpaid_amount < 0:
-                print(unpaid_amount)
-                rollback()
-                from sandik.utils.exceptions import UnexpectedValue
-                raise UnexpectedValue("ERRCODE: 0010, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+            self.contribution_ref.recalculate_is_fully_paid()
             self.contribution_ref.share_ref.member_ref.balance += self.amount
 
         if self.installment_ref:
-            unpaid_amount = self.installment_ref.get_unpaid_amount()
-            if unpaid_amount == 0:
-                self.installment_ref.is_fully_paid = True
-            elif unpaid_amount < 0:
-                raise Exception("ERRCODE: 0011, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
-            # TODO ilgili borç tamamen ödendiyse PieceOfDebt'leri sil
-            # TODO ilgili borç tamamen ödenmediyse PieceOfDebt'leri güncelle
+            self.installment_ref.recalculate_is_fully_paid()
             self.installment_ref.debt_ref.update_pieces_of_debt()
 
         # TODO test et: 4 işlem tipi için de dene
@@ -673,6 +688,20 @@ class SubReceipt(db.Entity):
             self.money_transaction_ref.is_fully_distributed = True
         elif mt_untreated_amount < 0:
             raise Exception("ERRCODE: 0013, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+
+    def before_delete(self):
+        # if self.contribution_ref:
+        #     contribution = self.contribution_ref
+        #     self.contribution_ref = None
+        #     contribution.recalculate_is_fully_paid()
+        #     contribution.share_ref.member_ref.balance -= self.amount
+        #
+        # if self.installment_ref:
+        #     installment = self.installment_ref
+        #     self.installment_ref = None
+        #     installment.recalculate_is_fully_paid()
+        #     installment.debt_ref.update_pieces_of_debt()
+        pass
 
 
 class Notification(db.Entity):

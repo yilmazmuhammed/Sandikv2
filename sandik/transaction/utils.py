@@ -1,6 +1,7 @@
 from pony.orm import desc  # ponyorm order_by icin lambda string'inde kullaniliyor
 
 from sandik.transaction import db
+from sandik.transaction.exceptions import UndefinedRemoveOperation
 from sandik.utils import period as period_utils
 from sandik.utils.db_models import Share, Member, MoneyTransaction, Contribution, Installment, Sandik, Debt
 from sandik.utils.exceptions import InvalidWhoseType
@@ -312,3 +313,27 @@ def add_custom_contribution(amount, period, share, created_by):
     if not period_utils.is_valid_period(period=period):
         raise NotValidPeriod(f"'{period}' geçerli bir aidat dönemi değil. Lütfen YYYY-AA (Yıl-Ay) formatında giriniz.")
     db.create_contribution(share=share, period=period, amount=amount, created_by=created_by)
+
+
+def remove_sub_receipt_from_contribution(sub_receipt, removed_by):
+    return db.remove_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
+
+
+def remove_sub_receipt_from_installment(sub_receipt, removed_by):
+    return db.remove_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
+
+
+def remove_sub_receipt(sub_receipt, removed_by):
+    if sub_receipt.contribution_ref:
+        remove_sub_receipt_from_contribution(sub_receipt=sub_receipt, removed_by=removed_by)
+    elif sub_receipt.installment_ref:
+        remove_sub_receipt_from_installment(sub_receipt=sub_receipt, removed_by=removed_by)
+    else:
+        raise UndefinedRemoveOperation("Tanımlanmamış sub receipt silme işlemi")
+
+
+def remove_money_transaction(money_transaction, removed_by):
+    for sub_receipt in money_transaction.sub_receipts_set:
+        remove_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
+    db.remove_money_transaction(money_transaction=money_transaction, removed_by=removed_by)
+

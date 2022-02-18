@@ -7,6 +7,7 @@ from sandik.sandik import db as sandik_db
 from sandik.sandik.exceptions import ThereIsNoMember, ThereIsNoShare
 from sandik.sandik.requirement import sandik_authorization_required, member_required
 from sandik.transaction import forms, utils
+from sandik.transaction.authorization import money_transaction_required
 from sandik.transaction.exceptions import MaximumDebtAmountExceeded
 from sandik.utils import LayoutPI
 from sandik.utils.db_models import MoneyTransaction
@@ -60,7 +61,7 @@ def add_money_transaction_by_manager_page(sandik_id):
 
 @transaction_page_bp.route('aidat-ekle', methods=["GET", "POST"])
 @sandik_authorization_required("write")
-def add_custom_contribution_page(sandik_id):
+def add_custom_contribution_by_manager_page(sandik_id):
     form = forms.ContributionForm(sandik=g.sandik)
 
     if form.validate_on_submit():
@@ -75,15 +76,23 @@ def add_custom_contribution_page(sandik_id):
 
             utils.add_custom_contribution(amount=form.amount.data, period=form.period.data, share=share,
                                           created_by=current_user)
-            return redirect(url_for("transaction_page_bp.add_custom_contribution_page", sandik_id=sandik_id))
+            return redirect(url_for("transaction_page_bp.add_custom_contribution_by_manager_page", sandik_id=sandik_id))
         except (ThereIsNoMember, ThereIsNoShare) as e:
             flash(str(e), "danger")
         except NotValidPeriod as e:
             flash(str(e), "danger")
 
-    return render_template("transaction/add_custom_contribution_page.html",
+    return render_template("transaction/add_custom_contribution_by_manager_page.html",
                            page_info=FormPI(title="Manuel aidat ekle", form=form,
                                             active_dropdown="management-transactions"))
+
+
+@transaction_page_bp.route('mt-<int:money_transaction_id>/sil')
+@sandik_authorization_required("write")
+@money_transaction_required
+def remove_money_transaction_by_manager_page(sandik_id, money_transaction_id):
+    utils.remove_money_transaction(money_transaction=g.money_transaction, removed_by=current_user)
+    return redirect(request.referrer or url_for("transaction_page_bp.money_transactions_of_sandik_page"))
 
 
 @transaction_page_bp.route('butun-uyeler-icin-vadesi-gelmis-aidatlari-olustur', methods=["GET", "POST"])

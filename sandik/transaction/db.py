@@ -1,6 +1,6 @@
 from math import ceil
 
-from pony.orm import select
+from pony.orm import select, flush
 
 from sandik.utils import period as period_utils, sandik_preferences
 from sandik.utils.db_models import Contribution, Share, Member, Installment, MoneyTransaction, Log, SubReceipt, Debt, \
@@ -68,111 +68,6 @@ def create_piece_of_debt(member, debt, amount, trust_relationship_for_log, creat
     }
     log = Log(web_user_ref=created_by, type=Log.TYPE.PIECE_OF_DEBT.CREATE, **logged_ref_items)
     return PieceOfDebt(logs_set=log, member_ref=member, debt_ref=debt, amount=amount)
-
-
-def get_contribution(*args, **kwargs) -> Contribution:
-    return Contribution.get(*args, **kwargs)
-
-
-def select_contributions(*args, **kwargs):
-    return Contribution.select(*args, **kwargs)
-
-
-def select_installments(*args, **kwargs):
-    return Installment.select(*args, **kwargs)
-
-
-def select_money_transactions(*args, **kwargs):
-    return MoneyTransaction.select(*args, **kwargs)
-
-
-def select_debts(*args, **kwargs):
-    return Debt.select(*args, **kwargs)
-
-
-def get_paid_contributions(whose):
-    if isinstance(whose, Share):
-        return select_contributions(lambda c: c.share_ref == whose and c.is_fully_paid)
-    elif isinstance(whose, Member):
-        return select_contributions(lambda c: c.share_ref.member_ref == whose and c.is_fully_paid)
-    else:
-        raise Exception("ERRCODE: 0008, MSG: 'whose' sadece 'Member' yada 'Share' olabilir.")
-
-
-def get_unpaid_and_due_contributions(whose):
-    """
-    Ödenmemiş aidatları !!term'e gore sirali!! olarak doner
-    """
-    if isinstance(whose, Share):
-        return select_contributions(
-            lambda c: c.share_ref == whose and not c.is_fully_paid and c.term <= period_utils.current_period()
-        ).order_by(lambda c: c.term)
-    elif isinstance(whose, Member):
-        return select_contributions(
-            lambda c:
-            c.share_ref.member_ref == whose and not c.is_fully_paid and c.term <= period_utils.current_period()
-        ).order_by(lambda c: (c.term, c.share_ref.share_order_of_member))
-    elif isinstance(whose, Sandik):
-        return select_contributions(
-            lambda c:
-            c.share_ref.member_ref.sandik_ref == whose and not c.is_fully_paid and c.term <= period_utils.current_period()
-        ).order_by(lambda c: (c.term, c.share_ref.share_order_of_member))
-    else:
-        raise Exception("ERRCODE: 0007, MSG: 'whose' sadece 'Member' yada 'Share' olabilir.")
-
-
-def get_unpaid_and_due_installments(whose):
-    """
-    Ödenmemiş taksitler !!term'e gore sirali!! olarak doner
-    """
-    if isinstance(whose, Share):
-        return select_installments(
-            lambda i: i.share_ref == whose and not i.is_fully_paid and i.term <= period_utils.current_period()
-        ).order_by(lambda c: c.term)
-    elif isinstance(whose, Member):
-        return select_installments(
-            lambda i:
-            i.share_ref.member_ref == whose and not i.is_fully_paid and i.term <= period_utils.current_period()
-        ).order_by(lambda c: (c.term, c.share_ref.share_order_of_member))
-    elif isinstance(whose, Sandik):
-        return select_installments(
-            lambda i:
-            i.share_ref.member_ref.sandik_ref == whose and not i.is_fully_paid and i.term <= period_utils.current_period()
-        ).order_by(lambda c: (c.term, c.share_ref.share_order_of_member))
-    else:
-        raise Exception("ERRCODE: 0006, MSG: 'whose' sadece 'Member' yada 'Share' olabilir.")
-
-
-def get_future_and_unpaid_installments(whose):
-    if isinstance(whose, Share):
-        return select_installments(
-            lambda i: i.share_ref == whose and not i.is_fully_paid and i.term > period_utils.current_period()
-        )
-    elif isinstance(whose, Member):
-        return select_installments(
-            lambda i: i.share_ref.member_ref == whose and not i.is_fully_paid and i.term > period_utils.current_period()
-        )
-    else:
-        raise Exception("ERRCODE: 0003, MSG: 'whose' sadece 'Member' yada 'Share' olabilir.")
-
-
-def sum_of_unpaid_and_due_contributions(whose):
-    return select(c.get_unpaid_amount() for c in get_unpaid_and_due_contributions(whose=whose)).sum()
-
-
-def sum_of_unpaid_and_due_installments(whose):
-    return select(c.get_unpaid_amount() for c in get_unpaid_and_due_installments(whose=whose)).sum()
-
-
-def sum_of_future_and_unpaid_installments(whose):
-    return select(c.get_unpaid_amount() for c in get_future_and_unpaid_installments(whose=whose)).sum()
-
-
-def sign_money_transaction_as_fully_distributed(money_transaction, signed_by):
-    Log(web_user_ref=signed_by, type=Log.TYPE.MONEY_TRANSACTION.SIGN_FULLY_DISTRIBUTED,
-        logged_money_transaction_ref=money_transaction, logged_member_ref=money_transaction.member_ref,
-        logged_sandik_ref=money_transaction.member_ref.sandik_ref)
-    money_transaction.set(is_fully_distributed=True)
 
 
 def create_installments_of_debt(debt, created_by):
@@ -284,6 +179,159 @@ def create_retracted(amount, untreated_money_transaction, money_transaction, cre
                                                    is_auto=True, created_by=created_by),
         logs_set=Log(web_user_ref=created_by, type=Log.TYPE.DEBT.CREATE, **logged_ref_items)
     )
+
+
+def remove_sub_receipt(sub_receipt, removed_by):
+    logged_ref_items = {
+        "logged_money_transaction_ref": sub_receipt.money_transaction_ref,
+        "logged_share_ref": sub_receipt.share_ref,
+        "logged_member_ref": sub_receipt.share_ref.member_ref,
+        "logged_sandik_ref": sub_receipt.share_ref.member_ref.sandik_ref,
+        "logged_contribution_ref": sub_receipt.contribution_ref,
+        "logged_installment_ref": sub_receipt.installment_ref,
+        "logged_debt_ref": sub_receipt.debt_ref,
+    }
+    sub_receipt_logs = sub_receipt.logs_set
+    sub_receipt_id = sub_receipt.id
+    contribution = sub_receipt.contribution_ref
+    installment = sub_receipt.installment_ref
+    amount = sub_receipt.amount
+    flush()
+
+    Log(web_user_ref=removed_by, type=Log.TYPE.SUB_RECEIPT.DELETE, detail=str(sub_receipt.to_dict()),
+        **logged_ref_items)
+    for log in sub_receipt_logs:
+        log.detail += f"deleted_sub_receipt_id: {sub_receipt_id}"
+
+    sub_receipt.delete()
+
+    if contribution:
+        contribution.recalculate_is_fully_paid()
+        contribution.share_ref.member_ref.balance -= amount
+    if installment:
+        installment.recalculate_is_fully_paid()
+        installment.debt_ref.update_pieces_of_debt()
+
+
+def remove_money_transaction(money_transaction, removed_by):
+    logged_ref_items = {
+        "logged_member_ref": money_transaction.member_ref,
+        "logged_sandik_ref": money_transaction.member_ref.sandik_ref,
+    }
+    Log(web_user_ref=removed_by, type=Log.TYPE.MONEY_TRANSACTION.DELETE, detail=str(money_transaction.to_dict()),
+        **logged_ref_items)
+    for log in money_transaction.logs_set:
+        log.detail += f"deleted_money_transaction_id: {money_transaction.id}"
+    money_transaction.delete()
+
+
+def get_contribution(*args, **kwargs) -> Contribution:
+    return Contribution.get(*args, **kwargs)
+
+
+def get_money_transaction(*args, **kwargs) -> MoneyTransaction:
+    return MoneyTransaction.get(*args, **kwargs)
+
+
+def select_contributions(*args, **kwargs):
+    return Contribution.select(*args, **kwargs)
+
+
+def select_installments(*args, **kwargs):
+    return Installment.select(*args, **kwargs)
+
+
+def select_money_transactions(*args, **kwargs):
+    return MoneyTransaction.select(*args, **kwargs)
+
+
+def select_debts(*args, **kwargs):
+    return Debt.select(*args, **kwargs)
+
+
+def get_paid_contributions(whose):
+    if isinstance(whose, Share):
+        return select_contributions(lambda c: c.share_ref == whose and c.is_fully_paid)
+    elif isinstance(whose, Member):
+        return select_contributions(lambda c: c.share_ref.member_ref == whose and c.is_fully_paid)
+    else:
+        raise Exception("ERRCODE: 0008, MSG: 'whose' sadece 'Member' yada 'Share' olabilir.")
+
+
+def get_unpaid_and_due_contributions(whose):
+    """
+    Ödenmemiş aidatları !!term'e gore sirali!! olarak doner
+    """
+    if isinstance(whose, Share):
+        return select_contributions(
+            lambda c: c.share_ref == whose and not c.is_fully_paid and c.term <= period_utils.current_period()
+        ).order_by(lambda c: c.term)
+    elif isinstance(whose, Member):
+        return select_contributions(
+            lambda c:
+            c.share_ref.member_ref == whose and not c.is_fully_paid and c.term <= period_utils.current_period()
+        ).order_by(lambda c: (c.term, c.share_ref.share_order_of_member))
+    elif isinstance(whose, Sandik):
+        return select_contributions(
+            lambda c:
+            c.share_ref.member_ref.sandik_ref == whose and not c.is_fully_paid and c.term <= period_utils.current_period()
+        ).order_by(lambda c: (c.term, c.share_ref.share_order_of_member))
+    else:
+        raise Exception("ERRCODE: 0007, MSG: 'whose' sadece 'Member' yada 'Share' olabilir.")
+
+
+def get_unpaid_and_due_installments(whose):
+    """
+    Ödenmemiş taksitler !!term'e gore sirali!! olarak doner
+    """
+    if isinstance(whose, Share):
+        return select_installments(
+            lambda i: i.share_ref == whose and not i.is_fully_paid and i.term <= period_utils.current_period()
+        ).order_by(lambda c: c.term)
+    elif isinstance(whose, Member):
+        return select_installments(
+            lambda i:
+            i.share_ref.member_ref == whose and not i.is_fully_paid and i.term <= period_utils.current_period()
+        ).order_by(lambda c: (c.term, c.share_ref.share_order_of_member))
+    elif isinstance(whose, Sandik):
+        return select_installments(
+            lambda i:
+            i.share_ref.member_ref.sandik_ref == whose and not i.is_fully_paid and i.term <= period_utils.current_period()
+        ).order_by(lambda c: (c.term, c.share_ref.share_order_of_member))
+    else:
+        raise Exception("ERRCODE: 0006, MSG: 'whose' sadece 'Member' yada 'Share' olabilir.")
+
+
+def get_future_and_unpaid_installments(whose):
+    if isinstance(whose, Share):
+        return select_installments(
+            lambda i: i.share_ref == whose and not i.is_fully_paid and i.term > period_utils.current_period()
+        )
+    elif isinstance(whose, Member):
+        return select_installments(
+            lambda i: i.share_ref.member_ref == whose and not i.is_fully_paid and i.term > period_utils.current_period()
+        )
+    else:
+        raise Exception("ERRCODE: 0003, MSG: 'whose' sadece 'Member' yada 'Share' olabilir.")
+
+
+def sum_of_unpaid_and_due_contributions(whose):
+    return select(c.get_unpaid_amount() for c in get_unpaid_and_due_contributions(whose=whose)).sum()
+
+
+def sum_of_unpaid_and_due_installments(whose):
+    return select(c.get_unpaid_amount() for c in get_unpaid_and_due_installments(whose=whose)).sum()
+
+
+def sum_of_future_and_unpaid_installments(whose):
+    return select(c.get_unpaid_amount() for c in get_future_and_unpaid_installments(whose=whose)).sum()
+
+
+def sign_money_transaction_as_fully_distributed(money_transaction, signed_by):
+    Log(web_user_ref=signed_by, type=Log.TYPE.MONEY_TRANSACTION.SIGN_FULLY_DISTRIBUTED,
+        logged_money_transaction_ref=money_transaction, logged_member_ref=money_transaction.member_ref,
+        logged_sandik_ref=money_transaction.member_ref.sandik_ref)
+    money_transaction.set(is_fully_distributed=True)
 
 
 def total_paid_contributions_of_trusted_links(member):

@@ -44,7 +44,8 @@
             "actions": `
               <tr>
                 <td>{{ macros.button(url=url_for("sandik_page_bp.member_summary_for_management_page", member_id=member.id, sandik_id=g.sandik.id), icon='fa fa-search', type='info', size='xs', title='Üye özeti') }}</td>
-              </tr>`,
+              </tr>
+            `,
             {% endif %}
           },
         {% endfor %}
