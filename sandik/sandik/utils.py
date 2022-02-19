@@ -19,7 +19,7 @@ def add_share_to_member(member, added_by, **kwargs):
 
     order = db.get_last_share_order(member) + 1
     share = db.create_share(member=member, created_by=added_by, share_order_of_member=order, **kwargs)
-    transaction_utils.create_due_contributions_for_the_share(share, created_by=added_by)
+    transaction_utils.create_due_contributions_for_share(share, created_by=added_by)
     return share
 
 
@@ -39,7 +39,7 @@ def update_member_of_sandik(member, updated_by, date_of_membership=None, **kwarg
         if date_of_membership < member.date_of_membership:
             for share in member.shares_set.filter(date_of_opening=member.date_of_membership):
                 db.update_share(share=share, updated_by=updated_by, date_of_opening=date_of_membership)
-                transaction_utils.create_due_contributions_for_the_share(share, created_by=updated_by)
+                transaction_utils.create_due_contributions_for_share(share, created_by=updated_by)
         else:
             # TODO ödenmemiş aidatları sil
             raise UpdateMemberException("Üyelik tarihi ileriye alınamaz.")

@@ -143,7 +143,7 @@ def add_money_transaction(member, created_by, use_untreated_amount, pay_future_p
     return money_transaction
 
 
-def create_due_contributions_for_the_share(share, created_by, created_from=""):
+def create_due_contributions_for_share(share, created_by, created_from=""):
     print(f"START: Creating contributions for '{share}'...")
     first_period = period_utils.date_to_period(share.date_of_opening)
     last_period = period_utils.current_period()
@@ -157,18 +157,25 @@ def create_due_contributions_for_the_share(share, created_by, created_from=""):
     print(f"FINISH: Creating contributions for '{share}'...")
 
 
-def create_due_contributions_for_the_member(member, created_by, created_from=""):
+def create_due_contributions_for_member(member, created_by, created_from=""):
     print(f"START: Creating contributions for '{member}'...")
     for share in member.shares_set:
-        create_due_contributions_for_the_share(share=share, created_by=created_by, created_from=created_from)
+        create_due_contributions_for_share(share=share, created_by=created_by, created_from=created_from)
     print(f"FINISH: Creating contributions for '{member}'...")
 
 
-def create_due_contributions_for_all_members(sandik, created_by, created_from=""):
+def create_due_contributions_for_sandik(sandik, created_by, created_from=""):
     print(f"START: Creating contributions for '{sandik}'...")
     for member in sandik.members_set:
-        create_due_contributions_for_the_member(member=member, created_by=created_by, created_from=created_from)
+        create_due_contributions_for_member(member=member, created_by=created_by, created_from=created_from)
     print(f"FINISH: Creating contributions for '{sandik}'...")
+
+
+def create_due_contributions_for_all_sandiks(created_by, created_from=""):
+    print(f"START: Creating contributions for 'all sandiks'...")
+    for sandik in Sandik.select():
+        create_due_contributions_for_sandik(sandik=sandik, created_by=created_by, created_from=created_from)
+    print(f"FINISH: Creating contributions for 'all sandiks'...")
 
 
 def get_transactions(whose):
@@ -336,4 +343,3 @@ def remove_money_transaction(money_transaction, removed_by):
     for sub_receipt in money_transaction.sub_receipts_set:
         remove_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
     db.remove_money_transaction(money_transaction=money_transaction, removed_by=removed_by)
-

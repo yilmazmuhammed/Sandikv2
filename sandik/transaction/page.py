@@ -98,8 +98,8 @@ def remove_money_transaction_by_manager_page(sandik_id, money_transaction_id):
 @transaction_page_bp.route('butun-uyeler-icin-vadesi-gelmis-aidatlari-olustur', methods=["GET", "POST"])
 @sandik_authorization_required("write")
 def create_due_contributions_for_all_members_page(sandik_id):
-    utils.create_due_contributions_for_all_members(sandik=g.sandik, created_by=current_user,
-                                                   created_from="create_due_contributions_for_all_members_page")
+    utils.create_due_contributions_for_sandik(sandik=g.sandik, created_by=current_user,
+                                              created_from="create_due_contributions_for_all_members_page")
     return redirect(request.referrer or url_for("sandik_page_bp.sandik_index_page", sandik_id=sandik_id))
 
 
