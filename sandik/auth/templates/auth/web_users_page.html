@@ -38,7 +38,7 @@ jQuery(function($){
 			{ "name": "detail", "title": "Onay", },
 		],
 		"rows": [
-    {% for web_user in g.web_users.order_by("lambda wu: wu.id") %}
+    {% for web_user in g.web_users %}
       {
         "id": "<span title='ID: {{ web_user.id }}'>{{ loop.index }}</span>",
         "email_address": "{{ web_user.email_address }}",
