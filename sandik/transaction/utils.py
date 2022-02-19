@@ -69,6 +69,7 @@ def borrow_from_untreated_amount(untreated_money_transaction, amount, money_tran
     )
 
 
+# TODO ismi değişebilir, unpaid paymentları ödüyor
 def add_revenue_transactions(money_transaction, pay_future_payments, created_by):
     member = money_transaction.member_ref
     remaining_amount = money_transaction.get_undistributed_amount()

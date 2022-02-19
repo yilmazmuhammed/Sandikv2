@@ -32,9 +32,9 @@ TODO            member.balance özelliğini kaldır, get_balance() daha sağlık
 
 TASARIMLAR:
 - ...
-TODO	Her ayın başında;
-TODO		- Bütün hisseler için o ayın aidatları oluşturulur. Aidatlar oluşturulurken üyenin/hissenin o anki aidat miktarı göz önüne alınır.
-TODO		- Bütün hisseler için işleme sokulmamış paralar ile otomatik ödeme yapılır.
+DONE	Her ayın başında;
+DONE		- Bütün hisseler için o ayın aidatları oluşturulur. Aidatlar oluşturulurken üyenin/hissenin o anki aidat miktarı göz önüne alınır.
+DONE		- Bütün hisseler için işleme sokulmamış paralar ile otomatik ödeme yapılır.
 DONE	Ödeme yapılırken ödenmemiş bir ödeme varsa (içinde bulunulan ay dahil) önce o ödemeler tamamlanır. Eğer ödemeler tamamlandıktan sonra hala para kalıyorsa üyeye sorulur;
 DONE		- Gelecek ödemeler ödenebilir
 DONE		- İşleme sokulmadan beklenilir
