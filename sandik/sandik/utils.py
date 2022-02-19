@@ -104,6 +104,8 @@ class Notification:
 
 
 def send_notification_for_trust_relationship(trust_relationship):
+    # TODO class'a taşı
+    # TODO yöneticilere de bildirim gönder
     requester_name = trust_relationship.requester_member_ref.web_user_ref.name_surname
     receiver_web_user = trust_relationship.receiver_member_ref.web_user_ref
     sandik = trust_relationship.receiver_member_ref.sandik_ref

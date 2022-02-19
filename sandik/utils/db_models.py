@@ -174,6 +174,14 @@ class Member(db.Entity):
                              mt.type == MoneyTransaction.TYPE.EXPENSE).sum()
             return revenue - expense
 
+    def get_trust_link_with_member(self, other_member):
+        return TrustRelationship.get(
+            lambda t: ((t.requester_member_ref == self and t.receiver_member_ref == other_member)
+                       or (t.requester_member_ref == other_member and t.receiver_member_ref == self))
+                      and t.status != TrustRelationship.STATUS.REJECTED
+                      and t.status != TrustRelationship.STATUS.CANCELLED
+        )
+
     def accepted_trust_links(self):
         return select(t for t in TrustRelationship
                       if (t.requester_member_ref == self or t.receiver_member_ref == self)
@@ -351,8 +359,11 @@ class Log(db.Entity):
 
         class TRUST_RELATIONSHIP:
             first, last = 300, 399
-            ACCEPT = first + 11
+            CREATE = first + 1
             REJECT = first + 12
+            ACCEPT = first + 13
+            CANCEL = first + 14
+            REMOVE = first + 15
 
         class SUB_RECEIPT:
             first, last = 400, 499
@@ -488,6 +499,12 @@ class TrustRelationship(db.Entity):
             return self.requester_member_ref if self.receiver_member_ref.web_user_ref == whose else self.receiver_member_ref
         else:
             raise Exception("whose 'Member' veya 'WebUser' türünde olmalı")
+
+    def is_accepted(self):
+        return self.status == TrustRelationship.STATUS.ACCEPTED
+
+    def is_waiting(self):
+        return self.status == TrustRelationship.STATUS.WAITING
 
 
 class BankAccount(db.Entity):

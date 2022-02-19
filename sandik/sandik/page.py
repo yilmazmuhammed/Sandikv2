@@ -9,7 +9,7 @@ from sandik.sandik import forms, db, utils
 from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelationshipCreationException, \
     MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, SandikAuthorityException, AddMemberException, \
     MembershipException, MaxShareCountExceed
-from sandik.sandik.requirement import sandik_required, sandik_authorization_required, member_required, \
+from sandik.sandik.requirement import sandik_required, sandik_authorization_required, to_be_member_of_sandik_required, \
     trust_relationship_required
 from sandik.utils import LayoutPI, get_next_url, sandik_preferences
 
@@ -43,14 +43,14 @@ def create_sandik_page():
 
 
 @sandik_page_bp.route("/<int:sandik_id>/detay", methods=["GET", "POST"])
-@member_required
+@to_be_member_of_sandik_required
 def sandik_detail_page(sandik_id):
     return render_template("sandik/sandik_detail_page.html",
                            page_info=LayoutPI(title="Sandık detayı", active_dropdown="sandik"))
 
 
 @sandik_page_bp.route("/<int:sandik_id>/ozet", methods=["GET", "POST"])
-@member_required
+@to_be_member_of_sandik_required
 def sandik_summary_for_member_page(sandik_id):
     g.summary_data = utils.get_member_summary_page(member=g.member)
     g.type = "member"
@@ -78,40 +78,32 @@ def sandik_index_page(sandik_id):
 
 
 @sandik_page_bp.route("/<int:sandik_id>/güven-halkam", methods=["GET", "POST"])
-@member_required
+@to_be_member_of_sandik_required
 def trust_links_page(sandik_id):
     return render_template("sandik/trust_links_page.html",
                            page_info=LayoutPI(title="Güven halkam", active_dropdown="sandik"))
 
 
-@sandik_page_bp.route("/<int:sandik_id>/güven-bagi-istegi", methods=["GET", "POST"])
-@member_required
-def request_trust_link_page(sandik_id):
-    form = forms.SelectMemberForm(sandik=g.sandik)
+@sandik_page_bp.route("/<int:sandik_id>/u-<int:member_id>/gb-gonder", methods=["GET", "POST"])
+@to_be_member_of_sandik_required
+def send_request_trust_link_page(sandik_id, member_id):
+    receiver_member = db.get_member(id=member_id)
+    try:
+        trust_relationship = db.create_trust_relationship(requester_member=g.member, receiver_member=receiver_member,
+                                                          requested_by=current_user)
+        utils.send_notification_for_trust_relationship(trust_relationship=trust_relationship)
+    except TrustRelationshipAlreadyExist:
+        flash("Bu üyeyle zaten aranızda bekleyen veya onaylanmış bir güven bağı var.", "warning")
+    except TrustRelationshipCreationException as e:
+        flash(str(e), "warning")
 
-    if form.validate_on_submit():
-        selected_member = db.get_member(id=form.member.data)
-        try:
-            trust_relationship = db.create_trust_relationship(requester_member=g.member,
-                                                              receiver_member=selected_member,
-                                                              requested_by=current_user)
-            utils.send_notification_for_trust_relationship(trust_relationship=trust_relationship)
-            next_url = get_next_url(request.args,
-                                    default_url=url_for("sandik_page_bp.trust_links_page", sandik_id=sandik_id))
-            return redirect(next_url)
-        except TrustRelationshipAlreadyExist:
-            flash("Bu üyeyle zaten aranızda bekleyen veya onaylanmış bir güven bağı var.", "warning")
-        except TrustRelationshipCreationException as e:
-            flash(str(e), "warning")
-
-    return render_template("utils/form_layout.html",
-                           page_info=FormPI(title="Güven bağı isteği", form=form, active_dropdown='sandik'))
+    return redirect(request.referrer or url_for("sandik_page_bp.trust_links_page", sandik_id=sandik_id))
 
 
-@sandik_page_bp.route("/guven-bagi-istegini-onayla/<int:trust_relationship_id>")
+@sandik_page_bp.route("/<int:sandik_id>/gb-<int:trust_relationship_id>/onayla")
 @login_required
 @trust_relationship_required
-def accept_trust_relationship_request_page(trust_relationship_id):
+def accept_trust_relationship_request_page(sandik_id, trust_relationship_id):
     if g.trust_relationship.receiver_member_ref.web_user_ref != current_user:
         abort(403)
 
@@ -119,14 +111,14 @@ def accept_trust_relationship_request_page(trust_relationship_id):
     return redirect(request.referrer)
 
 
-@sandik_page_bp.route("/guven-bagi-istegini-reddet/<int:trust_relationship_id>")
+@sandik_page_bp.route("/<int:sandik_id>/gb-<int:trust_relationship_id>/kaldir")
 @trust_relationship_required
-def reject_trust_relationship_request_page(trust_relationship_id):
+def remove_trust_relationship_request_page(sandik_id, trust_relationship_id):
     if current_user not in [g.trust_relationship.receiver_member_ref.web_user_ref,
                             g.trust_relationship.requester_member_ref.web_user_ref]:
         abort(403)
 
-    db.reject_trust_relationship_request(trust_relationship=g.trust_relationship, rejected_by=current_user)
+    db.remove_trust_relationship_request(trust_relationship=g.trust_relationship, rejected_by=current_user)
     return redirect(request.referrer)
 
 

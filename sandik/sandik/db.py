@@ -179,7 +179,7 @@ def create_trust_relationship(requester_member, receiver_member, requested_by) -
     tr = get_trust_relationship_between_two_member(member1=requester_member, member2=receiver_member)
     if tr:
         raise TrustRelationshipAlreadyExist()
-    Log(web_user_ref=requested_by, type=Log.TYPE.CREATE,
+    Log(web_user_ref=requested_by, type=Log.TYPE.TRUST_RELATIONSHIP.CREATE,
         logged_sandik_ref=requester_member.sandik_ref)
     return TrustRelationship(requester_member_ref=requester_member, receiver_member_ref=receiver_member,
                              status=TrustRelationship.STATUS.WAITING)
@@ -191,10 +191,10 @@ def accept_trust_relationship_request(trust_relationship, confirmed_by):
     trust_relationship.set(status=TrustRelationship.STATUS.ACCEPTED, time=datetime.now())
 
 
-def reject_trust_relationship_request(trust_relationship, rejected_by):
-    Log(web_user_ref=rejected_by, type=Log.TYPE.TRUST_RELATIONSHIP.REJECT,
+def remove_trust_relationship_request(trust_relationship, rejected_by):
+    Log(web_user_ref=rejected_by, type=Log.TYPE.TRUST_RELATIONSHIP.REMOVE,
         logged_trust_relationship_ref=trust_relationship)
-    trust_relationship.set(status=TrustRelationship.STATUS.REJECTED, time=datetime.now())
+    trust_relationship.set(status=TrustRelationship.STATUS.CANCELLED, time=datetime.now())
 
 
 def get_trust_relationship(**kwargs) -> TrustRelationship:

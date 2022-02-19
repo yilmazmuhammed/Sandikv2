@@ -5,7 +5,7 @@ from werkzeug.utils import redirect
 
 from sandik.sandik import db as sandik_db
 from sandik.sandik.exceptions import ThereIsNoMember, ThereIsNoShare
-from sandik.sandik.requirement import sandik_authorization_required, member_required
+from sandik.sandik.requirement import sandik_authorization_required, to_be_member_of_sandik_required
 from sandik.transaction import forms, utils
 from sandik.transaction.authorization import money_transaction_required
 from sandik.transaction.exceptions import MaximumDebtAmountExceeded
@@ -113,7 +113,7 @@ def money_transactions_of_sandik_page(sandik_id):
 
 
 @transaction_page_bp.route('u-para-giris-cikislari')
-@member_required
+@to_be_member_of_sandik_required
 def money_transactions_of_member_page(sandik_id):
     g.money_transactions = g.member.money_transactions_set.order_by(lambda mt: (desc(mt.date), desc(mt.id)))
     return render_template(
@@ -132,7 +132,7 @@ def transactions_of_sandik_page(sandik_id):
 
 
 @transaction_page_bp.route('u-sandik-islemleri')
-@member_required
+@to_be_member_of_sandik_required
 def transactions_of_member_page(sandik_id):
     g.transactions = utils.get_transactions(whose=g.member)
     return render_template("transaction/sandik_transactions_page.html",
@@ -149,7 +149,7 @@ def payments_of_sandik_page(sandik_id):
 
 
 @transaction_page_bp.route('u-odemeler')
-@member_required
+@to_be_member_of_sandik_required
 def payments_of_member_page(sandik_id):
     g.payments = utils.get_payments(whose=g.member)
     g.due_and_unpaid_payments = utils.get_payments(whose=g.member, is_fully_paid=False, is_due=True)
@@ -167,7 +167,7 @@ def debts_of_sandik_page(sandik_id):
 
 
 @transaction_page_bp.route('u-borclar')
-@member_required
+@to_be_member_of_sandik_required
 def debts_of_member_page(sandik_id):
     g.unpaid_debts = utils.get_debts(whose=g.member, only_unpaid=True)
     g.debts = utils.get_debts(whose=g.member)
