@@ -68,8 +68,16 @@ def borrow_from_untreated_amount(untreated_money_transaction, amount, money_tran
 
 
 def add_revenue_transactions(money_transaction, pay_future_payments, created_by):
+    # TODO Money_transaction parametre olarak gelmesi yerine, dağıtılmamış paralar burada mı seçilmeli?
+    #     Yahut bu fonksiyon bu şekliyle kalıp, ayrı bir fonksiyonda dağıtılmamış paralar seçilip bu fonksiyon mu
+    #     çağrılmalı?
+    #         Bu durumda money transaction eklenirken bunun yerine yeni fonksiyon mu çağrılmalı?
     member = money_transaction.member_ref
+    # TODO amount değil undistributed_amount kullanılmalı
     remaining_amount = money_transaction.amount
+    if remaining_amount <= 0:
+        return False
+
     payments = get_payments(whose=member, is_fully_paid=False, is_due=True)
     if pay_future_payments:
         payments += get_payments(whose=member, is_fully_paid=False, is_due=False)
@@ -98,6 +106,8 @@ def add_revenue_transactions(money_transaction, pay_future_payments, created_by)
         #  çalışmıyorsa burada yap, çalışıyorsa fonksiyonu sil
         # db.sign_money_transaction_as_fully_distributed(money_transaction=money_transaction, signed_by=created_by)
         pass
+
+    return True
 
 
 def add_expense_transactions(money_transaction, use_untreated_amount, created_by):
