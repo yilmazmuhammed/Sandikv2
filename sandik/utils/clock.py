@@ -1,26 +1,21 @@
 from apscheduler.schedulers.blocking import BlockingScheduler
+from pony.orm import db_session
 
-sched = BlockingScheduler()
+from sandik.auth import db as auth_db
+from sandik.transaction import utils as transaction_utils
 
-
-@sched.scheduled_job('interval', seconds=1)
-def timed_job():
-    print('This job is run every 1 minutes.')
-
-
-@sched.scheduled_job('cron', day_of_week='mon-sun', hour=14, minute=12)
-def scheduled_job():
-    print('This job is run every weekday at 5pm. 1')
+scheduler = BlockingScheduler()
 
 
-@sched.scheduled_job('cron', day_of_week='mon-sun', hour=11, minute=12)
-def scheduled_job2():
-    print('This job is run every weekday at 5pm. 2')
+@scheduler.scheduled_job('cron', day=1, hour=0, minute=1)
+def beginning_of_each_month():
+    # TODO Aidatları ve taksitleri öde
+    with db_session:
+        # TODO sadece bu ayın aidatlarını oluştur
+        transaction_utils.create_due_contributions_for_all_sandiks(
+            created_by=auth_db.get_or_create_bot_user(which="clock"),
+            created_from="scheduler.beginning_of_each_month"
+        )
 
 
-@sched.scheduled_job('cron', day_of_week='mon-sun', hour=17, minute=12)
-def scheduled_job3():
-    print('This job is run every weekday at 5pm. 3')
-
-
-sched.start()
+scheduler.start()

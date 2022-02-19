@@ -3,7 +3,7 @@ from pony.orm import desc  # ponyorm order_by icin lambda string'inde kullaniliy
 from sandik.transaction import db
 from sandik.transaction.exceptions import UndefinedRemoveOperation
 from sandik.utils import period as period_utils
-from sandik.utils.db_models import Share, Member, MoneyTransaction, Contribution, Installment, Sandik, Debt
+from sandik.utils.db_models import Share, Member, MoneyTransaction, Contribution, Installment, Sandik, Debt, Log
 from sandik.utils.exceptions import InvalidWhoseType
 from sandik.utils.period import NotValidPeriod
 
@@ -143,17 +143,26 @@ def add_money_transaction(member, created_by, use_untreated_amount, pay_future_p
     return money_transaction
 
 
-def create_due_contributions_for_share(share, created_by, created_from=""):
+def create_due_contributions_for_share(share, created_by, created_from="", periods=None):
     print(f"START: Creating contributions for '{share}'...")
-    first_period = period_utils.date_to_period(share.date_of_opening)
-    last_period = period_utils.current_period()
-    periods = period_utils.get_periods_between_two_period(first_period=first_period, last_period=last_period)
+    if not isinstance(periods, list):
+        first_period = period_utils.date_to_period(share.date_of_opening)
+        last_period = period_utils.current_period()
+        periods = period_utils.get_periods_between_two_period(first_period=first_period, last_period=last_period)
     for period in periods:
-        if not db.get_contribution(share_ref=share, term=period):
-            db.create_contribution(share=share, period=period, created_by=created_by, log_detail=created_from)
-            print(f"Create contribution for share: '{share}', period: '{period}'")
-        else:
-            print(f"Contribution already exist for share: '{share}', period: '{period}'")
+        try:
+            if not period_utils.is_valid_period(period):
+                raise NotValidPeriod(f"Period '{period}' is not valid: Period is not str)")
+            if not db.get_contribution(share_ref=share, term=period):
+                db.create_contribution(share=share, period=period, created_by=created_by, log_detail=created_from)
+                print(f"Create contribution for share: '{share}', period: '{period}'")
+            else:
+                print(f"Contribution already exist for share: '{share}', period: '{period}'")
+        except Exception as e:
+            print("Exception in create_due_contributions_for_share:", str(type(e)), " -> ", str(e))
+            print(created_by)
+            Log(web_user_ref=created_by, type=Log.TYPE.LOG_LEVEL.ERROR,
+                detail=f"created_from: {created_from} \n Exception: {str(type(e))} -> {str(e)}")
     print(f"FINISH: Creating contributions for '{share}'...")
 
 
