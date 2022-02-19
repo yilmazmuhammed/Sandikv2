@@ -65,7 +65,7 @@ class Notification:
                     general_db.create_notification(
                         to_web_user=member.web_user_ref,
                         title=f"{web_user.name_surname} üyelik başvurusu onaylandı.", text=sandik.name,
-                        url=url_for("sandik_page_bp.sandik_detail_page", sandik_id=sandik.id)
+                        url=url_for("sandik_page_bp.trust_links_page", sandik_id=sandik.id)
                     )
             general_db.create_notification(
                 to_web_user=web_user, title=f"Üyelik başvurunuz onaylandı", text=sandik.name,
@@ -86,7 +86,7 @@ class Notification:
                     general_db.create_notification(
                         to_web_user=member.web_user_ref,
                         title=f"{web_user.name_surname} sandığa katıldı.", text=sandik.name,
-                        url=url_for("sandik_page_bp.sandik_detail_page", sandik_id=sandik.id)
+                        url=url_for("sandik_page_bp.trust_links_page", sandik_id=sandik.id)
                     )
             general_db.create_notification(
                 to_web_user=web_user, title=f"Sandık üyeliğiniz oluşturuldu", text=sandik.name,
