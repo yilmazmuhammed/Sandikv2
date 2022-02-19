@@ -330,13 +330,6 @@ def sum_of_future_and_unpaid_installments(whose):
     return select(c.get_unpaid_amount() for c in get_future_and_unpaid_installments(whose=whose)).sum()
 
 
-def sign_money_transaction_as_fully_distributed(money_transaction, signed_by):
-    Log(web_user_ref=signed_by, type=Log.TYPE.MONEY_TRANSACTION.SIGN_FULLY_DISTRIBUTED,
-        logged_money_transaction_ref=money_transaction, logged_member_ref=money_transaction.member_ref,
-        logged_sandik_ref=money_transaction.member_ref.sandik_ref)
-    money_transaction.set(is_fully_distributed=True)
-
-
 def total_paid_contributions_of_trusted_links(member):
     total = member.sum_of_paid_contributions()
     for link in member.accepted_trust_links():

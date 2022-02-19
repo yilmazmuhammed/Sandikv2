@@ -123,13 +123,7 @@ def add_expense_transactions(money_transaction, use_untreated_amount, created_by
     if remaining_amount > 0:
         borrow_debt(amount=remaining_amount, money_transaction=money_transaction, created_by=created_by)
 
-    if remaining_amount == 0:
-        # TODO test et: SubReceipt.after_insert fonksiyonunda yapılıyor,
-        #  çalışmıyorsa burada yap, çalışıyorsa fonksiyonu sil
-        # db.sign_money_transaction_as_fully_distributed(money_transaction=money_transaction, signed_by=created_by)
-        pass
-
-    pass
+    return True
 
 
 def add_money_transaction(member, created_by, use_untreated_amount, pay_future_payments, creation_type, **kwargs):
