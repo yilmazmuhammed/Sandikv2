@@ -51,5 +51,6 @@ def block_web_user(web_user_id, updated_by) -> WebUser:
 
 
 def web_users_form_choices():
-    choices = [(wu.id, f"{wu.name_surname} <{wu.email_address}>") for wu in WebUser.select()]
+    choices = [(wu.id, f"{wu.name_surname} <{wu.email_address}>")
+               for wu in WebUser.select().order_by(lambda wu: wu.name_surname.lower())]
     return choices

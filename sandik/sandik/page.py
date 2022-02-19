@@ -253,6 +253,7 @@ def reject_membership_application_page(sandik_id, web_user_id):
 @sandik_page_bp.route("/<int:sandik_id>/uyeler")
 @sandik_authorization_required(permission="read")
 def members_of_sandik_page(sandik_id):
+    g.members = g.sandik.members_set.order_by(lambda m: m.web_user_ref.name_surname.lower())
     return render_template("sandik/members_of_sandik_page.html",
                            page_info=LayoutPI(title="Üyeler", active_dropdown="members"))
 
