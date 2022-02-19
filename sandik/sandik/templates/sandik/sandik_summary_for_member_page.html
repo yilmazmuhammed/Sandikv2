@@ -347,26 +347,28 @@
 
     </div>
 
-    <div class="row">
+    {% if g.type == "member" %}
+      <div class="row">
 
-      <!-- Hisseler -->
-      <div class="col-md-8 col-md-offset-2">
-        <div class="panel panel-default">
-          <div class="panel-heading font-bold">
-            <span>Hisseler</span>
-            {% if g.type == "management" %}
-            <span class="pull-right">
-              {{ macros.button(url=url_for("sandik_page_bp.add_share_to_member_page", member_id=g.member.id, sandik_id=g.sandik.id), icon='glyphicon glyphicon-plus', type='default', size='sm', title='Düzenle') }}
-            </span>
-            {% endif %}
-          </div>
-          <div>
-            <table id="shares-table" class="table"></table>
+        <!-- Hisseler -->
+        <div class="col-md-8 col-md-offset-2">
+          <div class="panel panel-default">
+            <div class="panel-heading font-bold">
+              <span>Hisseler</span>
+              {% if g.type == "management" %}
+              <span class="pull-right">
+                {{ macros.button(url=url_for("sandik_page_bp.add_share_to_member_page", member_id=g.member.id, sandik_id=g.sandik.id), icon='glyphicon glyphicon-plus', type='default', size='sm', title='Düzenle') }}
+              </span>
+              {% endif %}
+            </div>
+            <div>
+              <table id="shares-table" class="table"></table>
+            </div>
           </div>
         </div>
-      </div>
 
-    </div>
+      </div>
+    {% endif %}
 
   </div>
 {% endblock %}
