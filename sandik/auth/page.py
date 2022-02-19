@@ -68,7 +68,7 @@ def logout_page():
 @auth_page_bp.route("/kullanicilar")
 @admin_required
 def web_users_page():
-    g.web_users = db.select_web_users()
+    g.web_users = db.select_web_users().order_by(lambda wu: wu.name_surname.lower())
     return render_template("auth/web_users_page.html",
                            page_info=LayoutPI(title="Kullanıcı listesi", active_dropdown="web-users"))
 
