@@ -191,11 +191,11 @@
               </tr>
               <tr class="row">
                 <th>Ay sonu:</th>
-                <td title="Ay sonu ödemeleri: {{ g.summary_data.sum_of_unpaid_and_due_payments }}" class="font-bold {% if g.summary_data.sum_of_unpaid_and_due_payments > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.member.total_of_undistributed_amount() - g.summary_data.sum_of_unpaid_and_due_payments }} ₺</td>
+                <td title="Ay sonu ödemeleri: {{ g.summary_data.sum_of_unpaid_and_due_payments }}" class="font-bold {% if g.member.total_of_undistributed_amount() - g.summary_data.sum_of_unpaid_and_due_payments < 0 %}text-danger{% else %}text-success{% endif %}">{{ g.member.total_of_undistributed_amount() - g.summary_data.sum_of_unpaid_and_due_payments }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Mil sonu:</th>
-                <td title="Mil sonu ödemeleri: {{ g.summary_data.sum_of_payments }}" class="font-bold {% if g.summary_data.sum_of_payments > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.member.total_of_undistributed_amount() - g.summary_data.sum_of_payments}} ₺</td>
+                <td title="Mil sonu ödemeleri: {{ g.summary_data.sum_of_payments }}" class="font-bold {% if g.member.total_of_undistributed_amount() - g.summary_data.sum_of_payments < 0 %}text-danger{% else %}text-success{% endif %}">{{ g.member.total_of_undistributed_amount() - g.summary_data.sum_of_payments}} ₺</td>
               </tr>
               </tbody>
             </table>
@@ -347,7 +347,7 @@
 
     </div>
 
-    {% if g.type == "member" %}
+    {% if g.type == "management" %}
       <div class="row">
 
         <!-- Hisseler -->

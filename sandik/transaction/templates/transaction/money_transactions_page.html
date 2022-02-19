@@ -48,7 +48,7 @@ jQuery(function($){
         "bank_transaction": "{{ "Var" if mt.bank_transaction_ref else "Yok" }}",
         "sub_receipts": `
           {% if mt.sub_receipts_set.count() == 0 %}
-          İşlem yok<br><span class="font-bold">Para girişinin {{ mt.undistributed_amount() }} ₺'si işleme sokulmamış.</span>
+          İşlem yok<br><span class="font-bold">Para girişinin {{ mt.get_undistributed_amount() }} ₺'si işleme sokulmamış.</span>
           {% else %}
             <div class="table table-responsive">
               <table class="table table-striped table-bordered text-center" id="sub-receipts-of-mt{{ mt.id }}-table">
@@ -83,7 +83,7 @@ jQuery(function($){
                 {% endfor %}
                 {% if not mt.is_fully_distributed %}
                   <tr>
-                    <td colspan="8" class="font-bold">Para girişinin {{ mt.undistributed_amount() }} ₺'si işleme sokulmamış.</td>
+                    <td colspan="8" class="font-bold">Para girişinin {{ mt.get_undistributed_amount() }} ₺'si işleme sokulmamış.</td>
                   </tr>
                 {% endif %}
               </table>

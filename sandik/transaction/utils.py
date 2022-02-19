@@ -1,9 +1,10 @@
-from pony.orm import desc  # ponyorm order_by icin lambda string'inde kullaniliyor
+from pony.orm import desc, flush  # ponyorm order_by icin lambda string'inde 'desc' fonksiyonukullaniliyor
 
 from sandik.transaction import db
 from sandik.transaction.exceptions import UndefinedRemoveOperation
 from sandik.utils import period as period_utils
-from sandik.utils.db_models import Share, Member, MoneyTransaction, Contribution, Installment, Sandik, Debt, Log
+from sandik.utils.db_models import Share, Member, MoneyTransaction, Contribution, Installment, Sandik, Debt, Log, \
+    WebUser
 from sandik.utils.exceptions import InvalidWhoseType
 from sandik.utils.period import NotValidPeriod
 
@@ -22,6 +23,7 @@ def sum_of_unpaid_and_due_payments(whose):
 def sum_of_future_and_unpaid_payments(whose):
     if not isinstance(whose, Share) and not isinstance(whose, Member):
         raise Exception("'whose' sadece 'Member' yada 'Share' olabilir.")
+    # TODO vadesi gelmemiş ve ödenmemiş aidatları da ekle
     return db.sum_of_future_and_unpaid_installments(whose=whose)
 
 
@@ -68,13 +70,8 @@ def borrow_from_untreated_amount(untreated_money_transaction, amount, money_tran
 
 
 def add_revenue_transactions(money_transaction, pay_future_payments, created_by):
-    # TODO Money_transaction parametre olarak gelmesi yerine, dağıtılmamış paralar burada mı seçilmeli?
-    #     Yahut bu fonksiyon bu şekliyle kalıp, ayrı bir fonksiyonda dağıtılmamış paralar seçilip bu fonksiyon mu
-    #     çağrılmalı?
-    #         Bu durumda money transaction eklenirken bunun yerine yeni fonksiyon mu çağrılmalı?
     member = money_transaction.member_ref
-    # TODO amount değil undistributed_amount kullanılmalı
-    remaining_amount = money_transaction.amount
+    remaining_amount = money_transaction.get_undistributed_amount()
     if remaining_amount <= 0:
         return False
 
@@ -112,7 +109,8 @@ def add_expense_transactions(money_transaction, use_untreated_amount, created_by
     if use_untreated_amount:
         untreated_money_transactions = member.get_revenue_money_transactions_are_not_fully_distributed()
         for mt in untreated_money_transactions:
-            amount = mt.undistributed_amount() if remaining_amount >= mt.undistributed_amount() else remaining_amount
+            undistributed_amount = mt.get_undistributed_amount()
+            amount = undistributed_amount if remaining_amount >= undistributed_amount else remaining_amount
             borrow_from_untreated_amount(untreated_money_transaction=mt, amount=amount,
                                          money_transaction=money_transaction, created_by=created_by)
             remaining_amount -= amount
@@ -130,12 +128,13 @@ def add_money_transaction(member, created_by, use_untreated_amount, pay_future_p
     money_transaction = db.create_money_transaction(member_ref=member, is_fully_distributed=False,
                                                     creation_type=creation_type, created_by=created_by, **kwargs)
     if money_transaction.type == MoneyTransaction.TYPE.REVENUE:
+        # TODO add_revenue_transactions yerine pay_unpaid_payments_... fonksiyonu mu kullanılmalı?
         add_revenue_transactions(money_transaction=money_transaction, pay_future_payments=pay_future_payments,
                                  created_by=created_by)
 
     elif money_transaction.type == MoneyTransaction.TYPE.EXPENSE:
         print("expense")
-        # TODO Önce kendi parasından, güven bağı olan kişilerin parasından bu para aborç olarak
+        # TODO Önce kendi parasından, güven bağı olan kişilerin parasından bu para borç olarak
         #  alınabiliyor mu diye kontrol et.
         add_expense_transactions(money_transaction=money_transaction, use_untreated_amount=use_untreated_amount,
                                  created_by=created_by)
@@ -144,10 +143,12 @@ def add_money_transaction(member, created_by, use_untreated_amount, pay_future_p
 
 def create_due_contributions_for_share(share, created_by, created_from="", periods=None):
     print(f"START: Creating contributions for '{share}'...")
+
     if not isinstance(periods, list):
         first_period = period_utils.date_to_period(share.date_of_opening)
         last_period = period_utils.current_period()
-        periods = period_utils.get_periods_between_two_period(first_period=first_period, last_period=last_period)
+        periods = period_utils.get_periods_between_two_period(first_period=first_period, last_period=last_period) if first_period <= last_period else []
+
     for period in periods:
         try:
             if not period_utils.is_valid_period(period):
@@ -169,6 +170,9 @@ def create_due_contributions_for_member(member, created_by, created_from=""):
     print(f"START: Creating contributions for '{member}'...")
     for share in member.shares_set:
         create_due_contributions_for_share(share=share, created_by=created_by, created_from=created_from)
+
+    pay_unpaid_payments_from_untreated_amount_for_member(member=member, pay_future_payments=False,
+                                                         created_by=created_by)
     print(f"FINISH: Creating contributions for '{member}'...")
 
 
@@ -184,6 +188,15 @@ def create_due_contributions_for_all_sandiks(created_by, created_from=""):
     for sandik in Sandik.select():
         create_due_contributions_for_sandik(sandik=sandik, created_by=created_by, created_from=created_from)
     print(f"FINISH: Creating contributions for 'all sandiks'...")
+
+
+def pay_unpaid_payments_from_untreated_amount_for_member(member: Member, pay_future_payments: bool,
+                                                         created_by: WebUser):
+    print(f"START: Paying payments for '{member}' with pay_future_payments={pay_future_payments} ...")
+    money_transactions = member.get_revenue_money_transactions_are_not_fully_distributed()
+    for mt in money_transactions:
+        add_revenue_transactions(money_transaction=mt, pay_future_payments=pay_future_payments, created_by=created_by)
+    print(f"FINISH: Paying payments for '{member}' with pay_future_payments={pay_future_payments} ...")
 
 
 def get_transactions(whose):
@@ -348,6 +361,11 @@ def remove_sub_receipt(sub_receipt, removed_by):
 
 
 def remove_money_transaction(money_transaction, removed_by):
+    member = money_transaction.member_ref
+    flush()
     for sub_receipt in money_transaction.sub_receipts_set:
         remove_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
     db.remove_money_transaction(money_transaction=money_transaction, removed_by=removed_by)
+
+    pay_unpaid_payments_from_untreated_amount_for_member(member=member, pay_future_payments=False,
+                                                         created_by=removed_by)

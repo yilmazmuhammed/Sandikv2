@@ -49,7 +49,7 @@ class MoneyTransaction(db.Entity):
     def distributed_amount(self):
         return select(sr.amount for sr in self.sub_receipts_set).sum()
 
-    def undistributed_amount(self):
+    def get_undistributed_amount(self):
         return self.amount - self.distributed_amount()
 
 
@@ -218,7 +218,7 @@ class Member(db.Entity):
 
     def total_of_undistributed_amount(self):
         return select(
-            mt.undistributed_amount() for mt in self.get_revenue_money_transactions_are_not_fully_distributed()).sum()
+            mt.get_undistributed_amount() for mt in self.get_revenue_money_transactions_are_not_fully_distributed()).sum()
 
     def total_amount_unpaid_installments(self):
         return select(i.get_unpaid_amount() for i in Installment if
@@ -700,7 +700,7 @@ class SubReceipt(db.Entity):
             self.installment_ref.debt_ref.update_pieces_of_debt()
 
         # TODO test et: 4 işlem tipi için de dene
-        mt_untreated_amount = self.money_transaction_ref.undistributed_amount()
+        mt_untreated_amount = self.money_transaction_ref.get_undistributed_amount()
         if mt_untreated_amount == 0:
             self.money_transaction_ref.is_fully_distributed = True
         elif mt_untreated_amount < 0:
