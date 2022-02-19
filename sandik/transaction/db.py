@@ -1,6 +1,6 @@
 from math import ceil
 
-from pony.orm import select
+from pony.orm import select, flush
 
 from sandik.utils import period as period_utils, sandik_preferences
 from sandik.utils.db_models import Contribution, Share, Member, Installment, MoneyTransaction, Log, SubReceipt, Debt, \
@@ -70,8 +70,170 @@ def create_piece_of_debt(member, debt, amount, trust_relationship_for_log, creat
     return PieceOfDebt(logs_set=log, member_ref=member, debt_ref=debt, amount=amount)
 
 
+def create_installments_of_debt(debt, created_by):
+    debt_amount = debt.amount
+    number_of_installment = debt.number_of_installment
+    start_period = debt.starting_term
+
+    remaining_amount = debt_amount
+    installment_amount = ceil(debt_amount / number_of_installment)
+    for i in range(1, number_of_installment + 1):
+        if remaining_amount <= 0:
+            raise UnexpectedValue(f"RA: {remaining_amount}, "
+                                  f"MSG: Beklenmedik bir hata ile karşılaşıldı. Düzeltilmesi için "
+                                  f"lütfen site yöneticisi ile iletişime geçerek ERRCODE'u ve RA'yı söyleyiniz.",
+                                  errcode=15, create_log=True)
+
+        temp_amount = installment_amount if remaining_amount >= installment_amount else remaining_amount
+        installment_term = period_utils.get_last_installment_period(start_period, i)
+        create_installment(amount=temp_amount, term=installment_term, debt=debt, created_by=created_by)
+        remaining_amount -= temp_amount
+
+    if remaining_amount != 0:
+        raise UnexpectedValue(f"RA: {remaining_amount}, "
+                              f"MSG: Beklenmedik bir hata ile karşılaşıldı. Düzeltilmesi için "
+                              f"lütfen site yöneticisi ile iletişime geçerek ERRCODE'u ve RA'yı söyleyiniz.",
+                              errcode=14, create_log=True)
+
+    return debt.installments_set
+
+
+def create_piece_of_debts(debt, created_by):
+    debt_amount = debt.amount
+
+    member = debt.share_ref.member_ref
+    trusted_links = member.accepted_trust_links()
+    # TODO performans için get_balance bir defa çağrılarak bir lsitede tutulabilir
+    sorted_trusted_links = sorted(trusted_links, key=lambda tl: tl.other_member(whose=member).get_balance())
+
+    remaining_amount = debt_amount
+
+    # Önce kendinden borç almalı
+    temp_amount = member.get_balance() if member.get_balance() <= remaining_amount else remaining_amount
+    create_piece_of_debt(member=member, debt=debt, amount=temp_amount,
+                         trust_relationship_for_log=None, created_by=created_by)
+    remaining_amount -= temp_amount
+
+    if remaining_amount == 0:
+        return debt.piece_of_debts_set
+
+    for i, link in enumerate(sorted_trusted_links):
+        if remaining_amount <= 0:
+            raise Exception(f"ERRCODE: 0016, RA: {remaining_amount}, "
+                            f"MSG: Beklenmedik bir hata ile karşılaşıldı. Düzeltilmesi için "
+                            f"lütfen site yöneticisi ile iletişime geçerek ERRCODE'u ve RA'yı söyleyiniz.")
+
+        temp_amount = ceil(remaining_amount / (len(sorted_trusted_links) - i))
+        temp_amount = temp_amount if temp_amount <= remaining_amount else remaining_amount
+
+        other_member = link.other_member(whose=member)
+        temp_amount = temp_amount if temp_amount <= other_member.get_balance() else other_member.get_balance()
+
+        create_piece_of_debt(member=other_member, debt=debt, amount=temp_amount,
+                             trust_relationship_for_log=link, created_by=created_by)
+        remaining_amount -= temp_amount
+
+    if remaining_amount != 0:
+        raise Exception(f"ERRCODE: 0017, RA: {remaining_amount}, "
+                        f"MSG: Beklenmedik bir hata ile karşılaşıldı. Düzeltilmesi için "
+                        f"lütfen site yöneticisi ile iletişime geçerek ERRCODE'u ve RA'yı söyleyiniz.")
+
+    return debt.piece_of_debts_set
+
+
+def create_debt(amount, share, money_transaction, created_by, start_period=None, number_of_installment=None) -> Debt:
+    sandik = money_transaction.member_ref.sandik_ref
+    if number_of_installment is None:
+        number_of_installment = sandik_preferences.max_number_of_installment(sandik=sandik, amount=amount)
+    if start_period is None:
+        start_period = sandik_preferences.get_start_period(sandik=sandik, debt_date=money_transaction.date)
+
+    due_term = period_utils.get_last_installment_period(start_period, number_of_installment)
+
+    logged_ref_items = {
+        "logged_money_transaction_ref": money_transaction,
+        "logged_member_ref": money_transaction.member_ref,
+        "logged_sandik_ref": money_transaction.member_ref.sandik_ref,
+        "logged_share_ref": share,
+    }
+    print("create_debt - amount:", amount)
+    debt = Debt(
+        amount=amount, share_ref=share,
+        number_of_installment=number_of_installment, starting_term=start_period, due_term=due_term,
+        logs_set=Log(web_user_ref=created_by, type=Log.TYPE.DEBT.CREATE, **logged_ref_items),
+        sub_receipt_ref=create_sub_receipt(money_transaction=money_transaction, amount=amount, is_auto=True,
+                                           created_by=created_by)
+    )
+
+    create_installments_of_debt(debt=debt, created_by=created_by)
+    create_piece_of_debts(debt=debt, created_by=created_by)
+    return debt
+
+
+def create_retracted(amount, untreated_money_transaction, money_transaction, created_by) -> Retracted:
+    logged_ref_items = {
+        "logged_sandik_ref": money_transaction.member_ref.sandik_ref
+    }
+    return Retracted(
+        amount=amount,
+        expense_sub_receipt_ref=create_sub_receipt(money_transaction=money_transaction, amount=amount, is_auto=True,
+                                                   created_by=created_by),
+        revenue_sub_receipt_ref=create_sub_receipt(money_transaction=untreated_money_transaction, amount=amount,
+                                                   is_auto=True, created_by=created_by),
+        logs_set=Log(web_user_ref=created_by, type=Log.TYPE.DEBT.CREATE, **logged_ref_items)
+    )
+
+
+def remove_sub_receipt(sub_receipt, removed_by):
+    logged_ref_items = {
+        "logged_money_transaction_ref": sub_receipt.money_transaction_ref,
+        "logged_share_ref": sub_receipt.share_ref,
+        "logged_member_ref": sub_receipt.share_ref.member_ref,
+        "logged_sandik_ref": sub_receipt.share_ref.member_ref.sandik_ref,
+        "logged_contribution_ref": sub_receipt.contribution_ref,
+        "logged_installment_ref": sub_receipt.installment_ref,
+        "logged_debt_ref": sub_receipt.debt_ref,
+    }
+    sub_receipt_logs = sub_receipt.logs_set
+    sub_receipt_id = sub_receipt.id
+    contribution = sub_receipt.contribution_ref
+    installment = sub_receipt.installment_ref
+    amount = sub_receipt.amount
+    flush()
+
+    Log(web_user_ref=removed_by, type=Log.TYPE.SUB_RECEIPT.DELETE, detail=str(sub_receipt.to_dict()),
+        **logged_ref_items)
+    for log in sub_receipt_logs:
+        log.detail += f"deleted_sub_receipt_id: {sub_receipt_id}"
+
+    sub_receipt.delete()
+
+    if contribution:
+        contribution.recalculate_is_fully_paid()
+        contribution.share_ref.member_ref.balance -= amount
+    if installment:
+        installment.recalculate_is_fully_paid()
+        installment.debt_ref.update_pieces_of_debt()
+
+
+def remove_money_transaction(money_transaction, removed_by):
+    logged_ref_items = {
+        "logged_member_ref": money_transaction.member_ref,
+        "logged_sandik_ref": money_transaction.member_ref.sandik_ref,
+    }
+    Log(web_user_ref=removed_by, type=Log.TYPE.MONEY_TRANSACTION.DELETE, detail=str(money_transaction.to_dict()),
+        **logged_ref_items)
+    for log in money_transaction.logs_set:
+        log.detail += f"deleted_money_transaction_id: {money_transaction.id}"
+    money_transaction.delete()
+
+
 def get_contribution(*args, **kwargs) -> Contribution:
     return Contribution.get(*args, **kwargs)
+
+
+def get_money_transaction(*args, **kwargs) -> MoneyTransaction:
+    return MoneyTransaction.get(*args, **kwargs)
 
 
 def select_contributions(*args, **kwargs):
@@ -166,124 +328,6 @@ def sum_of_unpaid_and_due_installments(whose):
 
 def sum_of_future_and_unpaid_installments(whose):
     return select(c.get_unpaid_amount() for c in get_future_and_unpaid_installments(whose=whose)).sum()
-
-
-def sign_money_transaction_as_fully_distributed(money_transaction, signed_by):
-    Log(web_user_ref=signed_by, type=Log.TYPE.MONEY_TRANSACTION.SIGN_FULLY_DISTRIBUTED,
-        logged_money_transaction_ref=money_transaction, logged_member_ref=money_transaction.member_ref,
-        logged_sandik_ref=money_transaction.member_ref.sandik_ref)
-    money_transaction.set(is_fully_distributed=True)
-
-
-def create_installments_of_debt(debt, created_by):
-    debt_amount = debt.amount
-    number_of_installment = debt.number_of_installment
-    start_period = debt.starting_term
-
-    remaining_amount = debt_amount
-    installment_amount = ceil(debt_amount / number_of_installment)
-    for i in range(1, number_of_installment + 1):
-        if remaining_amount <= 0:
-            raise UnexpectedValue(f"RA: {remaining_amount}, "
-                                  f"MSG: Beklenmedik bir hata ile karşılaşıldı. Düzeltilmesi için "
-                                  f"lütfen site yöneticisi ile iletişime geçerek ERRCODE'u ve RA'yı söyleyiniz.",
-                                  errcode=15, create_log=True)
-
-        temp_amount = installment_amount if remaining_amount >= installment_amount else remaining_amount
-        installment_term = period_utils.get_last_installment_period(start_period, i)
-        create_installment(amount=temp_amount, term=installment_term, debt=debt, created_by=created_by)
-        remaining_amount -= temp_amount
-
-    if remaining_amount != 0:
-        raise UnexpectedValue(f"RA: {remaining_amount}, "
-                              f"MSG: Beklenmedik bir hata ile karşılaşıldı. Düzeltilmesi için "
-                              f"lütfen site yöneticisi ile iletişime geçerek ERRCODE'u ve RA'yı söyleyiniz.",
-                              errcode=14, create_log=True)
-
-    return debt.installments_set
-
-
-def create_piece_of_debts(debt, created_by):
-    debt_amount = debt.amount
-
-    member = debt.share_ref.member_ref
-    trusted_links = member.accepted_trust_links()
-    # TODO performans için get_balance bir defa çağrılarak bir lsitede tutulabilir
-    sorted_trusted_links = sorted(trusted_links, key=lambda tl: tl.other_member(whose=member).get_balance())
-
-    remaining_amount = debt_amount
-
-    # Önce kendinden borç almalı
-    temp_amount = member.get_balance() if member.get_balance() <= remaining_amount else remaining_amount
-    create_piece_of_debt(member=member, debt=debt, amount=temp_amount,
-                         trust_relationship_for_log=None, created_by=created_by)
-    remaining_amount -= temp_amount
-
-    for i, link in enumerate(sorted_trusted_links):
-        if remaining_amount <= 0:
-            raise Exception(f"ERRCODE: 0016, RA: {remaining_amount}, "
-                            f"MSG: Beklenmedik bir hata ile karşılaşıldı. Düzeltilmesi için "
-                            f"lütfen site yöneticisi ile iletişime geçerek ERRCODE'u ve RA'yı söyleyiniz.")
-
-        temp_amount = ceil(remaining_amount / (len(sorted_trusted_links) - i))
-        temp_amount = temp_amount if temp_amount <= remaining_amount else remaining_amount
-
-        other_member = link.other_member(whose=member)
-        temp_amount = temp_amount if temp_amount <= other_member.get_balance() else other_member.get_balance()
-
-        create_piece_of_debt(member=other_member, debt=debt, amount=temp_amount,
-                             trust_relationship_for_log=link, created_by=created_by)
-        remaining_amount -= temp_amount
-
-    if remaining_amount != 0:
-        raise Exception(f"ERRCODE: 0017, RA: {remaining_amount}, "
-                        f"MSG: Beklenmedik bir hata ile karşılaşıldı. Düzeltilmesi için "
-                        f"lütfen site yöneticisi ile iletişime geçerek ERRCODE'u ve RA'yı söyleyiniz.")
-
-    return debt.piece_of_debts_set
-
-
-def create_debt(amount, share, money_transaction, created_by, start_period=None, number_of_installment=None) -> Debt:
-    sandik = money_transaction.member_ref.sandik_ref
-    if number_of_installment is None:
-        number_of_installment = sandik_preferences.max_number_of_installment(sandik=sandik, amount=amount)
-    if start_period is None:
-        start_period = sandik_preferences.get_start_period(sandik=sandik, debt_date=money_transaction.date)
-
-    due_term = period_utils.get_last_installment_period(start_period, number_of_installment)
-
-    logged_ref_items = {
-        "logged_money_transaction_ref": money_transaction,
-        "logged_member_ref": money_transaction.member_ref,
-        "logged_sandik_ref": money_transaction.member_ref.sandik_ref,
-        "logged_share_ref": share,
-    }
-    print("create_debt - amount:", amount)
-    debt = Debt(
-        amount=amount, share_ref=share,
-        number_of_installment=number_of_installment, starting_term=start_period, due_term=due_term,
-        logs_set=Log(web_user_ref=created_by, type=Log.TYPE.DEBT.CREATE, **logged_ref_items),
-        sub_receipt_ref=create_sub_receipt(money_transaction=money_transaction, amount=amount, is_auto=True,
-                                           created_by=created_by)
-    )
-
-    create_installments_of_debt(debt=debt, created_by=created_by)
-    create_piece_of_debts(debt=debt, created_by=created_by)
-    return debt
-
-
-def create_retracted(amount, untreated_money_transaction, money_transaction, created_by) -> Retracted:
-    logged_ref_items = {
-        "logged_sandik_ref": money_transaction.member_ref.sandik_ref
-    }
-    return Retracted(
-        amount=amount,
-        expense_sub_receipt_ref=create_sub_receipt(money_transaction=money_transaction, amount=amount, is_auto=True,
-                                                   created_by=created_by),
-        revenue_sub_receipt_ref=create_sub_receipt(money_transaction=untreated_money_transaction, amount=amount,
-                                                   is_auto=True, created_by=created_by),
-        logs_set=Log(web_user_ref=created_by, type=Log.TYPE.DEBT.CREATE, **logged_ref_items)
-    )
 
 
 def total_paid_contributions_of_trusted_links(member):

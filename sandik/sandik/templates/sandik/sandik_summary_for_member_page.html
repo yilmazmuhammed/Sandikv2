@@ -191,11 +191,11 @@
               </tr>
               <tr class="row">
                 <th>Ay sonu:</th>
-                <td title="Ay sonu ödemeleri: {{ g.summary_data.sum_of_unpaid_and_due_payments }}" class="font-bold {% if g.summary_data.sum_of_unpaid_and_due_payments > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.member.total_of_undistributed_amount() - g.summary_data.sum_of_unpaid_and_due_payments }} ₺</td>
+                <td title="Ay sonu ödemeleri: {{ g.summary_data.sum_of_unpaid_and_due_payments }}" class="font-bold {% if g.member.total_of_undistributed_amount() - g.summary_data.sum_of_unpaid_and_due_payments < 0 %}text-danger{% else %}text-success{% endif %}">{{ g.member.total_of_undistributed_amount() - g.summary_data.sum_of_unpaid_and_due_payments }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Mil sonu:</th>
-                <td title="Mil sonu ödemeleri: {{ g.summary_data.sum_of_payments }}" class="font-bold {% if g.summary_data.sum_of_payments > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.member.total_of_undistributed_amount() - g.summary_data.sum_of_payments}} ₺</td>
+                <td title="Mil sonu ödemeleri: {{ g.summary_data.sum_of_payments }}" class="font-bold {% if g.member.total_of_undistributed_amount() - g.summary_data.sum_of_payments < 0 %}text-danger{% else %}text-success{% endif %}">{{ g.member.total_of_undistributed_amount() - g.summary_data.sum_of_payments}} ₺</td>
               </tr>
               </tbody>
             </table>
@@ -268,9 +268,11 @@
               <tr class="row">
                 <th>Birincil<br>banka hesabı:</th>
                 <td>
+                  {% if g.member.web_user_ref.get_primary_bank_account() %}
                   <span title="Hesap başlığı">{{ g.member.web_user_ref.get_primary_bank_account().title }}</span><br>
                   <span title="Hesap sahibi">{{ g.member.web_user_ref.get_primary_bank_account().holder }}</span><br>
                   <span title="IBAN ">{{ g.member.web_user_ref.get_primary_bank_account().get_iban_string() }}</span>
+                  {% endif %}
                 </td>
               </tr>
               </tbody>
@@ -345,26 +347,28 @@
 
     </div>
 
-    <div class="row">
+    {% if g.type == "management" %}
+      <div class="row">
 
-      <!-- Hisseler -->
-      <div class="col-md-8 col-md-offset-2">
-        <div class="panel panel-default">
-          <div class="panel-heading font-bold">
-            <span>Hisseler</span>
-            {% if g.type == "management" %}
-            <span class="pull-right">
-              {{ macros.button(url=url_for("sandik_page_bp.add_share_to_member_page", member_id=g.member.id, sandik_id=g.sandik.id), icon='glyphicon glyphicon-plus', type='default', size='sm', title='Düzenle') }}
-            </span>
-            {% endif %}
-          </div>
-          <div>
-            <table id="shares-table" class="table"></table>
+        <!-- Hisseler -->
+        <div class="col-md-8 col-md-offset-2">
+          <div class="panel panel-default">
+            <div class="panel-heading font-bold">
+              <span>Hisseler</span>
+              {% if g.type == "management" %}
+              <span class="pull-right">
+                {{ macros.button(url=url_for("sandik_page_bp.add_share_to_member_page", member_id=g.member.id, sandik_id=g.sandik.id), icon='glyphicon glyphicon-plus', type='default', size='sm', title='Düzenle') }}
+              </span>
+              {% endif %}
+            </div>
+            <div>
+              <table id="shares-table" class="table"></table>
+            </div>
           </div>
         </div>
-      </div>
 
-    </div>
+      </div>
+    {% endif %}
 
   </div>
 {% endblock %}

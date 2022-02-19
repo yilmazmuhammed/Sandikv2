@@ -15,7 +15,7 @@ class RegisterException(AuthException):
     pass
 
 
-class EmailAlreadyExist(AuthException):
+class EmailAlreadyExist(RegisterException):
     pass
 
 

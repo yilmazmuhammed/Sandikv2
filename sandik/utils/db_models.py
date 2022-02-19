@@ -49,7 +49,7 @@ class MoneyTransaction(db.Entity):
     def distributed_amount(self):
         return select(sr.amount for sr in self.sub_receipts_set).sum()
 
-    def undistributed_amount(self):
+    def get_undistributed_amount(self):
         return self.amount - self.distributed_amount()
 
 
@@ -174,6 +174,14 @@ class Member(db.Entity):
                              mt.type == MoneyTransaction.TYPE.EXPENSE).sum()
             return revenue - expense
 
+    def get_trust_link_with_member(self, other_member):
+        return TrustRelationship.get(
+            lambda t: ((t.requester_member_ref == self and t.receiver_member_ref == other_member)
+                       or (t.requester_member_ref == other_member and t.receiver_member_ref == self))
+                      and t.status != TrustRelationship.STATUS.REJECTED
+                      and t.status != TrustRelationship.STATUS.CANCELLED
+        )
+
     def accepted_trust_links(self):
         return select(t for t in TrustRelationship
                       if (t.requester_member_ref == self or t.receiver_member_ref == self)
@@ -210,7 +218,7 @@ class Member(db.Entity):
 
     def total_of_undistributed_amount(self):
         return select(
-            mt.undistributed_amount() for mt in self.get_revenue_money_transactions_are_not_fully_distributed()).sum()
+            mt.get_undistributed_amount() for mt in self.get_revenue_money_transactions_are_not_fully_distributed()).sum()
 
     def total_amount_unpaid_installments(self):
         return select(i.get_unpaid_amount() for i in Installment if
@@ -351,16 +359,21 @@ class Log(db.Entity):
 
         class TRUST_RELATIONSHIP:
             first, last = 300, 399
-            ACCEPT = first + 11
+            CREATE = first + 1
             REJECT = first + 12
+            ACCEPT = first + 13
+            CANCEL = first + 14
+            REMOVE = first + 15
 
         class SUB_RECEIPT:
             first, last = 400, 499
             CREATE = first + 1
+            DELETE = first + 3
 
         class MONEY_TRANSACTION:
             first, last = 500, 599
             CREATE = first + 1
+            DELETE = first + 3
             SIGN_FULLY_DISTRIBUTED = first + 11
 
         class DEBT:
@@ -487,6 +500,12 @@ class TrustRelationship(db.Entity):
         else:
             raise Exception("whose 'Member' veya 'WebUser' türünde olmalı")
 
+    def is_accepted(self):
+        return self.status == TrustRelationship.STATUS.ACCEPTED
+
+    def is_waiting(self):
+        return self.status == TrustRelationship.STATUS.WAITING
+
 
 class BankAccount(db.Entity):
     id = PrimaryKey(int, auto=True)
@@ -547,6 +566,18 @@ class Contribution(db.Entity):
     def get_unpaid_amount(self):
         return self.amount - self.get_paid_amount()
 
+    def recalculate_is_fully_paid(self):
+        unpaid_amount = self.get_unpaid_amount()
+        if unpaid_amount == 0:
+            self.is_fully_paid = True
+        elif unpaid_amount > 0:
+            self.is_fully_paid = False
+        else:
+            print("recalculate_is_fully_paid:", unpaid_amount)
+            rollback()
+            from sandik.utils.exceptions import UnexpectedValue
+            raise UnexpectedValue("ERRCODE: 0010, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+
 
 class Debt(db.Entity):
     id = PrimaryKey(int, auto=True)
@@ -575,6 +606,8 @@ class Debt(db.Entity):
         return self.amount - self.get_paid_amount()
 
     def update_pieces_of_debt(self):
+        # TODO ilgili borç tamamen ödendiyse PieceOfDebt'leri sil
+        # TODO ilgili borç tamamen ödenmediyse PieceOfDebt'leri güncelle
         paid_amount = self.get_paid_amount()
         undistributed_paid_amount = paid_amount
         for piece in self.piece_of_debts_set:
@@ -617,6 +650,18 @@ class Installment(db.Entity):
     def get_unpaid_amount(self):
         return self.amount - self.get_paid_amount()
 
+    def recalculate_is_fully_paid(self):
+        unpaid_amount = self.get_unpaid_amount()
+        if unpaid_amount == 0:
+            self.is_fully_paid = True
+        elif unpaid_amount > 0:
+            self.is_fully_paid = False
+        else:
+            print("Installment.recalculate_is_fully_paid:", unpaid_amount)
+            rollback()
+            from sandik.utils.exceptions import UnexpectedValue
+            raise UnexpectedValue("ERRCODE: 0011, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+
 
 class SubReceipt(db.Entity):
     """TODO - Bir SubReceipt aynı anda Contribution, Debt veya Installment'ten biriyle ilişkili olmak zorundadır. Daha az veya daha fazlası olamaz."""
@@ -647,32 +692,33 @@ class SubReceipt(db.Entity):
     def after_insert(self):
         # TODO test et
         if self.contribution_ref:
-            unpaid_amount = self.contribution_ref.get_unpaid_amount()
-            if unpaid_amount == 0:
-                self.contribution_ref.is_fully_paid = True
-            elif unpaid_amount < 0:
-                print(unpaid_amount)
-                rollback()
-                from sandik.utils.exceptions import UnexpectedValue
-                raise UnexpectedValue("ERRCODE: 0010, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+            self.contribution_ref.recalculate_is_fully_paid()
             self.contribution_ref.share_ref.member_ref.balance += self.amount
 
         if self.installment_ref:
-            unpaid_amount = self.installment_ref.get_unpaid_amount()
-            if unpaid_amount == 0:
-                self.installment_ref.is_fully_paid = True
-            elif unpaid_amount < 0:
-                raise Exception("ERRCODE: 0011, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
-            # TODO ilgili borç tamamen ödendiyse PieceOfDebt'leri sil
-            # TODO ilgili borç tamamen ödenmediyse PieceOfDebt'leri güncelle
+            self.installment_ref.recalculate_is_fully_paid()
             self.installment_ref.debt_ref.update_pieces_of_debt()
 
         # TODO test et: 4 işlem tipi için de dene
-        mt_untreated_amount = self.money_transaction_ref.undistributed_amount()
+        mt_untreated_amount = self.money_transaction_ref.get_undistributed_amount()
         if mt_untreated_amount == 0:
             self.money_transaction_ref.is_fully_distributed = True
         elif mt_untreated_amount < 0:
             raise Exception("ERRCODE: 0013, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+
+    def before_delete(self):
+        # if self.contribution_ref:
+        #     contribution = self.contribution_ref
+        #     self.contribution_ref = None
+        #     contribution.recalculate_is_fully_paid()
+        #     contribution.share_ref.member_ref.balance -= self.amount
+        #
+        # if self.installment_ref:
+        #     installment = self.installment_ref
+        #     self.installment_ref = None
+        #     installment.recalculate_is_fully_paid()
+        #     installment.debt_ref.update_pieces_of_debt()
+        pass
 
 
 class Notification(db.Entity):

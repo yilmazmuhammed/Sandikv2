@@ -27,7 +27,7 @@ def sandik_required(func):
     return decorated_view
 
 
-def member_required(func):
+def to_be_member_of_sandik_required(func):
     @wraps(func)
     @login_required
     @sandik_required

@@ -9,28 +9,38 @@
         "toggleColumn": "first",
         "columns": [
           { "name": "index", "title": "#", "classes": "text-center font-bold", },
-          { "name": "name_surname", "title": "Üye", "classes": "text-center" },
+          { "name": "name_surname", "title": "Üye", },
           {# { "name": "status", "title": "Durum", "classes": "text-center" }, #}
           { "name": "time", "title": "İstek tarihi", "classes": "text-center" },
           { "name": "actions", "title": "", "breakpoints": "xs sm md" },
         ],
         "rows": [
-        {% for tr in g.member.waiting_trust_links() %}
-          {
-            "index": `<span title='ID: {{ tr.id }}'>{{ loop.index }}</span>`,
-            "name_surname": `{{ tr.other_member(current_user).web_user_ref.name_surname  }}`,
-            {# "status": `{{ tr.status }}`, #}
-            "time": `{{ tr.time.strftime("%d.%m.%Y") }}`,
-            "actions": `
-              <tr>
-                {% if tr.receiver_member_ref.web_user_ref == current_user %}
-                <td>{{ macros.button(url=url_for('sandik_page_bp.accept_trust_relationship_request_page', trust_relationship_id=tr.id), icon='fa fa-check', type='success', size='xs', title='Kabul et', confirm_msg='Güven bağı isteğini onaylıyorsunuz. Devam etmek istiyor musunuz?') }}</td>
-                <td style='padding:5px;'></td>
-                {% endif %}
-                <td>{{ macros.button(url=url_for('sandik_page_bp.reject_trust_relationship_request_page', trust_relationship_id=tr.id), icon='fa fa-times', type='danger', size='xs', title='Reddet', confirm_msg='Güven bağı isteğini reddetmek istediğinizden emin misiniz?') }}</td>
-                <td style='padding:5px;'></td>
-              </tr>`,
-          },
+        {% for member in g.sandik.members_set.order_by("lambda m: m.web_user_ref.name_surname") %}
+          {% set tr = g.member.get_trust_link_with_member(other_member=member) %}
+          {% if g.member != member and (not tr or not tr.is_accepted()) %}
+            {
+              "index": `<span title='ID: {{ member.id }}'>{{ loop.index }}</span>`,
+              "name_surname": `{{ member.web_user_ref.name_surname  }}`,
+              {# "status": `{{ tr.status }}`, #}
+              "time": `{% if tr %}{{ tr.time.strftime("%d.%m.%Y") }}{% else %}-{% endif %}`,
+              "actions": `
+                <tr>
+                  {% if not tr %}
+                  <td>{{ macros.button(url=url_for('sandik_page_bp.send_request_trust_link_page', sandik_id=g.sandik.id, member_id=member.id), icon='fa fa-plus', type='success', size='xs', title='İstek gönder', confirm_msg=member.web_user_ref.name_surname + ' üyesine güven bağı isteği gönderiyorsunuz. Devam etmek istiyor musunuz?') }}</td>
+                  <td style='padding:5px;'></td>
+                  {% elif tr.is_waiting() and tr.receiver_member_ref == g.member %}
+                  <td>{{ macros.button(url=url_for('sandik_page_bp.accept_trust_relationship_request_page', sandik_id=g.sandik.id, trust_relationship_id=tr.id), icon='fa fa-check', type='success', size='xs', title='Kabul et', confirm_msg='Güven bağı isteğini onaylıyorsunuz. Devam etmek istiyor musunuz?') }}</td>
+                  <td style='padding:5px;'></td>
+                  <td>{{ macros.button(url=url_for('sandik_page_bp.remove_trust_relationship_request_page', sandik_id=g.sandik.id, trust_relationship_id=tr.id), icon='fa fa-times', type='danger', size='xs', title='Reddet', confirm_msg='Güven bağı isteğini reddetmek istediğinizden emin misiniz?') }}</td>
+                  <td style='padding:5px;'></td>
+                  {% elif tr.is_waiting() and tr.requester_member_ref == g.member %}
+                  <td>{{ macros.button(url=url_for('sandik_page_bp.remove_trust_relationship_request_page', sandik_id=g.sandik.id, trust_relationship_id=tr.id), icon='fa fa-times', type='danger', size='xs', title='İsteği geri çek', confirm_msg='Güven bağı isteğini geri çekmek istediğinizden emin misiniz?') }}</td>
+                  <td style='padding:5px;'></td>
+                  {% endif %}
+                </tr>
+              `,
+            },
+          {% endif %}
         {% endfor %}
         ]
       });
@@ -53,7 +63,7 @@
             "time": `{{ tr.time.strftime("%d.%m.%Y") }}`,
             "actions": `
               <tr>
-                <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Reddet', confirm_msg='Devam etmek istiyor musunuz?') }}</td>
+                <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Bağı sil', confirm_msg='Güven bağını silmek istiyor musunuz?') }}</td>
                 <td style='padding:5px;'></td>
               </tr>`,
           },
@@ -75,9 +85,6 @@
         <div class="panel panel-default">
           <div class="panel-heading font-bold">
             <span>Güven bağı istekleri</span>
-            <span class="pull-right">
-              {{ macros.button(url_for("sandik_page_bp.request_trust_link_page", sandik_id=g.sandik.id), "glyphicon glyphicon-plus") }}
-            </span>
           </div>
           <div>
             <table id="waiting-trust-links-table" class="table"></table>
@@ -90,9 +97,6 @@
         <div class="panel panel-default">
           <div class="panel-heading font-bold">
             <span>Güven halkam</span>
-            <span class="pull-right">
-              {{ macros.button(url_for("sandik_page_bp.request_trust_link_page", sandik_id=g.sandik.id), "glyphicon glyphicon-plus") }}
-            </span>
           </div>
           <div>
             <table id="accepted-trust-links-table" class="table"></table>

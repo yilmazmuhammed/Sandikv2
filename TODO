@@ -1,9 +1,4 @@
 1- Sistemin işler hale getirilmesi
-TODO CRITICAL   Her ay aidatlar oluşturulacak
-                    - Aidatlar oluşturulurken işleme konmamış para varsa onunla ödeme de yapılsın
-                    - Taksitler " " " " "?
-                            => Bu ikisi için şöyle bir yol izlenebilir. MoneyTransaction eklenirken, eklendikten sonraki
-                            ödeme mekanizması ayrı bir fonksiyona taşınır ve bu çalıştırılırç
 
 TODO MAJOR      Üyeler sayfası, her üye için hisse hisse ne yaptı ne etti
 
