@@ -101,11 +101,6 @@ def add_revenue_transactions(money_transaction, pay_future_payments, created_by)
 
     if remaining_amount < 0:
         raise Exception("ERR_CODE: 0001, MSG: Site yöneticisiyle iletişime geçiniz...")
-    if remaining_amount == 0:
-        # TODO test et SubReceipt.after_insert fonksiyonunda yapılıyor,
-        #  çalışmıyorsa burada yap, çalışıyorsa fonksiyonu sil
-        # db.sign_money_transaction_as_fully_distributed(money_transaction=money_transaction, signed_by=created_by)
-        pass
 
     return True
 

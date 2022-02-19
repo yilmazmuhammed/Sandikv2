@@ -114,6 +114,9 @@ def create_piece_of_debts(debt, created_by):
                          trust_relationship_for_log=None, created_by=created_by)
     remaining_amount -= temp_amount
 
+    if remaining_amount == 0:
+        return debt.piece_of_debts_set
+
     for i, link in enumerate(sorted_trusted_links):
         if remaining_amount <= 0:
             raise Exception(f"ERRCODE: 0016, RA: {remaining_amount}, "
