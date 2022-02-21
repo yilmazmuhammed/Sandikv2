@@ -218,7 +218,8 @@ class Member(db.Entity):
 
     def total_of_undistributed_amount(self):
         return select(
-            mt.get_undistributed_amount() for mt in self.get_revenue_money_transactions_are_not_fully_distributed()).sum()
+            mt.get_undistributed_amount() for mt in
+            self.get_revenue_money_transactions_are_not_fully_distributed()).sum()
 
     def total_amount_unpaid_installments(self):
         return select(i.get_unpaid_amount() for i in Installment if
@@ -234,7 +235,7 @@ class Member(db.Entity):
         return total_of_half_paid_contributions + total_of_fully_paid_contributions
 
     def get_unpaid_debts(self):
-        return select(d for d in Debt if d.member_ref == self)
+        return select(d for d in Debt if d.member_ref == self and d.get_unpaid_amount() > 0)
 
 
 class WebUser(db.Entity, UserMixin):
@@ -395,6 +396,7 @@ class Log(db.Entity):
         class BANK_ACCOUNT:
             first, last = 1000, 1099
             CREATE = first + 1
+            UPDATE = first + 2
             DELETE = first + 3
 
         class SANDIK_AUTHORITY_TYPE:
@@ -787,6 +789,16 @@ else:
     db.bind(provider="sqlite", filename='database.sqlite', create_db=True)
 
 db.generate_mapping(create_tables=True)
+
+
+def get_updated_fields(new_values, db_object):
+    ret = {}
+    print(new_values)
+    for key, value in new_values.items():
+        if key in db_object.__dict__.keys() and value != db_object.__dict__[key]:
+            ret[key] = {"new": value, "old_": db_object.__dict__[key]}
+    return ret
+
 
 if __name__ == '__main__':
     with db_session:

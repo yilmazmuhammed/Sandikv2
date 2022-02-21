@@ -29,7 +29,7 @@
           { "name": "shares_count", "title": "Hisse sayısı", "breakpoints": "xs sm md", "classes": "text-center", },
           { "name": "is_active", "title": "Durum", "classes": "text-center", "breakpoints": "xs sm md lg" ,  },
           {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
-          { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+          { "name": "actions", "title": "", },
           {% endif %}
         ],
         "rows": [

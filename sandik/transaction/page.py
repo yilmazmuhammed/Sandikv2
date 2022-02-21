@@ -106,6 +106,7 @@ def create_due_contributions_for_all_members_page(sandik_id):
 @transaction_page_bp.route('s-para-giris-cikislari')
 @sandik_authorization_required("read")
 def money_transactions_of_sandik_page(sandik_id):
+    g.type = "management"
     g.money_transactions = g.sandik.get_money_transactions().order_by(lambda mt: (desc(mt.date), desc(mt.id)))
     return render_template("transaction/money_transactions_page.html",
                            page_info=LayoutPI(title="Para giriş/çıkış işlemleri",
@@ -115,6 +116,7 @@ def money_transactions_of_sandik_page(sandik_id):
 @transaction_page_bp.route('u-para-giris-cikislari')
 @to_be_member_of_sandik_required
 def money_transactions_of_member_page(sandik_id):
+    g.type = "member"
     g.money_transactions = g.member.money_transactions_set.order_by(lambda mt: (desc(mt.date), desc(mt.id)))
     return render_template(
         "transaction/money_transactions_page.html",

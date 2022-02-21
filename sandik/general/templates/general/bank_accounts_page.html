@@ -15,7 +15,7 @@
           { "name": "title", "title": "Başlık", },
           { "name": "holder", "title": "Hesap sahibi", },
           { "name": "iban", "title": "IBAN", },
-          { "name": "is_primary", "title": "Varsayılan", "classes": "text-center",  },
+          { "name": "is_primary", "title": "Varsayılan hesap mı?", "classes": "text-center",  },
           { "name": "actions", "title": "", "breakpoints": "xs sm md" },
         ],
         "rows": [
@@ -26,10 +26,10 @@
             "holder": `{{ bank_account.holder }}`,
             "iban": `TR{{ bank_account.iban }}`,
             {# TODO Varsayılan olma özelliğini switch buton ile göster. #}
-            "is_primary": `{{ "Varsayılan" if bank_account.is_primary else "Standart" }}`,
+            "is_primary": `{{ "Evet" if bank_account.is_primary else "Hayır" }}`,
             "actions": `
               <tr>
-                <td>{{ macros.button(url="#", icon='fa fa-pencil', type='info', size='xs', title='Düzenle') }}</td>
+                <td>{{ macros.button(url=url_for('general_page_bp.update_bank_account_page', bank_account_id=bank_account.id), icon='fa fa-pencil', type='info', size='xs', title='Düzenle') }}</td>
                 <td style='padding:5px;'></td>
                 <td>{{ macros.button(url=url_for("general_page_bp.delete_bank_account_page", bank_account_id=bank_account.id) , icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
               </tr>

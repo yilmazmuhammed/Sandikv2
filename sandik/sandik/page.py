@@ -55,7 +55,7 @@ def sandik_summary_for_member_page(sandik_id):
     g.summary_data = utils.get_member_summary_page(member=g.member)
     g.type = "member"
     return render_template("sandik/sandik_summary_for_member_page.html",
-                           page_info=LayoutPI(title=g.sandik.name, active_dropdown="sandik"))
+                           page_info=LayoutPI(title="Üye özeti", active_dropdown="sandik"))
 
 
 @sandik_page_bp.route("/<int:sandik_id>/index", methods=["GET", "POST"])
