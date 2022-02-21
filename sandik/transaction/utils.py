@@ -79,7 +79,8 @@ def add_revenue_transactions(money_transaction, pay_future_payments, created_by)
     payments = get_payments(whose=member, is_fully_paid=False, is_due=True)
     if pay_future_payments:
         payments += get_payments(whose=member, is_fully_paid=False, is_due=False)
-
+        
+    payments = sorted(payments, key=lambda t: t.term)
     for p in payments:
         amount = p.get_unpaid_amount() if remaining_amount >= p.get_unpaid_amount() else remaining_amount
 
