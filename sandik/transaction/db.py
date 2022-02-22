@@ -205,7 +205,7 @@ def delete_sub_receipt(sub_receipt, removed_by):
     Log(web_user_ref=removed_by, type=Log.TYPE.SUB_RECEIPT.DELETE, detail=str(sub_receipt.to_dict()),
         **logged_ref_items)
     for log in sub_receipt_logs:
-        log.detail += f"deleted_sub_receipt_id: {sub_receipt_id}"
+        log.detail += f", deleted_sub_receipt_id: {sub_receipt_id}"
 
     sub_receipt.delete()
 
@@ -226,7 +226,7 @@ def delete_money_transaction(money_transaction, removed_by):
     Log(web_user_ref=removed_by, type=Log.TYPE.MONEY_TRANSACTION.DELETE, detail=str(money_transaction.to_dict()),
         **logged_ref_items)
     for log in money_transaction.logs_set:
-        log.detail += f"deleted_money_transaction_id: {money_transaction.id}"
+        log.detail += f", deleted_money_transaction_id: {money_transaction.id}"
     money_transaction.delete()
 
 
@@ -239,7 +239,7 @@ def delete_contribution(contribution, removed_by):
     Log(web_user_ref=removed_by, type=Log.TYPE.CONTRIBUTION.DELETE, detail=str(contribution.to_dict()),
         **logged_ref_items)
     for log in contribution.logs_set:
-        log.detail += f"deleted_contribution_id: {contribution.id}"
+        log.detail += f", deleted_contribution_id: {contribution.id}"
     contribution.delete()
 
 

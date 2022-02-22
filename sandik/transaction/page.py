@@ -170,7 +170,8 @@ def transactions_of_member_page(sandik_id):
 @sandik_authorization_required("read")
 def payments_of_sandik_page(sandik_id):
     g.payments = utils.get_payments(whose=g.sandik)
-    g.due_and_unpaid_payments = utils.get_payments(whose=g.sandik, is_fully_paid=False, is_due=True)
+    due_and_unpaid_payments = utils.get_payments(whose=g.sandik, is_fully_paid=False, is_due=True)
+    g.due_and_unpaid_payments = sorted(due_and_unpaid_payments, key=lambda p: p.term)
     return render_template("transaction/payments_page.html",
                            page_info=LayoutPI(title="Sandıktaki ödemeler", active_dropdown="management-transactions"))
 
@@ -179,7 +180,8 @@ def payments_of_sandik_page(sandik_id):
 @to_be_member_of_sandik_required
 def payments_of_member_page(sandik_id):
     g.payments = utils.get_payments(whose=g.member)
-    g.due_and_unpaid_payments = utils.get_payments(whose=g.member, is_fully_paid=False, is_due=True)
+    due_and_unpaid_payments = utils.get_payments(whose=g.member, is_fully_paid=False, is_due=True)
+    g.due_and_unpaid_payments = sorted(due_and_unpaid_payments, key=lambda t: t.term)
     return render_template("transaction/payments_page.html",
                            page_info=LayoutPI(title="Ödemelerim", active_dropdown="member-transactions"))
 

@@ -360,6 +360,7 @@ class Log(db.Entity):
             first, last = 100, 199
             CONFIRM = first + 11
             BLOCK = first + 12
+            REGISTER = first + 13
 
         class SANDIK:
             first, last = 200, 299

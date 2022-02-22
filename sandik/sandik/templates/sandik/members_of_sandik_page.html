@@ -44,6 +44,8 @@
             "actions": `
               <tr>
                 <td>{{ macros.button(url=url_for("sandik_page_bp.member_summary_for_management_page", member_id=member.id, sandik_id=g.sandik.id), icon='fa fa-search', type='info', size='xs', title='Üye özeti') }}</td>
+                <td style='padding:5px;'></td>
+                <td>{{ macros.button(url=url_for("transaction_page_bp.money_transactions_of_member_for_management_page", member_id=member.id, sandik_id=g.sandik.id), icon='fa fa-list', type='info', size='xs', title='Tüm para giriş/çıkışları') }}</td>
               </tr>
             `,
             {% endif %}

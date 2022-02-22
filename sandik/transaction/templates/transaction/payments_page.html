@@ -6,6 +6,9 @@
 <script>
 jQuery(function($){
 	$('#all-payments-table').footable({
+    components: {
+      filtering: create_footable_basic_filter("is_fully_paid", "Ödenme durumu:", ["Ödenmedi", "Ödendi"], "Ödendi"),
+    },
     "toggleColumn": "first",
     "paging": {
       "enabled": true,

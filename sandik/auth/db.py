@@ -22,16 +22,22 @@ def get_or_create_bot_user(which):
     return bot_user
 
 
+def get_admin_web_users():
+    return select_web_users(lambda wu: wu.is_admin())
+
+
 def add_web_user(email_address, password, **kwargs):
     if get_web_user(email_address=email_address):
         raise EmailAlreadyExist('Bu e-posta adresiyle daha önce kaydolunmuş.')
 
     web_user = WebUser(email_address=email_address, password_hash=hasher.hash(password), **kwargs)
+    Log(web_user_ref=get_or_create_bot_user(which="anonymous"), type=Log.TYPE.WEB_USER.REGISTER,
+        logged_web_user_ref=web_user)
     return web_user
 
 
-def select_web_users(**kwargs):
-    return WebUser.select(**kwargs)
+def select_web_users(*args, **kwargs):
+    return WebUser.select(*args, **kwargs)
 
 
 def confirm_web_user(web_user_id, updated_by) -> WebUser:

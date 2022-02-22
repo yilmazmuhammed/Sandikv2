@@ -16,7 +16,7 @@ def create_bank_account(created_by, is_primary, **kwargs) -> BankAccount:
     return BankAccount(logs_set=log, is_primary=is_primary, **kwargs)
 
 
-def create_notification(to_web_user, title, text, url='#') -> Notification:
+def create_notification(to_web_user, title, text, url='') -> Notification:
     return Notification(web_user_ref=to_web_user, title=title, text=text, url=url)
 
 
