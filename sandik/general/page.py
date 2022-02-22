@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, flash, url_for, g
+from flask import Blueprint, render_template, request, redirect, flash, url_for, g, abort
 from flask_login import current_user
 from pony.orm import desc
 
@@ -7,6 +7,7 @@ from sandik.general import forms, db, utils
 from sandik.general.exceptions import BankAccountException
 from sandik.general.requirement import notification_required
 from sandik.sandik import db as sandik_db
+from sandik.sandik.exceptions import ThereIsNoSandik, ThereIsNotAuthorizedOfSandik
 from sandik.utils import LayoutPI, get_next_url
 from sandik.utils.forms import flask_form_to_dict, FormPI
 
@@ -64,28 +65,56 @@ def create_bank_account_page():
 
     if form.validate_on_submit():
         form_data = flask_form_to_dict(request_form=request.form, boolean_fields=["is_primary"])
-        if request.args.get("sandik"):
-            # TODO sanığa ekleme mevzusunu yap
-            sandik = sandik_db.get_sandik(id=request.args.get("sandik"))
-            if not sandik:
-                flash("Sandık bulunamadı.", "danger")
-                return render_template(
-                    "utils/form_layout.html",
-                    page_info=FormPI(title="Üyelik başvurusu yap", form=form, active_dropdown='sandik')
-                )
-            form_data["sandik_ref"] = sandik
-        else:
-            form_data["web_user_ref"] = current_user
         try:
+            if request.args.get("sandik"):
+                sandik = sandik_db.get_sandik(id=request.args.get("sandik"))
+                if not sandik:
+                    raise ThereIsNoSandik("Sandık bulunamadı")
+                elif not current_user.has_permission(sandik=sandik, permission="write"):
+                    raise ThereIsNotAuthorizedOfSandik("Sandık'ta yazma yetkiniz bulunmamakta")
+                form_data["sandik_ref"] = sandik
+            else:
+                form_data["web_user_ref"] = current_user
+
             db.create_bank_account(created_by=current_user, **form_data)
 
             next_url = get_next_url(request.args, default_url=url_for("general_page_bp.index_page"))
+            return redirect(next_url)
+        except (BankAccountException, ThereIsNoSandik, ThereIsNotAuthorizedOfSandik) as e:
+            flash(str(e), "danger")
+
+    return render_template("utils/form_layout.html",
+                           page_info=FormPI(title="Banka hesabı ekle", form=form))
+
+
+@general_page_bp.route("/banka-hesabi/<int:bank_account_id>/duzenle", methods=["GET", "POST"])
+@login_required
+def update_bank_account_page(bank_account_id):
+    bank_account = db.get_bank_account(id=bank_account_id)
+    if not bank_account:
+        abort(404, "Banka hesabı bulunamadı!")
+    elif bank_account.web_user_ref and bank_account.web_user_ref != current_user:
+        abort(403, "Başkasının banka hesabını düzenleyemezsiniz!")
+    elif bank_account.sandik_ref and not current_user.has_permission(sandik=bank_account.sandik_ref,
+                                                                     permission="write"):
+        abort(403, "Sandıkta yazma yetkiniz bulunmamakta!")
+
+    form = forms.BankAccountForm()
+    if request.method == "GET":
+        form.fill_with_back_account(bank_account=bank_account)
+
+    if form.validate_on_submit():
+        form_data = flask_form_to_dict(request_form=request.form, boolean_fields=["is_primary"])
+        try:
+            db.update_bank_account(bank_account=bank_account, updated_by=current_user, **form_data)
+
+            next_url = get_next_url(request.args, default_url=url_for("general_page_bp.bank_accounts_page"))
             return redirect(next_url)
         except BankAccountException as e:
             flash(str(e), "danger")
 
     return render_template("utils/form_layout.html",
-                           page_info=FormPI(title="Üyelik başvurusu yap", form=form, active_dropdown='sandik'))
+                           page_info=FormPI(title="Banka hesabını düzenle", form=form))
 
 
 @general_page_bp.route("/bildirim/<int:notification_id>")

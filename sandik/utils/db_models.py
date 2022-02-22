@@ -52,6 +52,15 @@ class MoneyTransaction(db.Entity):
     def get_undistributed_amount(self):
         return self.amount - self.distributed_amount()
 
+    def recalculate_is_fully_distributed(self):
+        mt_untreated_amount = self.get_undistributed_amount()
+        if mt_untreated_amount == 0:
+            self.is_fully_distributed = True
+        elif mt_untreated_amount > 0:
+            self.is_fully_distributed = False
+        elif mt_untreated_amount < 0:
+            raise Exception("ERRCODE: 0013, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+
 
 class Share(db.Entity):
     """composite_key(membre_ref, share_order_of_member)"""
@@ -218,7 +227,8 @@ class Member(db.Entity):
 
     def total_of_undistributed_amount(self):
         return select(
-            mt.get_undistributed_amount() for mt in self.get_revenue_money_transactions_are_not_fully_distributed()).sum()
+            mt.get_undistributed_amount() for mt in
+            self.get_revenue_money_transactions_are_not_fully_distributed()).sum()
 
     def total_amount_unpaid_installments(self):
         return select(i.get_unpaid_amount() for i in Installment if
@@ -234,7 +244,7 @@ class Member(db.Entity):
         return total_of_half_paid_contributions + total_of_fully_paid_contributions
 
     def get_unpaid_debts(self):
-        return select(d for d in Debt if d.member_ref == self)
+        return select(d for d in Debt if d.member_ref == self and d.get_unpaid_amount() > 0)
 
 
 class WebUser(db.Entity, UserMixin):
@@ -350,6 +360,7 @@ class Log(db.Entity):
             first, last = 100, 199
             CONFIRM = first + 11
             BLOCK = first + 12
+            REGISTER = first + 13
 
         class SANDIK:
             first, last = 200, 299
@@ -391,10 +402,12 @@ class Log(db.Entity):
         class CONTRIBUTION:
             first, last = 900, 999
             CREATE = first + 1
+            DELETE = first + 3
 
         class BANK_ACCOUNT:
             first, last = 1000, 1099
             CREATE = first + 1
+            UPDATE = first + 2
             DELETE = first + 3
 
         class SANDIK_AUTHORITY_TYPE:
@@ -700,11 +713,7 @@ class SubReceipt(db.Entity):
             self.installment_ref.debt_ref.update_pieces_of_debt()
 
         # TODO test et: 4 işlem tipi için de dene
-        mt_untreated_amount = self.money_transaction_ref.get_undistributed_amount()
-        if mt_untreated_amount == 0:
-            self.money_transaction_ref.is_fully_distributed = True
-        elif mt_untreated_amount < 0:
-            raise Exception("ERRCODE: 0013, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+        self.money_transaction_ref.recalculate_is_fully_distributed()
 
     def before_delete(self):
         # if self.contribution_ref:
@@ -787,6 +796,16 @@ else:
     db.bind(provider="sqlite", filename='database.sqlite', create_db=True)
 
 db.generate_mapping(create_tables=True)
+
+
+def get_updated_fields(new_values, db_object):
+    ret = {}
+    print(new_values)
+    for key, value in new_values.items():
+        if key in db_object.__dict__.keys() and value != db_object.__dict__[key]:
+            ret[key] = {"new": value, "old_": db_object.__dict__[key]}
+    return ret
+
 
 if __name__ == '__main__':
     with db_session:

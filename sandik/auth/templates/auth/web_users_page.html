@@ -15,7 +15,7 @@
 jQuery(function($){
 	$('#web-users-table').footable({
     components: {
-      filtering: create_footable_basic_filter("is_active", "Onay durumu:", ["Onaylı", "Onaysız"])
+      filtering: create_footable_basic_filter("is_active", "Onay durumu:", ["Onaylı", "Onaysız"], "Onaylı")
     },
     "toggleColumn": "first",
     "paging": {
@@ -68,11 +68,6 @@ jQuery(function($){
     <div class="panel panel-default">
       <div class="panel-heading">
         {{ page_info.title }}
-        <span class="pull-right">
-{#          <a href="{{ url_for("cash_account_bp.create_cash_account_page") }}" class="btn btn-xs btn-primary">#}
-{#            <i class="fa fa-plus"></i>#}
-{#          </a>#}
-        </span>
       </div>
       <div class="table table-responsive">
         <table class="table" id="web-users-table"></table>

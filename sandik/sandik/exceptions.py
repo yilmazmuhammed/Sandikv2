@@ -83,3 +83,7 @@ class ThereIsNotSandikAuthority(SandikAuthorityException):
 
 class ThereIsNotAuthorizedOfSandik(SandikAuthorityException):
     pass
+
+
+class ThereIsNoSandik(SandikException):
+    pass

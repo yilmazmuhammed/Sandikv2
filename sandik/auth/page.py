@@ -4,6 +4,7 @@ from flask_login import login_user, login_required, logout_user, current_user
 from sandik.auth import db, forms
 from sandik.auth.exceptions import RegisterException
 from sandik.auth.requirement import admin_required
+from sandik.auth.utils import Notification
 from sandik.utils import LayoutPI
 from sandik.utils.forms import flask_form_to_dict, FormPI
 
@@ -26,7 +27,8 @@ def register_page():
         else:
             try:
                 form_data = flask_form_to_dict(request_form=request.form, exclude=['password_verification'])
-                db.add_web_user(is_active_=True, **form_data)
+                registered_web_user = db.add_web_user(is_active_=True, **form_data)
+                Notification.WebUserAuth.send_register_web_user_notification(registered_web_user=registered_web_user)
                 flash("Account created.", 'success')
                 return redirect(url_for("auth_page_bp.login_page"))
             except RegisterException as ex:

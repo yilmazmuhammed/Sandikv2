@@ -7,7 +7,7 @@ def remove_bank_account(bank_account_id, deleted_by):
     if not bank_account:
         raise BankAccountNotFound("Banka hesabı bulunamadı.", create_log=True)
 
-    if bank_account.is_primary:
-        raise PrimaryBankAccountCannotBeDeleted("Birincil banka hesabı silinemez.")
+    # if bank_account.is_primary:
+    #     raise PrimaryBankAccountCannotBeDeleted("Birincil banka hesabı silinemez.")
 
     return db.delete_bank_account(bank_account=bank_account, deleted_by=deleted_by)

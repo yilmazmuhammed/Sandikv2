@@ -29,7 +29,7 @@
           { "name": "shares_count", "title": "Hisse sayısı", "breakpoints": "xs sm md", "classes": "text-center", },
           { "name": "is_active", "title": "Durum", "classes": "text-center", "breakpoints": "xs sm md lg" ,  },
           {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
-          { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+          { "name": "actions", "title": "", },
           {% endif %}
         ],
         "rows": [
@@ -44,6 +44,8 @@
             "actions": `
               <tr>
                 <td>{{ macros.button(url=url_for("sandik_page_bp.member_summary_for_management_page", member_id=member.id, sandik_id=g.sandik.id), icon='fa fa-search', type='info', size='xs', title='Üye özeti') }}</td>
+                <td style='padding:5px;'></td>
+                <td>{{ macros.button(url=url_for("transaction_page_bp.money_transactions_of_member_for_management_page", member_id=member.id, sandik_id=g.sandik.id), icon='fa fa-list', type='info', size='xs', title='Tüm para giriş/çıkışları') }}</td>
               </tr>
             `,
             {% endif %}

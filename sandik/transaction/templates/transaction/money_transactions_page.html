@@ -40,7 +40,7 @@ jQuery(function($){
         "id": "<span title='ID: {{ mt.id }}'>{{ loop.revindex }}</span>",
         "date": "{{ mt.date.strftime("%Y-%m-%d") }}",
         "amount": "{{ mt.amount }} ₺",
-        "name_surname": "{{ mt.member_ref.web_user_ref.name_surname }}",
+        "name_surname": `{% if g.type == "management"%}<a href="{{ url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=g.sandik.id, member_id=mt.member_ref.id) }}" title="Üye özeti için tıklayınız..." class="font-bold text-primary">{{ mt.member_ref.web_user_ref.name_surname }}</a>{% else %}{{ mt.member_ref.web_user_ref.name_surname }}{% endif %}`,
         "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}"Para girişi"{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}"Para çıkışı"{% else %}"---"{% endif %},
         "detail": "{{ mt.detail }}",
         "is_fully_distributed": "{{ "Evet" if mt.is_fully_distributed else "Hayır" }}",

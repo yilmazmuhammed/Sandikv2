@@ -37,7 +37,7 @@
             "exception_detail": `{% if log.detail.find("(ERRCODE") >= 0 %}{{ ("ERRCODE"+log.detail.split("(ERRCODE")[1][:-1]).replace("ERRCODE:", "<strong>ERRCODE:</strong>").replace("FUNCTION:", "<br><strong>FUNCTION:</strong>").replace("EXCEPTION:", "<br><strong>EXCEPTION:</strong>") | safe }}{% endif %}`,
             "logged_refs": `
               {% for key, value in log.to_dict(related_objects=True, exclude=["id", 'web_user_ref', "time", "type", "special_type", "detail"]).items() %}
-                {% if value %}{{ value }} &emsp;->&emsp; {{ value.title or value.name_surname or value.name }}<br>{% endif %}
+                {% if value %}{{ value }} &emsp;->&emsp; {{ value.title or (value.name_surname + " <" + value.email_address + ">"  if value.email_address else "") or value.name or (value.member_ref.web_user_ref.name_surname if value.member_ref else "" ) or (value.web_user_ref.name_surname if value.web_user_ref else "" )}}<br>{% endif %}
               {% endfor %}
             `,
             "actions": `

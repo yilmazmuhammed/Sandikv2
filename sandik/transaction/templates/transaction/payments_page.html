@@ -1,10 +1,14 @@
 {% extends "utils/layout.html" %}
+{% import "utils/parts/macros.html" as macros%}
 
 {% block js_block %}
 <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
 <script>
 jQuery(function($){
 	$('#all-payments-table').footable({
+    components: {
+      filtering: create_footable_basic_filter("is_fully_paid", "Ödenme durumu:", ["Ödenmedi", "Ödendi"], "Ödendi"),
+    },
     "toggleColumn": "first",
     "paging": {
       "enabled": true,
@@ -28,7 +32,7 @@ jQuery(function($){
 			{ "name": "is_fully_paid", "title": "Ödenme durumu", "breakpoints": "xs sm md", },
 			{ "name": "detail", "title": "Detay", "breakpoints": "xs sm md", },
 			{ "name": "sub_receipts", "title": "", "breakpoints": "xs sm md lg", },
-			{# { "name": "action", "title": "", "breakpoints": "xs sm md lg", }, #}
+			{ "name": "action", "title": "", "breakpoints": "xs sm md", },
 		],
 		"rows": [
     {% for p in g.payments %}
@@ -87,14 +91,13 @@ jQuery(function($){
           {% endif %}
         `,
         "detail": "{{ detail }}",
-        {# "action":` #}
-        {#   <label class="i-switch m-t-xs m-r"> #}
-        {#     <a href="{% if web_user.is_active %}{{ url_for("auth_page_bp.block_web_user_page", web_user_id=web_user.id) }}{% else %}{{ url_for("auth_page_bp.confirm_web_user_page", web_user_id=web_user.id) }}{% endif %}"> #}
-        {#       <input id="is_timed" name="is_timed" {{ "checked=''" if web_user.is_active else "" }} type="checkbox" value="y"> #}
-        {#       <i></i> #}
-        {#     </a> #}
-        {#   </label> #}
-        {# ` #}
+        "action":`
+          <tr>
+            {% if isinstance(p, Contribution) %}
+              <td>{{ macros.button(url=url_for("transaction_page_bp.remove_contribution_by_manager_page", sandik_id=g.sandik.id, contribution_id=p.id), icon='fa fa-trash', type='danger', size='xs', title='İşlemi sil', confirm_msg='Aidatı silmek üzeresiniz. Bu işlem geri alınamaz. Silme işlemine devam etmek istiyor musunuz?') }}</td>
+            {% endif %}
+          </tr>
+        `
       },
     {% endfor %}
     ]
@@ -124,7 +127,7 @@ jQuery(function($){
 			{ "name": "is_fully_paid", "title": "Ödenme durumu", "breakpoints": "xs sm md", },
 			{ "name": "detail", "title": "Detay", "breakpoints": "xs sm md", },
 			{ "name": "sub_receipts", "title": "", "breakpoints": "xs sm md lg", },
-			{# { "name": "action", "title": "", "breakpoints": "xs sm md lg", }, #}
+			{ "name": "action", "title": "", "breakpoints": "xs sm md", },
 		],
 		"rows": [
     {% for p in g.due_and_unpaid_payments %}
@@ -183,14 +186,13 @@ jQuery(function($){
           {% endif %}
         `,
         "detail": "{{ detail }}",
-        {# "action":` #}
-        {#   <label class="i-switch m-t-xs m-r"> #}
-        {#     <a href="{% if web_user.is_active %}{{ url_for("auth_page_bp.block_web_user_page", web_user_id=web_user.id) }}{% else %}{{ url_for("auth_page_bp.confirm_web_user_page", web_user_id=web_user.id) }}{% endif %}"> #}
-        {#       <input id="is_timed" name="is_timed" {{ "checked=''" if web_user.is_active else "" }} type="checkbox" value="y"> #}
-        {#       <i></i> #}
-        {#     </a> #}
-        {#   </label> #}
-        {# ` #}
+        "action":`
+          <tr>
+            {% if isinstance(p, Contribution) %}
+              <td>{{ macros.button(url=url_for("transaction_page_bp.remove_contribution_by_manager_page", sandik_id=g.sandik.id, contribution_id=p.id), icon='fa fa-trash', type='danger', size='xs', title='İşlemi sil', confirm_msg='Aidatı silmek üzeresiniz. Bu işlem geri alınamaz. Silme işlemine devam etmek istiyor musunuz?') }}</td>
+            {% endif %}
+          </tr>
+        `
       },
     {% endfor %}
     ]

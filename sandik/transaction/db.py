@@ -184,7 +184,7 @@ def create_retracted(amount, untreated_money_transaction, money_transaction, cre
     )
 
 
-def remove_sub_receipt(sub_receipt, removed_by):
+def delete_sub_receipt(sub_receipt, removed_by):
     logged_ref_items = {
         "logged_money_transaction_ref": sub_receipt.money_transaction_ref,
         "logged_share_ref": sub_receipt.share_ref,
@@ -198,16 +198,18 @@ def remove_sub_receipt(sub_receipt, removed_by):
     sub_receipt_id = sub_receipt.id
     contribution = sub_receipt.contribution_ref
     installment = sub_receipt.installment_ref
+    money_transaction = sub_receipt.money_transaction_ref
     amount = sub_receipt.amount
     flush()
 
     Log(web_user_ref=removed_by, type=Log.TYPE.SUB_RECEIPT.DELETE, detail=str(sub_receipt.to_dict()),
         **logged_ref_items)
     for log in sub_receipt_logs:
-        log.detail += f"deleted_sub_receipt_id: {sub_receipt_id}"
+        log.detail += f", deleted_sub_receipt_id: {sub_receipt_id}"
 
     sub_receipt.delete()
 
+    money_transaction.recalculate_is_fully_distributed()
     if contribution:
         contribution.recalculate_is_fully_paid()
         contribution.share_ref.member_ref.balance -= amount
@@ -216,7 +218,7 @@ def remove_sub_receipt(sub_receipt, removed_by):
         installment.debt_ref.update_pieces_of_debt()
 
 
-def remove_money_transaction(money_transaction, removed_by):
+def delete_money_transaction(money_transaction, removed_by):
     logged_ref_items = {
         "logged_member_ref": money_transaction.member_ref,
         "logged_sandik_ref": money_transaction.member_ref.sandik_ref,
@@ -224,8 +226,21 @@ def remove_money_transaction(money_transaction, removed_by):
     Log(web_user_ref=removed_by, type=Log.TYPE.MONEY_TRANSACTION.DELETE, detail=str(money_transaction.to_dict()),
         **logged_ref_items)
     for log in money_transaction.logs_set:
-        log.detail += f"deleted_money_transaction_id: {money_transaction.id}"
+        log.detail += f", deleted_money_transaction_id: {money_transaction.id}"
     money_transaction.delete()
+
+
+def delete_contribution(contribution, removed_by):
+    logged_ref_items = {
+        "logged_share_ref": contribution.share_ref,
+        "logged_member_ref": contribution.share_ref.member_ref,
+        "logged_sandik_ref": contribution.share_ref.member_ref.sandik_ref,
+    }
+    Log(web_user_ref=removed_by, type=Log.TYPE.CONTRIBUTION.DELETE, detail=str(contribution.to_dict()),
+        **logged_ref_items)
+    for log in contribution.logs_set:
+        log.detail += f", deleted_contribution_id: {contribution.id}"
+    contribution.delete()
 
 
 def get_contribution(*args, **kwargs) -> Contribution:

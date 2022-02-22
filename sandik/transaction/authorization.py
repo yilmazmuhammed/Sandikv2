@@ -23,3 +23,22 @@ def money_transaction_required(func):
         return func(*args, **kwargs)
 
     return decorated_view
+
+
+def contribution_required(func):
+    @wraps(func)
+    @sandik_required
+    def decorated_view(*args, **kwargs):
+
+        if not kwargs.get("contribution_id"):
+            abort(404)
+
+        contribution = db.get_contribution(id=kwargs.get("contribution_id"))
+        if not contribution or contribution.member_ref.sandik_ref != g.sandik:
+            abort(404)
+
+        g.contribution = contribution
+
+        return func(*args, **kwargs)
+
+    return decorated_view

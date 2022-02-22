@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template, g, flash, url_for
+from flask import Blueprint, request, render_template, g, flash, url_for, abort
 from flask_login import current_user
 from pony.orm import desc, rollback
 from werkzeug.utils import redirect
@@ -7,7 +7,7 @@ from sandik.sandik import db as sandik_db
 from sandik.sandik.exceptions import ThereIsNoMember, ThereIsNoShare
 from sandik.sandik.requirement import sandik_authorization_required, to_be_member_of_sandik_required
 from sandik.transaction import forms, utils
-from sandik.transaction.authorization import money_transaction_required
+from sandik.transaction.authorization import money_transaction_required, contribution_required
 from sandik.transaction.exceptions import MaximumDebtAmountExceeded
 from sandik.utils import LayoutPI
 from sandik.utils.db_models import MoneyTransaction
@@ -95,6 +95,14 @@ def remove_money_transaction_by_manager_page(sandik_id, money_transaction_id):
     return redirect(request.referrer or url_for("transaction_page_bp.money_transactions_of_sandik_page"))
 
 
+@transaction_page_bp.route('c-<int:contribution_id>/sil')
+@sandik_authorization_required("write")
+@contribution_required
+def remove_contribution_by_manager_page(sandik_id, contribution_id):
+    utils.remove_contribution(contribution=g.contribution, removed_by=current_user)
+    return redirect(request.referrer or url_for("transaction_page_bp.payments_of_sandik_page"))
+
+
 @transaction_page_bp.route('butun-uyeler-icin-vadesi-gelmis-aidatlari-olustur', methods=["GET", "POST"])
 @sandik_authorization_required("write")
 def create_due_contributions_for_all_members_page(sandik_id):
@@ -106,6 +114,7 @@ def create_due_contributions_for_all_members_page(sandik_id):
 @transaction_page_bp.route('s-para-giris-cikislari')
 @sandik_authorization_required("read")
 def money_transactions_of_sandik_page(sandik_id):
+    g.type = "management"
     g.money_transactions = g.sandik.get_money_transactions().order_by(lambda mt: (desc(mt.date), desc(mt.id)))
     return render_template("transaction/money_transactions_page.html",
                            page_info=LayoutPI(title="Para giriş/çıkış işlemleri",
@@ -115,10 +124,28 @@ def money_transactions_of_sandik_page(sandik_id):
 @transaction_page_bp.route('u-para-giris-cikislari')
 @to_be_member_of_sandik_required
 def money_transactions_of_member_page(sandik_id):
+    g.type = "member"
     g.money_transactions = g.member.money_transactions_set.order_by(lambda mt: (desc(mt.date), desc(mt.id)))
     return render_template(
         "transaction/money_transactions_page.html",
         page_info=LayoutPI(title="Para giriş/çıkış işlemlerim", active_dropdown="member-transactions")
+    )
+
+
+@transaction_page_bp.route('uye-<int:member_id>/para-giris-cikislari')
+@sandik_authorization_required("read")
+def money_transactions_of_member_for_management_page(sandik_id, member_id):
+    g.member = sandik_db.get_member(id=member_id, sandik_ref=g.sandik)
+    if not g.member:
+        abort(404)
+
+    g.type = "management"
+    page_title = f"Para giriş/çıkış işlemleri: {g.member.web_user_ref.name_surname}"
+
+    g.money_transactions = g.member.money_transactions_set.order_by(lambda mt: (desc(mt.date), desc(mt.id)))
+    return render_template(
+        "transaction/money_transactions_page.html",
+        page_info=LayoutPI(title=page_title, active_dropdown="management-transactions")
     )
 
 
@@ -143,7 +170,8 @@ def transactions_of_member_page(sandik_id):
 @sandik_authorization_required("read")
 def payments_of_sandik_page(sandik_id):
     g.payments = utils.get_payments(whose=g.sandik)
-    g.due_and_unpaid_payments = utils.get_payments(whose=g.sandik, is_fully_paid=False, is_due=True)
+    due_and_unpaid_payments = utils.get_payments(whose=g.sandik, is_fully_paid=False, is_due=True)
+    g.due_and_unpaid_payments = sorted(due_and_unpaid_payments, key=lambda p: p.term)
     return render_template("transaction/payments_page.html",
                            page_info=LayoutPI(title="Sandıktaki ödemeler", active_dropdown="management-transactions"))
 
@@ -152,7 +180,8 @@ def payments_of_sandik_page(sandik_id):
 @to_be_member_of_sandik_required
 def payments_of_member_page(sandik_id):
     g.payments = utils.get_payments(whose=g.member)
-    g.due_and_unpaid_payments = utils.get_payments(whose=g.member, is_fully_paid=False, is_due=True)
+    due_and_unpaid_payments = utils.get_payments(whose=g.member, is_fully_paid=False, is_due=True)
+    g.due_and_unpaid_payments = sorted(due_and_unpaid_payments, key=lambda t: t.term)
     return render_template("transaction/payments_page.html",
                            page_info=LayoutPI(title="Ödemelerim", active_dropdown="member-transactions"))
 
