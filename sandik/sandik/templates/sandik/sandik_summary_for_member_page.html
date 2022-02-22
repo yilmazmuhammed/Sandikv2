@@ -202,6 +202,9 @@
             <span>Son işlemlerim</span>
             {% elif g.type == "management" %}
             <span>Üyenin son işlemleri</span>
+            <span class="pull-right">
+              {{ macros.button(url=url_for("transaction_page_bp.money_transactions_of_member_for_management_page", member_id=g.member.id, sandik_id=g.sandik.id), icon='fa fa-search', type='info', size='sm', title='Tüm para giriş/çıkışları') }}
+            </span>
             {% endif %}
           </div>
             <table id="my-latest-money-transactions-table" class="table"></table>

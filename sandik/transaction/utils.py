@@ -79,7 +79,7 @@ def add_revenue_transactions(money_transaction, pay_future_payments, created_by)
     payments = get_payments(whose=member, is_fully_paid=False, is_due=True)
     if pay_future_payments:
         payments += get_payments(whose=member, is_fully_paid=False, is_due=False)
-        
+
     payments = sorted(payments, key=lambda t: t.term)
     for p in payments:
         amount = p.get_unpaid_amount() if remaining_amount >= p.get_unpaid_amount() else remaining_amount
@@ -149,7 +149,9 @@ def create_due_contributions_for_share(share, created_by, created_from="", perio
     if not isinstance(periods, list):
         first_period = period_utils.date_to_period(share.date_of_opening)
         last_period = period_utils.current_period()
-        periods = period_utils.get_periods_between_two_period(first_period=first_period, last_period=last_period) if first_period <= last_period else []
+        periods = period_utils.get_periods_between_two_period(
+            first_period=first_period, last_period=last_period
+        ) if first_period <= last_period else []
 
     for period in periods:
         try:
@@ -346,11 +348,11 @@ def add_custom_contribution(amount, period, share, created_by):
 
 
 def remove_sub_receipt_from_contribution(sub_receipt, removed_by):
-    return db.remove_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
+    return db.delete_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
 
 
 def remove_sub_receipt_from_installment(sub_receipt, removed_by):
-    return db.remove_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
+    return db.delete_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
 
 
 def remove_sub_receipt(sub_receipt, removed_by):
@@ -367,7 +369,14 @@ def remove_money_transaction(money_transaction, removed_by):
     flush()
     for sub_receipt in money_transaction.sub_receipts_set:
         remove_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
-    db.remove_money_transaction(money_transaction=money_transaction, removed_by=removed_by)
+    db.delete_money_transaction(money_transaction=money_transaction, removed_by=removed_by)
 
     pay_unpaid_payments_from_untreated_amount_for_member(member=member, pay_future_payments=False,
                                                          created_by=removed_by)
+
+
+def remove_contribution(contribution, removed_by):
+    for sub_receipt in contribution.sub_receipts_set:
+        remove_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
+    db.delete_contribution(contribution=contribution, removed_by=removed_by)
+

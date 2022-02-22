@@ -52,6 +52,15 @@ class MoneyTransaction(db.Entity):
     def get_undistributed_amount(self):
         return self.amount - self.distributed_amount()
 
+    def recalculate_is_fully_distributed(self):
+        mt_untreated_amount = self.get_undistributed_amount()
+        if mt_untreated_amount == 0:
+            self.is_fully_distributed = True
+        elif mt_untreated_amount > 0:
+            self.is_fully_distributed = False
+        elif mt_untreated_amount < 0:
+            raise Exception("ERRCODE: 0013, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+
 
 class Share(db.Entity):
     """composite_key(membre_ref, share_order_of_member)"""
@@ -392,6 +401,7 @@ class Log(db.Entity):
         class CONTRIBUTION:
             first, last = 900, 999
             CREATE = first + 1
+            DELETE = first + 3
 
         class BANK_ACCOUNT:
             first, last = 1000, 1099
@@ -702,11 +712,7 @@ class SubReceipt(db.Entity):
             self.installment_ref.debt_ref.update_pieces_of_debt()
 
         # TODO test et: 4 işlem tipi için de dene
-        mt_untreated_amount = self.money_transaction_ref.get_undistributed_amount()
-        if mt_untreated_amount == 0:
-            self.money_transaction_ref.is_fully_distributed = True
-        elif mt_untreated_amount < 0:
-            raise Exception("ERRCODE: 0013, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+        self.money_transaction_ref.recalculate_is_fully_distributed()
 
     def before_delete(self):
         # if self.contribution_ref:
