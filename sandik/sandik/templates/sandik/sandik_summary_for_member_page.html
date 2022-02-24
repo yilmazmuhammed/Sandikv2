@@ -159,7 +159,7 @@
         {% for tr in g.member.accepted_trust_links() %}
           {
             "index": `<span title='ID: {{ tr.id }}'>{{ loop.index }}</span>`,
-            "name_surname": `{{ tr.other_member(current_user).web_user_ref.name_surname  }}`,
+            "name_surname": `{{ tr.other_member(g.member).web_user_ref.name_surname  }}`,
             {# "status": `{{ tr.status }}`, #}
             "time": `{{ tr.time.strftime("%d.%m.%Y") }}`,
           },
