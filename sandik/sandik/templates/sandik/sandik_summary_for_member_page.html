@@ -184,8 +184,14 @@
           <div class="panel-heading font-bold">
             {% if g.type == "member" %}
             <span>Yaklaşan ödemelerim</span>
+            <span class="pull-right">
+              {{ macros.button(url=url_for("transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_page", sandik_id=g.sandik.id), icon='fa fa-repeat', type='default', size='sm', title='Yenile') }}
+            </span>
             {% elif g.type == "management" %}
             <span>Üyenin yaklaşan ödemeleri</span>
+            <span class="pull-right">
+              {{ macros.button(url=url_for("transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_for_management_page", member_id=g.member.id, sandik_id=g.sandik.id), icon='fa fa-repeat', type='default', size='sm', title='Yenile') }}
+            </span>
             {% endif %}
           </div>
           <div>
@@ -200,10 +206,13 @@
           <div class="panel-heading font-bold">
             {% if g.type == "member" %}
             <span>Son işlemlerim</span>
+            <span class="pull-right">
+              {{ macros.button(url=url_for("transaction_page_bp.money_transactions_of_member_page", sandik_id=g.sandik.id), icon='fa fa-list', type='info', size='sm', title='Tüm para giriş/çıkışları') }}
+            </span>
             {% elif g.type == "management" %}
             <span>Üyenin son işlemleri</span>
             <span class="pull-right">
-              {{ macros.button(url=url_for("transaction_page_bp.money_transactions_of_member_for_management_page", member_id=g.member.id, sandik_id=g.sandik.id), icon='fa fa-search', type='info', size='sm', title='Tüm para giriş/çıkışları') }}
+              {{ macros.button(url=url_for("transaction_page_bp.money_transactions_of_member_for_management_page", member_id=g.member.id, sandik_id=g.sandik.id), icon='fa fa-list', type='info', size='sm', title='Tüm para giriş/çıkışları') }}
             </span>
             {% endif %}
           </div>

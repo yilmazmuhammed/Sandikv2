@@ -203,6 +203,15 @@ def pay_unpaid_payments_from_untreated_amount_for_member(member: Member, pay_fut
     print(f"FINISH: Paying payments for '{member}' with pay_future_payments={pay_future_payments} ...")
 
 
+def pay_unpaid_payments_from_untreated_amount_for_sandik(sandik: Sandik, pay_future_payments: bool,
+                                                         created_by: WebUser):
+    print(f"START: Paying payments for '{sandik}' with pay_future_payments={pay_future_payments} ...")
+    for member in sandik.members_set:
+        pay_unpaid_payments_from_untreated_amount_for_member(member=member, pay_future_payments=pay_future_payments,
+                                                             created_by=created_by)
+    print(f"FINISH: Paying payments for '{sandik}' with pay_future_payments={pay_future_payments} ...")
+
+
 def get_transactions(whose):
     if isinstance(whose, Sandik):
         whose_filter_ref = "sandik_ref"
@@ -371,6 +380,8 @@ def remove_money_transaction(money_transaction, removed_by):
         remove_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
     db.delete_money_transaction(money_transaction=money_transaction, removed_by=removed_by)
 
+    # Bir para işlemi silinince ödenmiş olan bazı ödemeler, ödenmemiş durumuna geçebilir.
+    # Bu durumda üyenin işleme konmamış parası varsa bu parayla ödemeler tekrar ödenmelidir
     pay_unpaid_payments_from_untreated_amount_for_member(member=member, pay_future_payments=False,
                                                          created_by=removed_by)
 
@@ -379,4 +390,3 @@ def remove_contribution(contribution, removed_by):
     for sub_receipt in contribution.sub_receipts_set:
         remove_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
     db.delete_contribution(contribution=contribution, removed_by=removed_by)
-

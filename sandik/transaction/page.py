@@ -169,6 +169,7 @@ def transactions_of_member_page(sandik_id):
 @transaction_page_bp.route('s-odemeler')
 @sandik_authorization_required("read")
 def payments_of_sandik_page(sandik_id):
+    g.type = "management"
     g.payments = utils.get_payments(whose=g.sandik)
     due_and_unpaid_payments = utils.get_payments(whose=g.sandik, is_fully_paid=False, is_due=True)
     g.due_and_unpaid_payments = sorted(due_and_unpaid_payments, key=lambda p: p.term)
@@ -179,6 +180,7 @@ def payments_of_sandik_page(sandik_id):
 @transaction_page_bp.route('u-odemeler')
 @to_be_member_of_sandik_required
 def payments_of_member_page(sandik_id):
+    g.type = "member"
     g.payments = utils.get_payments(whose=g.member)
     due_and_unpaid_payments = utils.get_payments(whose=g.member, is_fully_paid=False, is_due=True)
     g.due_and_unpaid_payments = sorted(due_and_unpaid_payments, key=lambda t: t.term)
@@ -202,3 +204,32 @@ def debts_of_member_page(sandik_id):
     g.debts = utils.get_debts(whose=g.member)
     return render_template("transaction/debts_page.html",
                            page_info=LayoutPI(title="Borçlarım", active_dropdown="member-transactions"))
+
+
+@transaction_page_bp.route("u-ödemeleri-yenile")
+@to_be_member_of_sandik_required
+def pay_unpaid_payments_from_untreated_amount_of_member_page(sandik_id):
+    utils.pay_unpaid_payments_from_untreated_amount_for_member(member=g.member, pay_future_payments=False,
+                                                               created_by=current_user)
+    return redirect(request.referrer or url_for("transaction_page_bp.payments_of_member_page", sandik_id=sandik_id))
+
+
+@transaction_page_bp.route("s-ödemeleri-yenile")
+@sandik_authorization_required("write")
+def pay_unpaid_payments_from_untreated_amount_of_sandik_page(sandik_id):
+    utils.pay_unpaid_payments_from_untreated_amount_for_sandik(sandik=g.sandik, pay_future_payments=False,
+                                                               created_by=current_user)
+    return redirect(request.referrer or url_for("transaction_page_bp.payments_of_sandik_page", sandik_id=sandik_id))
+
+
+@transaction_page_bp.route("uye-<int:member_id>/ödemeleri-yenile")
+@sandik_authorization_required("write")
+def pay_unpaid_payments_from_untreated_amount_of_member_for_management_page(sandik_id, member_id):
+    member = sandik_db.get_member(id=member_id, sandik_ref=g.sandik)
+    if not member:
+        abort(404)
+
+    utils.pay_unpaid_payments_from_untreated_amount_for_member(member=member, pay_future_payments=False,
+                                                               created_by=current_user)
+    return redirect(request.referrer or url_for("sandik_page_bp.member_summary_for_management_page",
+                                                sandik_id=sandik_id, member_id=member_id))
