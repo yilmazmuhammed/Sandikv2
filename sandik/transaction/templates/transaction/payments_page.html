@@ -211,10 +211,11 @@ jQuery(function($){
       <div class="panel-heading">
         Vadesi gelmiş ve ödenmemiş ödemeler
         <span class="pull-right">
-          {# {{ url_for('transaction_page_bp.add_sandik_transaction_by_manager_page', sandik_id=g.sandik.id) }} #}
-          <a href="#" class="btn btn-xs btn-primary">
-            <i class="fa fa-plus"></i>
-          </a>
+          {% if g.type == "member" %}
+            {{ macros.button(url=url_for("transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_page", sandik_id=g.sandik.id), icon='fa fa-repeat', type='default', size='sm', title='Yenile') }}
+          {% elif g.type == "management" %}
+            {{ macros.button(url=url_for("transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_sandik_page", sandik_id=g.sandik.id), icon='fa fa-repeat', type='default', size='sm', title='Yenile') }}
+          {% endif %}
         </span>
       </div>
       <div class="table table-responsive">
