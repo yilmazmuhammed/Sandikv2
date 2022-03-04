@@ -375,7 +375,7 @@ def remove_sub_receipt(sub_receipt, removed_by):
 
 def remove_money_transaction(money_transaction, removed_by):
     member = money_transaction.member_ref
-    flush()
+    flush()  # TODO acaba neden bunu koymuşum??
     for sub_receipt in money_transaction.sub_receipts_set:
         remove_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
     db.delete_money_transaction(money_transaction=money_transaction, removed_by=removed_by)

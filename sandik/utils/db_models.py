@@ -624,7 +624,7 @@ class Debt(db.Entity):
         paid_amount = self.get_paid_amount()
         undistributed_paid_amount = paid_amount
         for piece in self.piece_of_debts_set:
-            piece_lot = math.ceil(undistributed_paid_amount * (piece.amount / self.amount))
+            piece_lot = math.ceil(paid_amount * (piece.amount / self.amount))
 
             temp_paid_amount = piece_lot if piece_lot <= undistributed_paid_amount else undistributed_paid_amount
             piece.set(paid_amount=temp_paid_amount)
