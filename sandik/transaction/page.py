@@ -91,7 +91,12 @@ def add_custom_contribution_by_manager_page(sandik_id):
 @sandik_authorization_required("write")
 @money_transaction_required
 def remove_money_transaction_by_manager_page(sandik_id, money_transaction_id):
-    utils.remove_money_transaction(money_transaction=g.money_transaction, removed_by=current_user)
+    # TODO bu fonksiyonun içindeki flush'lar çok tehlikeli
+    try:
+        utils.remove_money_transaction(money_transaction=g.money_transaction, removed_by=current_user)
+    except Exception as e:
+        rollback()
+        flash(str(e), "danger")
     return redirect(request.referrer or url_for("transaction_page_bp.money_transactions_of_sandik_page"))
 
 
