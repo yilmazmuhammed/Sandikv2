@@ -25,7 +25,7 @@ class BankTransaction(db.Entity):
 class MoneyTransaction(db.Entity):
     # TODO para çıkışı ise is_fully_distributed true olmak zorundadır
     id = PrimaryKey(int, auto=True)
-    date = Required(date)
+    date = Required(date, default=lambda: date.today())
     amount = Required(Decimal)
     detail = Optional(str)
     type = Required(int)
@@ -45,6 +45,7 @@ class MoneyTransaction(db.Entity):
     class CREATION_TYPE:
         BY_MANUEL = 0
         BY_BANK_TRANSACTION = 1
+        BY_AUTO = 2
 
     def distributed_amount(self):
         return select(sr.amount for sr in self.sub_receipts_set).sum()
@@ -115,6 +116,9 @@ class Share(db.Entity):
     def total_amount_unpaid_installments(self):
         return select(i.get_unpaid_amount() for i in Installment if
                       i.debt_ref.share_ref == self and i.is_fully_paid is False).sum()
+
+    def do_passive(self):
+        self.is_active = False
 
 
 class Member(db.Entity):
@@ -605,8 +609,8 @@ class Contribution(db.Entity):
     def get_unpaid_amount(self):
         return self.amount - self.get_paid_amount()
 
-    def recalculate_is_fully_paid(self):
-        unpaid_amount = self.get_unpaid_amount()
+    def recalculate_is_fully_paid(self, is_leaving=False):
+        unpaid_amount = self.get_unpaid_amount() if not is_leaving else -self.amount - self.get_paid_amount()
         if unpaid_amount == 0:
             self.is_fully_paid = True
         elif unpaid_amount > 0:
@@ -731,7 +735,7 @@ class SubReceipt(db.Entity):
     def after_insert(self):
         # TODO test et
         if self.contribution_ref:
-            self.contribution_ref.recalculate_is_fully_paid()
+            self.contribution_ref.recalculate_is_fully_paid(is_leaving=True)
             self.contribution_ref.share_ref.member_ref.balance += self.amount
 
         if self.installment_ref:

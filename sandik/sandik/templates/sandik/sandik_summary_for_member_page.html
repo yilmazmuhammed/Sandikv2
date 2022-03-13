@@ -30,7 +30,7 @@
               <tr>
                 <td>{{ macros.button(url="#", icon='fa fa-pencil', type='info', size='xs', title='Düzenle') }}</td>
                 <td style='padding:5px;'></td>
-                <td>{{ macros.button(url="#", icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
+                <td>{{ macros.button(url=url_for("sandik_page_bp.remove_share_from_member_page", sandik_id=g.sandik.id, member_id=g.member.id, share_id=share.id), icon='fa fa-trash', type='danger', size='xs', title='Hisseyi sil', confirm_msg='Hisseyi silmek istediğinizden emin misiniz?') }}</td>
               </tr>`,
             {% endif %}
           },

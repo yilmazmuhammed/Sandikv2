@@ -7,7 +7,7 @@ from sandik.sandik.exceptions import MaxShareCountExceed, NotActiveMemberExcepti
 from sandik.sandik.exceptions import UpdateMemberException
 from sandik.transaction import utils as transaction_utils, db as transaction_db
 from sandik.utils import period as period_utils, sandik_preferences
-from sandik.utils.db_models import Member, Share
+from sandik.utils.db_models import Member, Share, MoneyTransaction
 
 
 def add_share_to_member(member, added_by, **kwargs):
@@ -150,25 +150,43 @@ def remove_member_from_sandik(member: Member, removed_by):
         raise ThereIsUnpaidAmountOfLoanedException("Üyenin verdiği borçlardan ödenmesi tamamlanmamış olan borç var",
                                                    create_log=True)
 
+    total_amount_to_be_refunded = member.sum_of_paid_contributions() + member.total_of_undistributed_amount()
+    money_transaction = transaction_db.create_money_transaction(
+        member_ref=member, amount=total_amount_to_be_refunded, type=MoneyTransaction.TYPE.EXPENSE,
+        detail="Üye ayrılışı", creation_type=MoneyTransaction.CREATION_TYPE.BY_AUTO, created_by=removed_by
+    )
     for share in member.get_active_shares():
-        remove_share_from_member(share=share, removed_by=removed_by)
-    # TODO Aktif hisselere ödedikleri aidat kadar ayrılma aidatı ekle
-    #  (Bunu yaparken çıkan para işleme konmamış para olarak kalsın)
-    # TODO Üyenin işleme konmamış parasının üye balance'ı kadarı geri iade edilecek
-    # TODO Aktif hisseleri pasif yap
+        remove_share_from_member(share=share, removed_by=removed_by, refunded_money_transaction=money_transaction)
+
+    # TODO Üyenin işleme konmamış parası geri iade edilecek
     # TODO Üyeyi pasif yap
     # TODO Güven bağlarını kaldır
     return None
 
 
-def remove_share_from_member(share: Share, removed_by):
+def remove_share_from_member(share: Share, removed_by, refunded_money_transaction=None):
     if not share.is_active:
         raise NotActiveShareException("Silinmek istenen hisse zaten aktif hisse değil.", create_log=True)
 
     if share.get_unpaid_debts().count() > 0:
         raise ThereIsUnpaidDebtOfShareException("Silinmek istenen hissenin ödenmemiş borcu var.", create_log=True)
 
-    transaction_db.create_contribution(share=share, period="9999-01", created_by=removed_by,
-                                       amount=-share.sum_of_paid_contributions())
+    refunded_amount = share.sum_of_paid_contributions()
+    refunded_contribution = transaction_db.create_contribution(
+        share=share, period="9999-01", amount=-refunded_amount, created_by=removed_by
+    )
 
-    # TODO Sub receipt ve money transaction oluşturma burada mı yapılacak?, karar verilecek
+    if not refunded_money_transaction:
+        refunded_money_transaction = transaction_db.create_money_transaction(
+            member_ref=share.member_ref, amount=refunded_amount, type=MoneyTransaction.TYPE.EXPENSE,
+            detail="Hisse kapatılması", creation_type=MoneyTransaction.CREATION_TYPE.BY_AUTO, created_by=removed_by
+        )
+
+    transaction_db.create_sub_receipt(
+        money_transaction=refunded_money_transaction, contribution_ref=refunded_contribution,
+        amount=refunded_amount, is_auto=True, created_by=removed_by
+    )
+
+    share.do_passive()
+
+    return refunded_money_transaction

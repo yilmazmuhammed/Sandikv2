@@ -318,7 +318,7 @@ def add_share_to_member_page(sandik_id, member_id):
                            page_info=FormPI(title="Hisse ekle", form=form, active_dropdown='members'))
 
 
-@sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/sil", methods=["GET", "POST"])
+@sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/sil")
 @sandik_authorization_required(permission="write")
 def remove_member_from_sandik_page(sandik_id, member_id):
     member = db.get_member(id=member_id, sandik_ref=g.sandik)
@@ -332,6 +332,26 @@ def remove_member_from_sandik_page(sandik_id, member_id):
         flash(str(e), "danger")
 
     return redirect(request.referrer or url_for("sandik_page_bp.members_of_sandik_page", sandik_id=sandik_id))
+
+
+@sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/hisse-<int:share_id>/sil")
+@sandik_authorization_required(permission="write")
+def remove_share_from_member_page(sandik_id, member_id, share_id):
+    member = db.get_member(id=member_id, sandik_ref=g.sandik)
+    if not member:
+        abort(404, "Üye bulunamadı")
+
+    share = db.get_share(id=share_id, member_ref=member)
+    if not share:
+        abort(404, "Hisse bulunamadı")
+
+    try:
+        utils.remove_share_from_member(share=share, removed_by=current_user)
+    except (NotActiveShareException, ThereIsUnpaidDebtOfShareException) as e:
+        flash(str(e), "danger")
+
+    return redirect(request.referrer or url_for("sandik_page_bp.member_summary_for_management_page",
+                                                sandik_id=sandik_id, member_id=member_id))
 
 
 """
