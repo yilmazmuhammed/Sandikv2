@@ -2,10 +2,12 @@ from flask import url_for
 
 from sandik.general import db as general_db
 from sandik.sandik import db
-from sandik.sandik.exceptions import MaxShareCountExceed
+from sandik.sandik.exceptions import MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
+    ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException
 from sandik.sandik.exceptions import UpdateMemberException
 from sandik.transaction import utils as transaction_utils, db as transaction_db
 from sandik.utils import period as period_utils, sandik_preferences
+from sandik.utils.db_models import Member, Share
 
 
 def add_share_to_member(member, added_by, **kwargs):
@@ -134,3 +136,39 @@ def get_member_summary_page(member):
         "my_latest_money_transactions": my_latest_money_transactions,
         "trusted_links": trusted_links,
     }
+
+
+def remove_member_from_sandik(member: Member, removed_by):
+    if not member.is_active:
+        raise NotActiveMemberException("Silinmek istenen üye zaten aktif üye değil.", create_log=True)
+
+    if member.get_unpaid_debts().count() > 0:
+        raise ThereIsUnpaidDebtOfMemberException("Silinmek istenen üyenin ödenmemiş borcu var.", create_log=True)
+
+    if member.get_unpaid_amount_of_loaned() > 0:
+        # TODO Sandık kurallarının güncellenmesi gerekli
+        raise ThereIsUnpaidAmountOfLoanedException("Üyenin verdiği borçlardan ödenmesi tamamlanmamış olan borç var",
+                                                   create_log=True)
+
+    for share in member.get_active_shares():
+        remove_share_from_member(share=share, removed_by=removed_by)
+    # TODO Aktif hisselere ödedikleri aidat kadar ayrılma aidatı ekle
+    #  (Bunu yaparken çıkan para işleme konmamış para olarak kalsın)
+    # TODO Üyenin işleme konmamış parasının üye balance'ı kadarı geri iade edilecek
+    # TODO Aktif hisseleri pasif yap
+    # TODO Üyeyi pasif yap
+    # TODO Güven bağlarını kaldır
+    return None
+
+
+def remove_share_from_member(share: Share, removed_by):
+    if not share.is_active:
+        raise NotActiveShareException("Silinmek istenen hisse zaten aktif hisse değil.", create_log=True)
+
+    if share.get_unpaid_debts().count() > 0:
+        raise ThereIsUnpaidDebtOfShareException("Silinmek istenen hissenin ödenmemiş borcu var.", create_log=True)
+
+    transaction_db.create_contribution(share=share, period="9999-01", created_by=removed_by,
+                                       amount=-share.sum_of_paid_contributions())
+
+    # TODO Sub receipt ve money transaction oluşturma burada mı yapılacak?, karar verilecek

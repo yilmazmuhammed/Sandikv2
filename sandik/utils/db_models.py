@@ -142,16 +142,42 @@ class Member(db.Entity):
             pod.get_unpaid_amount() for pod in self.piece_of_debts_set if pod.debt_ref).sum()
         return contributions_amount + undistributed_amount - unpaid_amount_of_loaned
 
+    """
+    ######################################################################################################
+    ################### UYENIN VERDIGI BORCLAR (PIECE_OF_DEBT) ILE ILGILI FONKSIYONLAR ###################
+    """
+
     def get_loaned_amount(self):
-        return select(pod.amount for pod in self.piece_of_debts_set if pod.debt_ref).sum()
+        return select(pod.amount for pod in self.piece_of_debts_set).sum()
 
     def get_paid_amount_of_loaned(self):
-        return select(pod.paid_amount for pod in self.piece_of_debts_set if pod.debt_ref).sum()
+        return select(pod.paid_amount for pod in self.piece_of_debts_set).sum()
+
+    def get_unpaid_amount_of_loaned(self):
+        return select(pod.get_unpaid_amount() for pod in self.piece_of_debts_set).sum()
+
+    """
+    ################### UYENIN VERDIGI BORCLAR (PIECE_OF_DEBT) ILE ILGILI FONKSIYONLAR ###################
+    ######################################################################################################
+    """
+
+    """
+    ######################################################################################################
+    ################################## HISSELER ILE ILGILI FONKSIYONLAR ##################################
+    """
 
     def shares_count(self, all_shares=False, is_active=True):
         if all_shares:
             return self.shares_set.count()
         return self.shares_set.filter(lambda s: s.is_active == is_active).count()
+
+    def get_active_shares(self):
+        return self.shares_set.filter(lambda s: s.is_active)
+
+    """
+    ################################## HISSELER ILE ILGILI FONKSIYONLAR ##################################
+    ######################################################################################################
+    """
 
     def transactions_count(self):
         contribution_count = select(c for c in Contribution if c.share_ref.member_ref == self).count()

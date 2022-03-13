@@ -8,7 +8,8 @@ from sandik.auth.requirement import login_required, web_user_required
 from sandik.sandik import forms, db, utils
 from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelationshipCreationException, \
     MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, SandikAuthorityException, AddMemberException, \
-    MembershipException, MaxShareCountExceed
+    MembershipException, MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
+    ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, to_be_member_of_sandik_required, \
     trust_relationship_required
 from sandik.utils import LayoutPI, get_next_url, sandik_preferences
@@ -320,16 +321,16 @@ def add_share_to_member_page(sandik_id, member_id):
 @sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/sil", methods=["GET", "POST"])
 @sandik_authorization_required(permission="write")
 def remove_member_from_sandik_page(sandik_id, member_id):
-    # TODO Üye bu sandığın üyesi mi diye kontrol et
-    # TODO Üye aktif üye mi diye kontrol et
-    # TODO Üyenin borcu var mı diye kontrol et
-    # TODO Aktif hisselere ödedikleri aidat kadar ayrılma aidatı ekle
-    #  (Bunu yaparken çıkan para işleme konmamış para olarak kalsın)
-    # TODO Üyenin işleme konmamış parasının üye balance'ı kadarı geri iade edilecek, borç olarak dağıtılan kısmı ödemeler geldikçe üyeye teslim edilecek????
-    #   Yada üyenin borç olarak verdiği miktarlar kalan güvenilir üyeler arasında taksim edilecek, kalan üyelerin bakiyeleri yetmiyorsa sadece edilebilen kısmı taksim edilecek, borç ödemeleri önce bu üyeye teslim edilecek
-    # TODO Aktif hisseleri pasif yap
-    # TODO Üyeyi pasif yap
-    # TODO Güven bağlarını kaldır
+    member = db.get_member(id=member_id, sandik_ref=g.sandik)
+    if not member:
+        abort(404, "Üye bulunamadı")
+
+    try:
+        utils.remove_member_from_sandik(member=member, removed_by=current_user)
+    except (NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, ThereIsUnpaidAmountOfLoanedException,
+            NotActiveShareException, ThereIsUnpaidDebtOfShareException) as e:
+        flash(str(e), "danger")
+
     return redirect(request.referrer or url_for("sandik_page_bp.members_of_sandik_page", sandik_id=sandik_id))
 
 

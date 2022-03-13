@@ -338,11 +338,11 @@ def sum_of_unpaid_and_due_contributions(whose):
 
 
 def sum_of_unpaid_and_due_installments(whose):
-    return select(c.get_unpaid_amount() for c in get_unpaid_and_due_installments(whose=whose)).sum()
+    return select(i.get_unpaid_amount() for i in get_unpaid_and_due_installments(whose=whose)).sum()
 
 
 def sum_of_future_and_unpaid_installments(whose):
-    return select(c.get_unpaid_amount() for c in get_future_and_unpaid_installments(whose=whose)).sum()
+    return select(i.get_unpaid_amount() for i in get_future_and_unpaid_installments(whose=whose)).sum()
 
 
 def total_paid_contributions_of_trusted_links(member):
