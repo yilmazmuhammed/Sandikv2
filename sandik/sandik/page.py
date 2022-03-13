@@ -87,7 +87,10 @@ def trust_links_page(sandik_id):
 @sandik_page_bp.route("/<int:sandik_id>/u-<int:member_id>/gb-gonder", methods=["GET", "POST"])
 @to_be_member_of_sandik_required
 def send_request_trust_link_page(sandik_id, member_id):
-    receiver_member = db.get_member(id=member_id)
+    receiver_member = db.get_member(id=member_id, sandik_ref=g.sandik)
+    if not receiver_member:
+        abort(404, "Üye bulunamadı")
+
     try:
         trust_relationship = db.create_trust_relationship(requester_member=g.member, receiver_member=receiver_member,
                                                           requested_by=current_user)
