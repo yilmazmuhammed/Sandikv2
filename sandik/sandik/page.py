@@ -317,6 +317,21 @@ def add_share_to_member_page(sandik_id, member_id):
                            page_info=FormPI(title="Hisse ekle", form=form, active_dropdown='members'))
 
 
+@sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/sil", methods=["GET", "POST"])
+@sandik_authorization_required(permission="write")
+def remove_member_from_sandik_page(sandik_id, member_id):
+    # TODO Üye bu sandığın üyesi mi diye kontrol et
+    # TODO Üye aktif üye mi diye kontrol et
+    # TODO Üyenin borcu var mı diye kontrol et
+    # TODO Aktif hisselere ödedikleri aidat kadar ayrılma aidatı ekle
+    #  (Bunu yaparken çıkan para işleme konmamış para olarak kalsın)
+    # TODO Üyenin işleme konmamış parasının üye balance'ı kadarı geri iade edilecek, borç olarak dağıtılan kısmı ödemeler geldikçe üyeye teslim edilecek????
+    #   Yada üyenin borç olarak verdiği miktarlar kalan güvenilir üyeler arasında taksim edilecek, kalan üyelerin bakiyeleri yetmiyorsa sadece edilebilen kısmı taksim edilecek, borç ödemeleri önce bu üyeye teslim edilecek
+    # TODO Aktif hisseleri pasif yap
+    # TODO Üyeyi pasif yap
+    # TODO Güven bağlarını kaldır
+    return redirect(request.referrer or url_for("sandik_page_bp.members_of_sandik_page", sandik_id=sandik_id))
+
 
 """
 ########################################################################################################################
