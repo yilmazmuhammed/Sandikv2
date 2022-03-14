@@ -97,8 +97,6 @@ def remove_money_transaction_by_manager_page(sandik_id, money_transaction_id):
     except Exception as e:
         rollback()
         flash(str(e), "danger")
-        print(e, type(e))
-        raise e
     return redirect(request.referrer or url_for("transaction_page_bp.money_transactions_of_sandik_page"))
 
 

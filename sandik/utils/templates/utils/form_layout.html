@@ -62,8 +62,8 @@
           <div class="panel-heading font-bold">{{ page_info.form.form_title }}</div>
           <div class="panel-body">
 {#          TODO flash mesajlarını include ile al include ile #}
-            {% if get_flashed_messages() %}
-              {% for category, msg in get_flashed_messages(with_categories=true) %}
+            {% if get_flashed_messages(category_filter=["success", "warning"]) %}
+              {% for category, msg in get_flashed_messages(with_categories=true, category_filter=["success", "warning"]) %}
                 <div class="col-12 alert alert-{{category}} text-center" role="alert">
                   {{ msg|safe }}
                 </div>
