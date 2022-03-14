@@ -42,6 +42,12 @@ class MoneyTransaction(db.Entity):
 
         strings = {REVENUE: "Para girişi", EXPENSE: "Para çıkışı"}
 
+    def is_type_revenue(self):
+        return self.type == MoneyTransaction.TYPE.REVENUE
+
+    def is_type_expense(self):
+        return self.type == MoneyTransaction.TYPE.EXPENSE
+
     class CREATION_TYPE:
         BY_MANUEL = 0
         BY_BANK_TRANSACTION = 1
@@ -76,7 +82,13 @@ class Share(db.Entity):
     debts_set = Set('Debt')
 
     def sum_of_paid_contributions(self):
-        return select(sr.amount for sr in self.sub_receipts_set if sr.contribution_ref).sum()
+        return select(
+            sr.amount for sr in self.sub_receipts_set
+            if sr.contribution_ref and sr.money_transaction_ref.is_type_revenue()
+        ).sum() - select(
+            sr.amount for sr in self.sub_receipts_set
+            if sr.contribution_ref and sr.money_transaction_ref.is_type_expense()
+        ).sum()
 
     def final_status(self, t_type):
         if t_type == "contribution":
@@ -119,6 +131,9 @@ class Share(db.Entity):
 
     def do_passive(self):
         self.is_active = False
+
+    def get_unpaid_debts(self):
+        return select(d for d in Debt if d.share_ref == self and d.get_unpaid_amount() > 0)
 
 
 class Member(db.Entity):
@@ -190,8 +205,13 @@ class Member(db.Entity):
         return contribution_count + debt_count + installment_count
 
     def sum_of_paid_contributions(self):
-        return select(sr.amount for sr in SubReceipt if
-                      sr.contribution_ref and sr.money_transaction_ref.member_ref == self).sum()
+        return select(
+            sr.amount for sr in SubReceipt
+            if sr.contribution_ref and sr.member_ref == self and sr.money_transaction_ref.is_type_revenue()
+        ).sum() - select(
+            sr.amount for sr in SubReceipt
+            if sr.contribution_ref and sr.member_ref == self and sr.money_transaction_ref.is_type_expense()
+        ).sum()
 
     def sum_of_paid_installments(self):
         return select(sr.amount for sr in SubReceipt if
@@ -234,7 +254,7 @@ class Member(db.Entity):
     def total_balance_from_accepted_trust_links(self):
         amount = 0
         amount += self.get_balance()
-        print("total_balance_from_accepted_trust_links -> amount:", amount)
+        print("member.total_balance_from_accepted_trust_links .... member.get_balance():", amount)
         for link in self.accepted_trust_links():
             amount += link.other_member(whose=self).get_balance()
         return amount
@@ -603,14 +623,17 @@ class Contribution(db.Entity):
     def sandik_ref(self):
         return self.member_ref.sandik_ref
 
+    def get_amount(self):
+        return abs(self.amount)
+
     def get_paid_amount(self):
         return select(sr.amount for sr in self.sub_receipts_set).sum()
 
     def get_unpaid_amount(self):
-        return self.amount - self.get_paid_amount()
+        return self.get_amount() - self.get_paid_amount()
 
-    def recalculate_is_fully_paid(self, is_leaving=False):
-        unpaid_amount = self.get_unpaid_amount() if not is_leaving else -self.amount - self.get_paid_amount()
+    def recalculate_is_fully_paid(self):
+        unpaid_amount = self.get_unpaid_amount()
         if unpaid_amount == 0:
             self.is_fully_paid = True
         elif unpaid_amount > 0:
@@ -721,6 +744,10 @@ class SubReceipt(db.Entity):
     share_ref = Optional(Share)
     creation_time = Required(datetime, default=lambda: datetime.now())
 
+    @property
+    def member_ref(self):
+        return self.money_transaction_ref.member_ref
+
     def before_insert(self):
         # TODO test et
         counter = 0
@@ -735,7 +762,7 @@ class SubReceipt(db.Entity):
     def after_insert(self):
         # TODO test et
         if self.contribution_ref:
-            self.contribution_ref.recalculate_is_fully_paid(is_leaving=True)
+            self.contribution_ref.recalculate_is_fully_paid()
             self.contribution_ref.share_ref.member_ref.balance += self.amount
 
         if self.installment_ref:

@@ -153,7 +153,8 @@ def remove_member_from_sandik(member: Member, removed_by):
     total_amount_to_be_refunded = member.sum_of_paid_contributions() + member.total_of_undistributed_amount()
     money_transaction = transaction_db.create_money_transaction(
         member_ref=member, amount=total_amount_to_be_refunded, type=MoneyTransaction.TYPE.EXPENSE,
-        detail="Üye ayrılışı", creation_type=MoneyTransaction.CREATION_TYPE.BY_AUTO, created_by=removed_by
+        detail="Üye ayrılışı", creation_type=MoneyTransaction.CREATION_TYPE.BY_AUTO, is_fully_distributed=False,
+        created_by=removed_by
     )
     for share in member.get_active_shares():
         remove_share_from_member(share=share, removed_by=removed_by, refunded_money_transaction=money_transaction)
@@ -179,7 +180,8 @@ def remove_share_from_member(share: Share, removed_by, refunded_money_transactio
     if not refunded_money_transaction:
         refunded_money_transaction = transaction_db.create_money_transaction(
             member_ref=share.member_ref, amount=refunded_amount, type=MoneyTransaction.TYPE.EXPENSE,
-            detail="Hisse kapatılması", creation_type=MoneyTransaction.CREATION_TYPE.BY_AUTO, created_by=removed_by
+            detail="Hisse kapatılması", creation_type=MoneyTransaction.CREATION_TYPE.BY_AUTO,
+            is_fully_distributed=False, created_by=removed_by
         )
 
     transaction_db.create_sub_receipt(

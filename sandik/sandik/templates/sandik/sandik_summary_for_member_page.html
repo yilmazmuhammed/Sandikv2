@@ -5,48 +5,6 @@
   <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
   <script>
     jQuery(function($){
-      $('#shares-table').footable({
-        "toggleColumn": "first",
-        "columns": [
-          { "name": "order", "title": "Hisse", "classes": "text-center font-bold", },
-          { "name": "total_contribution", "title": "Ödenen aidatlar", "classes": "text-center" },
-          { "name": "total_debt", "title": "Alınan borçlar", "classes": "text-center", },
-          { "name": "total_installment", "title": "Ödenen taksitler", "classes": "text-center",  },
-          { "name": "final_status", "title": "Son durum", "classes": "text-center", },
-          {% if g.type == "management" %}
-          { "name": "actions", "title": "", "breakpoints": "xs sm md" },
-          {% endif %}
-        ],
-        "rows": [
-        {% for share in g.member.shares_set.order_by("lambda s: s.share_order_of_member") %}
-          {
-            "order": `<span title='ID: {{ share.id }}'>{{ share.share_order_of_member }}</span>`,
-            "total_contribution": `xxx{{ share.final_status("contribution") }}`,
-            "total_debt": `xxx{{ share.final_status("debt") }}`,
-            "total_installment": `xxx{{ share.final_status("installment") }}`,
-            "final_status": `xxx{{ share.final_status("total") }}`,
-            {% if g.type == "management" %}
-            "actions": `
-              <tr>
-                <td>{{ macros.button(url="#", icon='fa fa-pencil', type='info', size='xs', title='Düzenle') }}</td>
-                <td style='padding:5px;'></td>
-                <td>{{ macros.button(url=url_for("sandik_page_bp.remove_share_from_member_page", sandik_id=g.sandik.id, member_id=g.member.id, share_id=share.id), icon='fa fa-trash', type='danger', size='xs', title='Hisseyi sil', confirm_msg='Hisseyi silmek istediğinizden emin misiniz?') }}</td>
-              </tr>`,
-            {% endif %}
-          },
-        {% endfor %}
-        {
-          "order": `<span title='Member ID: {{ g.member.id }}'>Üye Durumu</span>`,
-          "total_contribution": `xxx{{ g.member.sum_of_paid_contributions() }}`,
-          "total_debt": `xxx{{ g.member.final_status("debt") }}`,
-          "total_installment": `xxx{{ g.member.sum_of_paid_installments() }}`,
-          "final_status": `xxx{{ g.member.final_status("total") }}`,
-          {% if g.type == "management" %}
-          "actions": ``,
-          {% endif %}
-        },
-        ]
-      });
 
       $('#my-upcoming-payments-table').footable({
         "toggleColumn": "first",
@@ -88,87 +46,132 @@
         {% endfor %}
         ]
       });
-    });
 
-    $('#my-latest-money-transactions-table').footable({
-      "toggleColumn": "first",
-      "paging": {
-        "enabled": true,
-        "size": 10
-      },
-      "columns": [
-          { "name": "id", "title": "#"},
-          { "name": "date", "title": "Tarih" },
-          { "name": "amount", "title": "Miktar", },
-          { "name": "type", "title": "İşlem türü", },
-          { "name": "detail", "title": "Detay", },
-          { "name": "is_fully_distributed", "title": "Hepsi işleme sokulmuş mu?", "breakpoints": "xs sm md lg", },
-          { "name": "creation_type", "title": "Oluşturulma türü", "breakpoints": "xs sm md lg", },
-          { "name": "bank_transaction", "title": "Banka işlemi", "breakpoints": "xs sm md lg", },
-      ],
-      "rows": [
-        {% for mt in g.summary_data.my_latest_money_transactions %}
-          {
-            "id": "<span title='ID: {{ mt.id }}'>{{ loop.index }}</span>",
-            "date": "{{ mt.date.strftime("%Y-%m-%d") }}",
-            "amount": "{{ mt.amount }} ₺",
-            "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}"Para girişi"{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}"Para çıkışı"{% else %}"---"{% endif %},
-            "detail": "{{ mt.detail }}",
-            "is_fully_distributed": "{{ "Evet" if mt.is_fully_distributed else "Hayır" }}",
-            "creation_type": {% if mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}"Manuel"{% elif mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}"Otomatik"{% else %}"---"{% endif %},
-            "bank_transaction": "{{ "Var" if mt.bank_transaction_ref else "Yok" }}",
-          },
-        {% endfor %}
-      ]
-    });
-
-    {% if g.type == "management" %}
-    jQuery(function($){
-      $('#waiting-trust-links-table').footable({
+      $('#my-latest-money-transactions-table').footable({
         "toggleColumn": "first",
+        "paging": {
+          "enabled": true,
+          "size": 10
+        },
         "columns": [
-          { "name": "index", "title": "#", "classes": "text-center font-bold", },
-          { "name": "name_surname", "title": "Üye", },
-          {# { "name": "status", "title": "Durum", "classes": "text-center" }, #}
-          { "name": "time", "title": "İstek tarihi", "classes": "text-center" },
+            { "name": "id", "title": "#"},
+            { "name": "date", "title": "Tarih" },
+            { "name": "amount", "title": "Miktar", },
+            { "name": "type", "title": "İşlem türü", },
+            { "name": "detail", "title": "Detay", },
+            { "name": "is_fully_distributed", "title": "Hepsi işleme sokulmuş mu?", "breakpoints": "xs sm md lg", },
+            { "name": "creation_type", "title": "Oluşturulma türü", "breakpoints": "xs sm md lg", },
+            { "name": "bank_transaction", "title": "Banka işlemi", "breakpoints": "xs sm md lg", },
         ],
         "rows": [
-        {% for member in g.sandik.members_set.order_by("lambda m: m.web_user_ref.name_surname") %}
-          {% set tr = g.member.get_trust_link_with_member(other_member=member) %}
-          {% if g.member != member and (not tr or not tr.is_accepted()) %}
+          {% for mt in g.summary_data.my_latest_money_transactions %}
             {
-              "index": `<span title='ID: {{ member.id }}'>{{ loop.index }}</span>`,
-              "name_surname": `{{ member.web_user_ref.name_surname  }}`,
-              {# "status": `{{ tr.status }}`, #}
-              "time": `{% if tr %}{{ tr.time.strftime("%d.%m.%Y") }}{% else %}-{% endif %}`,
+              "id": "<span title='ID: {{ mt.id }}'>{{ loop.index }}</span>",
+              "date": "{{ mt.date.strftime("%Y-%m-%d") }}",
+              "amount": "{{ mt.amount }} ₺",
+              "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}"Para girişi"{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}"Para çıkışı"{% else %}"---"{% endif %},
+              "detail": "{{ mt.detail }}",
+              "is_fully_distributed": "{{ "Evet" if mt.is_fully_distributed else "Hayır" }}",
+              "creation_type": {% if mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}"Manuel"{% elif mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}"Otomatik"{% else %}"---"{% endif %},
+              "bank_transaction": "{{ "Var" if mt.bank_transaction_ref else "Yok" }}",
             },
-          {% endif %}
-        {% endfor %}
+          {% endfor %}
         ]
       });
 
-      $('#accepted-trust-links-table').footable({
-        "toggleColumn": "first",
-        "columns": [
-          { "name": "index", "title": "#", "classes": "text-center font-bold", },
-          { "name": "name_surname", "title": "Üye", "classes": "text-center" },
-          {# { "name": "status", "title": "Durum", "classes": "text-center" }, #}
-          { "name": "time", "title": "Tarih", "classes": "text-center" },
-        ],
-        "rows": [
-        {% for tr in g.member.accepted_trust_links() %}
+      {% if g.type == "management" %}
+        $('#shares-table').footable({
+          "toggleColumn": "first",
+          "columns": [
+            { "name": "order", "title": "Hisse", "classes": "text-center font-bold", },
+            { "name": "total_contribution", "title": "Ödenen aidatlar", "classes": "text-center" },
+            { "name": "total_debt", "title": "Alınan borçlar", "classes": "text-center", },
+            { "name": "total_installment", "title": "Ödenen taksitler", "classes": "text-center",  },
+            { "name": "final_status", "title": "Son durum", "classes": "text-center", },
+            {% if g.type == "management" %}
+            { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+            {% endif %}
+          ],
+          "rows": [
+          {% for share in g.member.shares_set.order_by("lambda s: s.share_order_of_member") %}
+            {
+              "order": `<span title='ID: {{ share.id }}'>{{ share.share_order_of_member }}</span>`,
+              "total_contribution": `xxx{{ share.sum_of_paid_contributions() }}`,
+              "total_debt": `xxx{{ share.final_status("debt") }}`,
+              "total_installment": `xxx{{ share.final_status("installment") }}`,
+              "final_status": `xxx{{ share.final_status("total") }}`,
+              {% if g.type == "management" %}
+              "actions": `
+                {% if share.is_active %}
+                  <tr>
+                    <td>{{ macros.button(url="#", icon='fa fa-pencil', type='info', size='xs', title='Düzenle') }}</td>
+                    <td style='padding:5px;'></td>
+                    <td>{{ macros.button(url=url_for("sandik_page_bp.remove_share_from_member_page", sandik_id=g.sandik.id, member_id=g.member.id, share_id=share.id), icon='fa fa-trash', type='danger', size='xs', title='Hisseyi sil', confirm_msg='Hisseyi silmek istediğinizden emin misiniz?') }}</td>
+                  </tr>
+                {% endif %}
+              `,
+              {% endif %}
+            },
+          {% endfor %}
           {
-            "index": `<span title='ID: {{ tr.id }}'>{{ loop.index }}</span>`,
-            "name_surname": `{{ tr.other_member(g.member).web_user_ref.name_surname  }}`,
-            {# "status": `{{ tr.status }}`, #}
-            "time": `{{ tr.time.strftime("%d.%m.%Y") }}`,
+            "order": `<span title='Member ID: {{ g.member.id }}'>Üye Durumu</span>`,
+            "total_contribution": `xxx{{ g.member.sum_of_paid_contributions() }}`,
+            "total_debt": `xxx{{ g.member.final_status("debt") }}`,
+            "total_installment": `xxx{{ g.member.sum_of_paid_installments() }}`,
+            "final_status": `xxx{{ g.member.final_status("total") }}`,
+            {% if g.type == "management" %}
+            "actions": ``,
+            {% endif %}
           },
-        {% endfor %}
-        ]
-      });
-    });
-    {% endif %}
+          ]
+        });
 
+        $('#waiting-trust-links-table').footable({
+          "toggleColumn": "first",
+          "columns": [
+            { "name": "index", "title": "#", "classes": "text-center font-bold", },
+            { "name": "name_surname", "title": "Üye", },
+            {# { "name": "status", "title": "Durum", "classes": "text-center" }, #}
+            { "name": "time", "title": "İstek tarihi", "classes": "text-center" },
+          ],
+          "rows": [
+          {% for member in g.sandik.members_set.order_by("lambda m: m.web_user_ref.name_surname") %}
+            {% set tr = g.member.get_trust_link_with_member(other_member=member) %}
+            {% if g.member != member and (not tr or not tr.is_accepted()) %}
+              {
+                "index": `<span title='ID: {{ member.id }}'>{{ loop.index }}</span>`,
+                "name_surname": `{{ member.web_user_ref.name_surname  }}`,
+                {# "status": `{{ tr.status }}`, #}
+                "time": `{% if tr %}{{ tr.time.strftime("%d.%m.%Y") }}{% else %}-{% endif %}`,
+              },
+            {% endif %}
+          {% endfor %}
+          ]
+        });
+
+        $('#accepted-trust-links-table').footable({
+          "toggleColumn": "first",
+          "columns": [
+            { "name": "index", "title": "#", "classes": "text-center font-bold", },
+            { "name": "name_surname", "title": "Üye", "classes": "text-center" },
+            {# { "name": "status", "title": "Durum", "classes": "text-center" }, #}
+            { "name": "time", "title": "Tarih", "classes": "text-center" },
+          ],
+          "rows": [
+          {% for tr in g.member.accepted_trust_links() %}
+            {
+              "index": `<span title='ID: {{ tr.id }}'>{{ loop.index }}</span>`,
+              "name_surname": `{{ tr.other_member(g.member).web_user_ref.name_surname  }}`,
+              {# "status": `{{ tr.status }}`, #}
+              "time": `{{ tr.time.strftime("%d.%m.%Y") }}`,
+            },
+          {% endfor %}
+          ]
+        });
+
+      {% endif %}
+
+    });
   </script>
 {% endblock %}
 
@@ -267,7 +270,7 @@
             {% if g.type == "member" %}
             <span>Alabileceğim borç miktarı</span>
             {% elif g.type == "management" %}
-            <span>Üyenin alabileceğim borç miktarı</span>
+            <span>Üyenin alabileceği borç miktarı</span>
             {% endif %}
           </div>
           <div>
