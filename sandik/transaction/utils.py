@@ -135,7 +135,6 @@ def add_money_transaction(member, created_by, use_untreated_amount, pay_future_p
                                  created_by=created_by)
 
     elif money_transaction.type == MoneyTransaction.TYPE.EXPENSE:
-        print("expense")
         # TODO Önce kendi parasından, güven bağı olan kişilerin parasından bu para borç olarak
         #  alınabiliyor mu diye kontrol et.
         add_expense_transactions(money_transaction=money_transaction, use_untreated_amount=use_untreated_amount,
@@ -164,7 +163,6 @@ def create_due_contributions_for_share(share, created_by, created_from="", perio
                 print(f"Contribution already exist for share: '{share}', period: '{period}'")
         except Exception as e:
             print("Exception in create_due_contributions_for_share:", str(type(e)), " -> ", str(e))
-            print(created_by)
             Log(web_user_ref=created_by, type=Log.TYPE.LOG_LEVEL.ERROR,
                 detail=f"created_from: {created_from} \n Exception: {str(type(e))} -> {str(e)}")
     print(f"FINISH: Creating contributions for '{share}'...")
@@ -221,7 +219,7 @@ def get_transactions(whose):
         whose_filter_ref = "share_ref"
     else:
         raise InvalidWhoseType("whose 'Sandik', 'Member' veya 'Share' olmalıdır", errcode=1, create_log=True)
-    print("get_transactions -> whose_filter_ref:", whose_filter_ref, "whose:", whose)
+
     contributions = db.select_contributions(f"lambda c: c.{whose_filter_ref} == {whose}").order_by(
         lambda c: (c.term, c.id)
     )[:][:]
@@ -291,9 +289,6 @@ def get_payments(whose, is_fully_paid: bool = None, is_due: bool = None, periods
 
     if is_fully_paid in [True, False]:
         filter_str += f"and p.is_fully_paid == {is_fully_paid}"
-
-    print("get_payments -> filter_str:", filter_str)
-    print("get_payments -> order_str:", order_str)
 
     contributions = db.select_contributions(filter_str).order_by(order_str)
     installment = db.select_installments(filter_str).order_by(order_str)

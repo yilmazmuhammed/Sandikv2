@@ -26,7 +26,6 @@ def add_money_transaction_by_manager_page(sandik_id):
     form = forms.MoneyTransactionForm(sandik=g.sandik, form_title="Para giriş/çıkışı")
 
     if form.validate_on_submit():
-        print(request.form)
         form_data = flask_form_to_dict(request_form=request.form, exclude=["member"],
                                        boolean_fields=["use_untreated_amount", "pay_future_payments"])
         try:
@@ -39,12 +38,10 @@ def add_money_transaction_by_manager_page(sandik_id):
                 if form.amount.data > max_amount:
                     raise MaximumDebtAmountExceeded(f"Üye bu miktarı alamaz. En fazla {max_amount}₺ alabilir.")
 
-            print(form_data)
             money_transaction = utils.add_money_transaction(
                 member=member, creation_type=MoneyTransaction.CREATION_TYPE.BY_MANUEL,
                 created_by=current_user, **form_data
             )
-            print(money_transaction.to_dict())
             return redirect(url_for("transaction_page_bp.add_money_transaction_by_manager_page", sandik_id=sandik_id))
         except MaximumDebtAmountExceeded as e:
             # rollback()
@@ -157,7 +154,6 @@ def money_transactions_of_member_for_management_page(sandik_id, member_id):
 @transaction_page_bp.route('s-sandik-islemleri')
 @sandik_authorization_required("read")
 def transactions_of_sandik_page(sandik_id):
-    print("sandik:", g.sandik)
     g.transactions = utils.get_transactions(whose=g.sandik)
     return render_template("transaction/sandik_transactions_page.html",
                            page_info=LayoutPI(title="Sandık işlemleri", active_dropdown="management-transactions"))
