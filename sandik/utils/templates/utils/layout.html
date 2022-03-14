@@ -42,6 +42,16 @@
   <div id="content" class="app-content" role="main">
   	<div class="app-content-body">
 
+      {% if get_flashed_messages() %}
+        <div class="wrapper-md">
+          {% for category, msg in get_flashed_messages(with_categories=true) %}
+            <div class="col-12 alert alert-{{category}} text-center" role="alert">
+              {{ msg|safe }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
       <!-- hbox layout -->
       <!-- block content -->
       {% block content_block %}

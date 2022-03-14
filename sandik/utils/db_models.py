@@ -129,9 +129,6 @@ class Share(db.Entity):
         return select(i.get_unpaid_amount() for i in Installment if
                       i.debt_ref.share_ref == self and i.is_fully_paid is False).sum()
 
-    def do_passive(self):
-        self.is_active = False
-
     def get_unpaid_debts(self):
         return select(d for d in Debt if d.share_ref == self and d.get_unpaid_amount() > 0)
 
@@ -471,11 +468,13 @@ class Log(db.Entity):
             first, last = 1200, 1299
             CREATE = first + 1
             UPDATE = first + 2
+            REMOVE = first + 11
 
         class MEMBER:
             first, last = 1300, 1399
             CREATE = first + 1
             UPDATE = first + 2
+            REMOVE = first + 11
 
         class LOG_LEVEL:
             first, last = 10000, 10099
@@ -857,10 +856,12 @@ db.generate_mapping(create_tables=True)
 
 def get_updated_fields(new_values, db_object):
     ret = {}
-    print(new_values)
+    print("get_updated_fields .... new_values:", new_values)
+    old_values = db_object.to_dict()
+    print("get_updated_fields .... old_values:", old_values)
     for key, value in new_values.items():
-        if key in db_object.__dict__.keys() and value != db_object.__dict__[key]:
-            ret[key] = {"new": value, "old_": db_object.__dict__[key]}
+        if key in old_values.keys() and value != old_values[key]:
+            ret[key] = {"new": value, "old": old_values[key]}
     return ret
 
 
