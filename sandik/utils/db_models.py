@@ -468,13 +468,11 @@ class Log(db.Entity):
             first, last = 1200, 1299
             CREATE = first + 1
             UPDATE = first + 2
-            REMOVE = first + 11
 
         class MEMBER:
             first, last = 1300, 1399
             CREATE = first + 1
             UPDATE = first + 2
-            REMOVE = first + 11
 
         class LOG_LEVEL:
             first, last = 10000, 10099
