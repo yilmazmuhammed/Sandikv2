@@ -145,7 +145,7 @@ jQuery(function($){
         {% set detail='' %}
       {% endif %}
       {
-        "id": `<span title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.revindex }}</span>`,
+        "id": `<span title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.index }}</span>`,
         "term": "{{ p.term }}",
         "name_surname": "{{ p.member_ref.web_user_ref.name_surname }} - {{ p.share_ref.share_order_of_member }}",
         "transaction_type": `{{ transaction_type }}`,
