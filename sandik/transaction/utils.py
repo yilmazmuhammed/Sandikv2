@@ -182,7 +182,7 @@ def create_due_contributions_for_member(member, created_by, created_from=""):
 
 def create_due_contributions_for_sandik(sandik, created_by, created_from=""):
     print(f"START: Creating contributions for '{sandik}'...")
-    for member in sandik.members_set:
+    for member in sandik.get_active_members():
         create_due_contributions_for_member(member=member, created_by=created_by, created_from=created_from)
     print(f"FINISH: Creating contributions for '{sandik}'...")
 
@@ -206,7 +206,7 @@ def pay_unpaid_payments_from_untreated_amount_for_member(member: Member, pay_fut
 def pay_unpaid_payments_from_untreated_amount_for_sandik(sandik: Sandik, pay_future_payments: bool,
                                                          created_by: WebUser):
     print(f"START: Paying payments for '{sandik}' with pay_future_payments={pay_future_payments} ...")
-    for member in sandik.members_set:
+    for member in sandik.get_active_members():
         pay_unpaid_payments_from_untreated_amount_for_member(member=member, pay_future_payments=pay_future_payments,
                                                              created_by=created_by)
     print(f"FINISH: Paying payments for '{sandik}' with pay_future_payments={pay_future_payments} ...")

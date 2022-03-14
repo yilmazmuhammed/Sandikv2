@@ -48,6 +48,34 @@ class UpdateMemberException(MembershipException):
     pass
 
 
+class RemoveMemberException(MembershipException):
+    pass
+
+
+class RemoveShareException(MembershipException):
+    pass
+
+
+class NotActiveShareException(MembershipException):
+    pass
+
+
+class ThereIsUnpaidDebtOfShareException(RemoveShareException):
+    pass
+
+
+class NotActiveMemberException(MembershipException):
+    pass
+
+
+class ThereIsUnpaidDebtOfMemberException(RemoveMemberException):
+    pass
+
+
+class ThereIsUnpaidAmountOfLoanedException(RemoveMemberException):
+    pass
+
+
 class MaxShareCountExceed(MembershipException):
     pass
 

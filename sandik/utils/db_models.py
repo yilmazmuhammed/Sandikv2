@@ -25,7 +25,7 @@ class BankTransaction(db.Entity):
 class MoneyTransaction(db.Entity):
     # TODO para çıkışı ise is_fully_distributed true olmak zorundadır
     id = PrimaryKey(int, auto=True)
-    date = Required(date)
+    date = Required(date, default=lambda: date.today())
     amount = Required(Decimal)
     detail = Optional(str)
     type = Required(int)
@@ -42,9 +42,16 @@ class MoneyTransaction(db.Entity):
 
         strings = {REVENUE: "Para girişi", EXPENSE: "Para çıkışı"}
 
+    def is_type_revenue(self):
+        return self.type == MoneyTransaction.TYPE.REVENUE
+
+    def is_type_expense(self):
+        return self.type == MoneyTransaction.TYPE.EXPENSE
+
     class CREATION_TYPE:
         BY_MANUEL = 0
         BY_BANK_TRANSACTION = 1
+        BY_AUTO = 2
 
     def distributed_amount(self):
         return select(sr.amount for sr in self.sub_receipts_set).sum()
@@ -75,7 +82,13 @@ class Share(db.Entity):
     debts_set = Set('Debt')
 
     def sum_of_paid_contributions(self):
-        return select(sr.amount for sr in self.sub_receipts_set if sr.contribution_ref).sum()
+        return select(
+            sr.amount for sr in self.sub_receipts_set
+            if sr.contribution_ref and sr.money_transaction_ref.is_type_revenue()
+        ).sum() - select(
+            sr.amount for sr in self.sub_receipts_set
+            if sr.contribution_ref and sr.money_transaction_ref.is_type_expense()
+        ).sum()
 
     def final_status(self, t_type):
         if t_type == "contribution":
@@ -116,6 +129,9 @@ class Share(db.Entity):
         return select(i.get_unpaid_amount() for i in Installment if
                       i.debt_ref.share_ref == self and i.is_fully_paid is False).sum()
 
+    def get_unpaid_debts(self):
+        return select(d for d in Debt if d.share_ref == self and d.get_unpaid_amount() > 0)
+
 
 class Member(db.Entity):
     id = PrimaryKey(int, auto=True)
@@ -142,16 +158,42 @@ class Member(db.Entity):
             pod.get_unpaid_amount() for pod in self.piece_of_debts_set if pod.debt_ref).sum()
         return contributions_amount + undistributed_amount - unpaid_amount_of_loaned
 
+    """
+    ######################################################################################################
+    ################### UYENIN VERDIGI BORCLAR (PIECE_OF_DEBT) ILE ILGILI FONKSIYONLAR ###################
+    """
+
     def get_loaned_amount(self):
-        return select(pod.amount for pod in self.piece_of_debts_set if pod.debt_ref).sum()
+        return select(pod.amount for pod in self.piece_of_debts_set).sum()
 
     def get_paid_amount_of_loaned(self):
-        return select(pod.paid_amount for pod in self.piece_of_debts_set if pod.debt_ref).sum()
+        return select(pod.paid_amount for pod in self.piece_of_debts_set).sum()
+
+    def get_unpaid_amount_of_loaned(self):
+        return select(pod.get_unpaid_amount() for pod in self.piece_of_debts_set).sum()
+
+    """
+    ################### UYENIN VERDIGI BORCLAR (PIECE_OF_DEBT) ILE ILGILI FONKSIYONLAR ###################
+    ######################################################################################################
+    """
+
+    """
+    ######################################################################################################
+    ################################## HISSELER ILE ILGILI FONKSIYONLAR ##################################
+    """
 
     def shares_count(self, all_shares=False, is_active=True):
         if all_shares:
             return self.shares_set.count()
         return self.shares_set.filter(lambda s: s.is_active == is_active).count()
+
+    def get_active_shares(self):
+        return self.shares_set.filter(lambda s: s.is_active)
+
+    """
+    ################################## HISSELER ILE ILGILI FONKSIYONLAR ##################################
+    ######################################################################################################
+    """
 
     def transactions_count(self):
         contribution_count = select(c for c in Contribution if c.share_ref.member_ref == self).count()
@@ -160,8 +202,13 @@ class Member(db.Entity):
         return contribution_count + debt_count + installment_count
 
     def sum_of_paid_contributions(self):
-        return select(sr.amount for sr in SubReceipt if
-                      sr.contribution_ref and sr.money_transaction_ref.member_ref == self).sum()
+        return select(
+            sr.amount for sr in SubReceipt
+            if sr.contribution_ref and sr.member_ref == self and sr.money_transaction_ref.is_type_revenue()
+        ).sum() - select(
+            sr.amount for sr in SubReceipt
+            if sr.contribution_ref and sr.member_ref == self and sr.money_transaction_ref.is_type_expense()
+        ).sum()
 
     def sum_of_paid_installments(self):
         return select(sr.amount for sr in SubReceipt if
@@ -204,7 +251,7 @@ class Member(db.Entity):
     def total_balance_from_accepted_trust_links(self):
         amount = 0
         amount += self.get_balance()
-        print("total_balance_from_accepted_trust_links -> amount:", amount)
+        print("member.total_balance_from_accepted_trust_links .... member.get_balance():", amount)
         for link in self.accepted_trust_links():
             amount += link.other_member(whose=self).get_balance()
         return amount
@@ -448,8 +495,8 @@ class Sandik(db.Entity):
     members_set = Set(Member)
     sandik_authority_types_set = Set('SandikAuthorityType')
 
-    def members_count(self):
-        return self.members_set.count()
+    def get_active_members(self):
+        return self.members_set.filter(lambda m: m.is_active)
 
     def shares_count(self):
         return count(self.members_set.shares_set)
@@ -484,7 +531,7 @@ class Sandik(db.Entity):
         return select(mt for mt in MoneyTransaction if mt.member_ref.sandik_ref == self)
 
     def total_of_undistributed_amount(self):
-        return select(member.total_of_undistributed_amount() for member in self.members_set).sum()
+        return select(member.total_of_undistributed_amount() for member in self.get_active_members()).sum()
 
 
 class TrustRelationship(db.Entity):
@@ -573,11 +620,14 @@ class Contribution(db.Entity):
     def sandik_ref(self):
         return self.member_ref.sandik_ref
 
+    def get_amount(self):
+        return abs(self.amount)
+
     def get_paid_amount(self):
         return select(sr.amount for sr in self.sub_receipts_set).sum()
 
     def get_unpaid_amount(self):
-        return self.amount - self.get_paid_amount()
+        return self.get_amount() - self.get_paid_amount()
 
     def recalculate_is_fully_paid(self):
         unpaid_amount = self.get_unpaid_amount()
@@ -691,6 +741,10 @@ class SubReceipt(db.Entity):
     share_ref = Optional(Share)
     creation_time = Required(datetime, default=lambda: datetime.now())
 
+    @property
+    def member_ref(self):
+        return self.money_transaction_ref.member_ref
+
     def before_insert(self):
         # TODO test et
         counter = 0
@@ -800,10 +854,12 @@ db.generate_mapping(create_tables=True)
 
 def get_updated_fields(new_values, db_object):
     ret = {}
-    print(new_values)
+    print("get_updated_fields .... new_values:", new_values)
+    old_values = db_object.to_dict()
+    print("get_updated_fields .... old_values:", old_values)
     for key, value in new_values.items():
-        if key in db_object.__dict__.keys() and value != db_object.__dict__[key]:
-            ret[key] = {"new": value, "old_": db_object.__dict__[key]}
+        if key in old_values.keys() and value != old_values[key]:
+            ret[key] = {"new": value, "old": old_values[key]}
     return ret
 
 

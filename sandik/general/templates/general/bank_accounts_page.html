@@ -44,9 +44,7 @@
 {% endblock %}
 
 {% block content_block %}
-  <div class="bg-light lter b-b wrapper-md">
-    <h1 class="m-n font-thin h3">{{ page_info.title }}</h1>
-  </div>
+  {{ macros.page_header(page_info.title) }}
   <div class="wrapper-md">
     <div class="panel panel-default">
       <div class="panel-heading">

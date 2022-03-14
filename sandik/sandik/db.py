@@ -4,7 +4,8 @@ from pony.orm import flush, select
 
 from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelationshipCreationException, \
     MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, ThereIsNotSandikAuthority
-from sandik.utils.db_models import Sandik, Log, SandikAuthorityType, Member, Share, TrustRelationship
+from sandik.utils.db_models import Sandik, Log, SandikAuthorityType, Member, Share, TrustRelationship, \
+    get_updated_fields
 
 
 def save():
@@ -133,13 +134,15 @@ def create_share(member, created_by, **kwargs) -> Share:
 
 
 def update_share(share, updated_by, **kwargs):
-    Log(web_user_ref=updated_by, type=Log.TYPE.SHARE.UPDATE, logged_share_ref=share, detail=str(kwargs))
+    updated_fields = get_updated_fields(new_values=kwargs, db_object=share)
+    Log(web_user_ref=updated_by, type=Log.TYPE.SHARE.UPDATE, logged_share_ref=share, detail=str(updated_fields))
     share.set(**kwargs)
     return share
 
 
 def update_member(member, updated_by, **kwargs):
-    Log(web_user_ref=updated_by, type=Log.TYPE.MEMBER.UPDATE, logged_member_ref=member, detail=str(kwargs))
+    updated_fields = get_updated_fields(new_values=kwargs, db_object=member)
+    Log(web_user_ref=updated_by, type=Log.TYPE.MEMBER.UPDATE, logged_member_ref=member, detail=str(updated_fields))
     member.set(**kwargs)
     return member
 
@@ -152,8 +155,11 @@ def get_share(**kwargs) -> Share:
     return Share.get(**kwargs)
 
 
-def members_form_choices(sandik):
-    choices = [(m.id, m.web_user_ref.name_surname) for m in sandik.members_set]
+def members_form_choices(sandik, only_active=True):
+    if only_active:
+        choices = [(m.id, m.web_user_ref.name_surname) for m in sandik.get_active_members()]
+    else:
+        choices = [(m.id, m.web_user_ref.name_surname) for m in sandik.members_set]
     choices = sorted(choices, key=lambda c: c[1])
     return choices
 
@@ -195,6 +201,7 @@ def remove_trust_relationship_request(trust_relationship, rejected_by):
     Log(web_user_ref=rejected_by, type=Log.TYPE.TRUST_RELATIONSHIP.REMOVE,
         logged_trust_relationship_ref=trust_relationship)
     trust_relationship.set(status=TrustRelationship.STATUS.CANCELLED, time=datetime.now())
+    return trust_relationship
 
 
 def get_trust_relationship(**kwargs) -> TrustRelationship:

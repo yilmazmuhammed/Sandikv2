@@ -8,7 +8,8 @@ from sandik.auth.requirement import login_required, web_user_required
 from sandik.sandik import forms, db, utils
 from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelationshipCreationException, \
     MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, SandikAuthorityException, AddMemberException, \
-    MembershipException, MaxShareCountExceed
+    MembershipException, MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
+    ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, to_be_member_of_sandik_required, \
     trust_relationship_required
 from sandik.utils import LayoutPI, get_next_url, sandik_preferences
@@ -87,7 +88,10 @@ def trust_links_page(sandik_id):
 @sandik_page_bp.route("/<int:sandik_id>/u-<int:member_id>/gb-gonder", methods=["GET", "POST"])
 @to_be_member_of_sandik_required
 def send_request_trust_link_page(sandik_id, member_id):
-    receiver_member = db.get_member(id=member_id)
+    receiver_member = db.get_member(id=member_id, sandik_ref=g.sandik)
+    if not receiver_member:
+        abort(404, "Üye bulunamadı")
+
     try:
         trust_relationship = db.create_trust_relationship(requester_member=g.member, receiver_member=receiver_member,
                                                           requested_by=current_user)
@@ -313,6 +317,42 @@ def add_share_to_member_page(sandik_id, member_id):
     return render_template("utils/form_layout.html",
                            page_info=FormPI(title="Hisse ekle", form=form, active_dropdown='members'))
 
+
+@sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/sil")
+@sandik_authorization_required(permission="write")
+def remove_member_from_sandik_page(sandik_id, member_id):
+    member = db.get_member(id=member_id, sandik_ref=g.sandik)
+    if not member:
+        abort(404, "Üye bulunamadı")
+
+    try:
+        utils.remove_member_from_sandik(member=member, removed_by=current_user)
+    except (NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, ThereIsUnpaidAmountOfLoanedException,
+            NotActiveShareException, ThereIsUnpaidDebtOfShareException) as e:
+        flash(str(e), "danger")
+
+    return redirect(request.referrer or url_for("sandik_page_bp.members_of_sandik_page", sandik_id=sandik_id))
+
+
+@sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/hisse-<int:share_id>/sil")
+@sandik_authorization_required(permission="write")
+def remove_share_from_member_page(sandik_id, member_id, share_id):
+    member = db.get_member(id=member_id, sandik_ref=g.sandik)
+    if not member:
+        abort(404, "Üye bulunamadı")
+
+    share = db.get_share(id=share_id, member_ref=member)
+    if not share:
+        abort(404, "Hisse bulunamadı")
+
+    try:
+        utils.remove_share_from_member(share=share, removed_by=current_user)
+    except (NotActiveShareException, ThereIsUnpaidDebtOfShareException) as e:
+        flash(str(e), "danger")
+        print(type(e), e)
+
+    return redirect(request.referrer or url_for("sandik_page_bp.member_summary_for_management_page",
+                                                sandik_id=sandik_id, member_id=member_id))
 
 
 """

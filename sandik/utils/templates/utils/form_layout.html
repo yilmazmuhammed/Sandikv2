@@ -54,9 +54,7 @@
 {% endblock %}
 
 {% block content_block %}
-  <div class="bg-light lter b-b wrapper-md">
-    <h1 class="m-n font-thin h3">{{ page_info.title}}</h1>
-  </div>
+  {{ macros.page_header(page_info.title) }}
   <div class="wrapper-md">
     <div class="row">
       <div class="col-sm-offset-3 col-sm-6">
@@ -65,13 +63,8 @@
           <div class="panel-body">
 {#          TODO flash mesajlarını include ile al include ile #}
             {% if get_flashed_messages(category_filter=["success", "warning"]) %}
-              {% for msg in get_flashed_messages(category_filter=["success"]) %}
-                <div class="col-12 alert alert-success text-center" role="alert">
-                  {{ msg|safe }}
-                </div>
-              {% endfor %}
-              {% for msg in get_flashed_messages(category_filter=["warning"]) %}
-                <div class="col-12 alert alert-warning text-center" role="alert">
+              {% for category, msg in get_flashed_messages(with_categories=true, category_filter=["success", "warning"]) %}
+                <div class="col-12 alert alert-{{category}} text-center" role="alert">
                   {{ msg|safe }}
                 </div>
               {% endfor %}

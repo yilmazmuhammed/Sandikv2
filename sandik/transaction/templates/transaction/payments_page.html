@@ -145,7 +145,7 @@ jQuery(function($){
         {% set detail='' %}
       {% endif %}
       {
-        "id": `<span title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.revindex }}</span>`,
+        "id": `<span title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.index }}</span>`,
         "term": "{{ p.term }}",
         "name_surname": "{{ p.member_ref.web_user_ref.name_surname }} - {{ p.share_ref.share_order_of_member }}",
         "transaction_type": `{{ transaction_type }}`,
@@ -203,9 +203,7 @@ jQuery(function($){
 {% endblock %}
 
 {% block content_block %}
-  <div class="bg-light lter b-b wrapper-md">
-    <h1 class="m-n font-thin h3">{{ page_info.title }}</h1>
-  </div>
+  {{ macros.page_header(page_info.title) }}
   <div class="wrapper-md">
     <div class="panel panel-default">
       <div class="panel-heading">

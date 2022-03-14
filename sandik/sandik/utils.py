@@ -2,10 +2,12 @@ from flask import url_for
 
 from sandik.general import db as general_db
 from sandik.sandik import db
-from sandik.sandik.exceptions import MaxShareCountExceed
+from sandik.sandik.exceptions import MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
+    ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException
 from sandik.sandik.exceptions import UpdateMemberException
 from sandik.transaction import utils as transaction_utils, db as transaction_db
 from sandik.utils import period as period_utils, sandik_preferences
+from sandik.utils.db_models import Member, Share, MoneyTransaction
 
 
 def add_share_to_member(member, added_by, **kwargs):
@@ -56,7 +58,7 @@ class Notification:
 
         @staticmethod
         def send_confirming_notification(sandik, web_user):
-            for member in sandik.members_set:
+            for member in sandik.get_active_members():
                 if web_user is not member.web_user_ref:
                     general_db.create_notification(
                         to_web_user=member.web_user_ref,
@@ -77,7 +79,7 @@ class Notification:
 
         @staticmethod
         def send_member_adding_notification(sandik, web_user):
-            for member in sandik.members_set:
+            for member in sandik.get_active_members():
                 if web_user is not member.web_user_ref:
                     general_db.create_notification(
                         to_web_user=member.web_user_ref,
@@ -91,7 +93,7 @@ class Notification:
 
         @staticmethod
         def send_apply_notification(sandik, applied_by):
-            for member in sandik.members_set:
+            for member in sandik.get_active_members():
                 general_db.create_notification(
                     to_web_user=member.web_user_ref,
                     title=f"{applied_by.name_surname} üyelik başvurusunda bulundu.", text=sandik.name,
@@ -134,3 +136,74 @@ def get_member_summary_page(member):
         "my_latest_money_transactions": my_latest_money_transactions,
         "trusted_links": trusted_links,
     }
+
+
+def remove_member_from_sandik(member: Member, removed_by):
+    if not member.is_active:
+        raise NotActiveMemberException("Silinmek istenen üye zaten aktif üye değil.", create_log=True)
+
+    if member.get_unpaid_debts().count() > 0:
+        raise ThereIsUnpaidDebtOfMemberException("Silinmek istenen üyenin ödenmemiş borcu var.", create_log=True)
+
+    if member.get_unpaid_amount_of_loaned() > 0:
+        # TODO Sandık kurallarının güncellenmesi gerekli
+        raise ThereIsUnpaidAmountOfLoanedException("Üyenin verdiği borçlardan ödenmesi tamamlanmamış olan borç var",
+                                                   create_log=True)
+
+    total_amount_to_be_refunded = member.sum_of_paid_contributions() + member.total_of_undistributed_amount()
+    refunded_money_transaction = transaction_db.create_money_transaction(
+        member_ref=member, amount=total_amount_to_be_refunded, type=MoneyTransaction.TYPE.EXPENSE,
+        detail="Üye ayrılışı", creation_type=MoneyTransaction.CREATION_TYPE.BY_AUTO, is_fully_distributed=False,
+        created_by=removed_by
+    )
+
+    # Hisseler kaldiriliyor ve odenen aidatlar uyeye geri veriliyor
+    for share in member.get_active_shares():
+        remove_share_from_member(share=share, removed_by=removed_by,
+                                 refunded_money_transaction=refunded_money_transaction)
+
+    # İsleme konmamis miktarlar uyeye geri iade ediliyor
+    for mt in member.get_revenue_money_transactions_are_not_fully_distributed():
+        undistributed_amount = mt.get_undistributed_amount()
+        transaction_utils.borrow_from_untreated_amount(
+            untreated_money_transaction=mt, amount=undistributed_amount, money_transaction=refunded_money_transaction,
+            created_by=removed_by
+        )
+
+    # Üye pasif üyeye dönüştürülüyor
+    db.update_member(member=member, updated_by=removed_by, is_active=False)
+
+    # Güven bağları siliniyor
+    for tr in member.accepted_trust_links():
+        db.remove_trust_relationship_request(trust_relationship=tr, rejected_by=removed_by)
+
+    return refunded_money_transaction
+
+
+def remove_share_from_member(share: Share, removed_by, refunded_money_transaction=None):
+    if not share.is_active:
+        raise NotActiveShareException("Silinmek istenen hisse zaten aktif hisse değil.", create_log=True)
+
+    if share.get_unpaid_debts().count() > 0:
+        raise ThereIsUnpaidDebtOfShareException("Silinmek istenen hissenin ödenmemiş borcu var.", create_log=True)
+
+    refunded_amount = share.sum_of_paid_contributions()
+    refunded_contribution = transaction_db.create_contribution(
+        share=share, period="9999-01", amount=-refunded_amount, created_by=removed_by
+    )
+
+    if not refunded_money_transaction:
+        refunded_money_transaction = transaction_db.create_money_transaction(
+            member_ref=share.member_ref, amount=refunded_amount, type=MoneyTransaction.TYPE.EXPENSE,
+            detail="Hisse kapatılması", creation_type=MoneyTransaction.CREATION_TYPE.BY_AUTO,
+            is_fully_distributed=False, created_by=removed_by
+        )
+
+    transaction_db.create_sub_receipt(
+        money_transaction=refunded_money_transaction, contribution_ref=refunded_contribution,
+        amount=refunded_amount, is_auto=True, created_by=removed_by
+    )
+
+    db.update_share(share=share, updated_by=removed_by, is_active=False)
+
+    return refunded_money_transaction

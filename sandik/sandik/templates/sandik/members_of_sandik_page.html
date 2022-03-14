@@ -30,6 +30,7 @@
           { "name": "is_active", "title": "Durum", "classes": "text-center", "breakpoints": "xs sm md lg" ,  },
           {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
           { "name": "actions", "title": "", },
+          { "name": "actions2", "title": "İşlemler", "breakpoints": "xs sm md lg", },
           {% endif %}
         ],
         "rows": [
@@ -48,6 +49,11 @@
                 <td>{{ macros.button(url=url_for("transaction_page_bp.money_transactions_of_member_for_management_page", member_id=member.id, sandik_id=g.sandik.id), icon='fa fa-list', type='info', size='xs', title='Tüm para giriş/çıkışları') }}</td>
               </tr>
             `,
+            "actions2": `
+              <tr>
+                <td>{{ macros.button(url=url_for("sandik_page_bp.remove_member_from_sandik_page", member_id=member.id, sandik_id=g.sandik.id), icon='fa fa-trash', type='danger', size='xs', title='Üyeyi sil', confirm_msg='Üyeyi silmek istediğinizden emin misiniz?') }}</td>
+              </tr>
+            `,
             {% endif %}
           },
         {% endfor %}
@@ -59,9 +65,7 @@
 {% endblock %}
 
 {% block content_block %}
-  <div class="bg-light lter b-b wrapper-md">
-    <h1 class="m-n font-thin h3">{{ page_info.title }}</h1>
-  </div>
+  {{ macros.page_header(page_info.title) }}
   <div class="wrapper-md">
     <div class="panel panel-default">
       <div class="panel-heading">
