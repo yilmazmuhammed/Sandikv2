@@ -349,6 +349,7 @@ def remove_share_from_member_page(sandik_id, member_id, share_id):
         utils.remove_share_from_member(share=share, removed_by=current_user)
     except (NotActiveShareException, ThereIsUnpaidDebtOfShareException) as e:
         flash(str(e), "danger")
+        print(type(e), e)
 
     return redirect(request.referrer or url_for("sandik_page_bp.member_summary_for_management_page",
                                                 sandik_id=sandik_id, member_id=member_id))

@@ -160,7 +160,7 @@ def remove_member_from_sandik(member: Member, removed_by):
         remove_share_from_member(share=share, removed_by=removed_by, refunded_money_transaction=money_transaction)
 
     # TODO Üyenin işleme konmamış parası geri iade edilecek
-    # TODO Üyeyi pasif yap
+    db.update_member(member=member, updated_by=removed_by, is_active=False)
     # TODO Güven bağlarını kaldır
     return None
 
@@ -189,6 +189,6 @@ def remove_share_from_member(share: Share, removed_by, refunded_money_transactio
         amount=refunded_amount, is_auto=True, created_by=removed_by
     )
 
-    share.do_passive()
+    db.update_share(share=share, updated_by=removed_by, is_active=False)
 
     return refunded_money_transaction
