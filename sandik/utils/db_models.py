@@ -497,8 +497,8 @@ class Sandik(db.Entity):
     members_set = Set(Member)
     sandik_authority_types_set = Set('SandikAuthorityType')
 
-    def members_count(self):
-        return self.members_set.count()
+    def get_active_members(self):
+        return self.members_set.filter(lambda m: m.is_active)
 
     def shares_count(self):
         return count(self.members_set.shares_set)
@@ -533,7 +533,7 @@ class Sandik(db.Entity):
         return select(mt for mt in MoneyTransaction if mt.member_ref.sandik_ref == self)
 
     def total_of_undistributed_amount(self):
-        return select(member.total_of_undistributed_amount() for member in self.members_set).sum()
+        return select(member.total_of_undistributed_amount() for member in self.get_active_members()).sum()
 
 
 class TrustRelationship(db.Entity):

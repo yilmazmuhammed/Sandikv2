@@ -58,7 +58,7 @@ class Notification:
 
         @staticmethod
         def send_confirming_notification(sandik, web_user):
-            for member in sandik.members_set:
+            for member in sandik.get_active_members():
                 if web_user is not member.web_user_ref:
                     general_db.create_notification(
                         to_web_user=member.web_user_ref,
@@ -79,7 +79,7 @@ class Notification:
 
         @staticmethod
         def send_member_adding_notification(sandik, web_user):
-            for member in sandik.members_set:
+            for member in sandik.get_active_members():
                 if web_user is not member.web_user_ref:
                     general_db.create_notification(
                         to_web_user=member.web_user_ref,
@@ -93,7 +93,7 @@ class Notification:
 
         @staticmethod
         def send_apply_notification(sandik, applied_by):
-            for member in sandik.members_set:
+            for member in sandik.get_active_members():
                 general_db.create_notification(
                     to_web_user=member.web_user_ref,
                     title=f"{applied_by.name_surname} üyelik başvurusunda bulundu.", text=sandik.name,
@@ -151,18 +151,33 @@ def remove_member_from_sandik(member: Member, removed_by):
                                                    create_log=True)
 
     total_amount_to_be_refunded = member.sum_of_paid_contributions() + member.total_of_undistributed_amount()
-    money_transaction = transaction_db.create_money_transaction(
+    refunded_money_transaction = transaction_db.create_money_transaction(
         member_ref=member, amount=total_amount_to_be_refunded, type=MoneyTransaction.TYPE.EXPENSE,
         detail="Üye ayrılışı", creation_type=MoneyTransaction.CREATION_TYPE.BY_AUTO, is_fully_distributed=False,
         created_by=removed_by
     )
-    for share in member.get_active_shares():
-        remove_share_from_member(share=share, removed_by=removed_by, refunded_money_transaction=money_transaction)
 
-    # TODO Üyenin işleme konmamış parası geri iade edilecek
+    # Hisseler kaldiriliyor ve odenen aidatlar uyeye geri veriliyor
+    for share in member.get_active_shares():
+        remove_share_from_member(share=share, removed_by=removed_by,
+                                 refunded_money_transaction=refunded_money_transaction)
+
+    # İsleme konmamis miktarlar uyeye geri iade ediliyor
+    for mt in member.get_revenue_money_transactions_are_not_fully_distributed():
+        undistributed_amount = mt.get_undistributed_amount()
+        transaction_utils.borrow_from_untreated_amount(
+            untreated_money_transaction=mt, amount=undistributed_amount, money_transaction=refunded_money_transaction,
+            created_by=removed_by
+        )
+
+    # Üye pasif üyeye dönüştürülüyor
     db.update_member(member=member, updated_by=removed_by, is_active=False)
-    # TODO Güven bağlarını kaldır
-    return None
+
+    # Güven bağları siliniyor
+    for tr in member.accepted_trust_links():
+        db.remove_trust_relationship_request(trust_relationship=tr, rejected_by=removed_by)
+
+    return refunded_money_transaction
 
 
 def remove_share_from_member(share: Share, removed_by, refunded_money_transaction=None):

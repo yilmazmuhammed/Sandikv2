@@ -155,8 +155,11 @@ def get_share(**kwargs) -> Share:
     return Share.get(**kwargs)
 
 
-def members_form_choices(sandik):
-    choices = [(m.id, m.web_user_ref.name_surname) for m in sandik.members_set]
+def members_form_choices(sandik, only_active=True):
+    if only_active:
+        choices = [(m.id, m.web_user_ref.name_surname) for m in sandik.get_active_members()]
+    else:
+        choices = [(m.id, m.web_user_ref.name_surname) for m in sandik.members_set]
     choices = sorted(choices, key=lambda c: c[1])
     return choices
 
@@ -198,6 +201,7 @@ def remove_trust_relationship_request(trust_relationship, rejected_by):
     Log(web_user_ref=rejected_by, type=Log.TYPE.TRUST_RELATIONSHIP.REMOVE,
         logged_trust_relationship_ref=trust_relationship)
     trust_relationship.set(status=TrustRelationship.STATUS.CANCELLED, time=datetime.now())
+    return trust_relationship
 
 
 def get_trust_relationship(**kwargs) -> TrustRelationship:

@@ -135,7 +135,7 @@
             { "name": "time", "title": "İstek tarihi", "classes": "text-center" },
           ],
           "rows": [
-          {% for member in g.sandik.members_set.order_by("lambda m: m.web_user_ref.name_surname") %}
+          {% for member in g.sandik.get_active_members().order_by("lambda m: m.web_user_ref.name_surname") %}
             {% set tr = g.member.get_trust_link_with_member(other_member=member) %}
             {% if g.member != member and (not tr or not tr.is_accepted()) %}
               {
