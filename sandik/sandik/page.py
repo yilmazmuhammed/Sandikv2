@@ -43,9 +43,14 @@ def create_sandik_page():
                            page_info=FormPI(title="Sandık oluştur", form=form, active_dropdown='sandik'))
 
 
-@sandik_page_bp.route("/<int:sandik_id>/detay", methods=["GET", "POST"])
-@to_be_member_of_sandik_required
+@sandik_page_bp.route("/<int:sandik_id>/detay")
+@login_required
+@sandik_required
 def sandik_detail_page(sandik_id):
+    member = db.get_member(sandik_ref=g.sandik, web_user_ref=current_user)
+    authority = current_user.get_sandik_authority(sandik=g.sandik)
+    if not member and not authority:
+        abort(403)
     return render_template("sandik/sandik_detail_page.html",
                            page_info=LayoutPI(title="Sandık detayı", active_dropdown="sandik"))
 
