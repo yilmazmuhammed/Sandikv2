@@ -34,7 +34,7 @@ def to_be_member_of_sandik_required(func):
     def decorated_view(*args, **kwargs):
         member = db.get_member(sandik_ref=g.sandik, web_user_ref=current_user)
         if not member:
-            abort(404)
+            abort(403, "Bu sandığın üyesi değilsiniz.")
 
         g.member = member
         return func(*args, **kwargs)
@@ -49,7 +49,7 @@ def sandik_authorization_required(permission):
         @wraps(func)
         def decorated_view(*args, **kwargs):
             if not current_user.is_admin() and not current_user.has_permission(sandik=g.sandik, permission=permission):
-                abort(403)
+                abort(403, "Bu sayfaya erişim yetkiniz bulunmamaktadır.")
             return func(*args, **kwargs)
 
         return decorated_view
