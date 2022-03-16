@@ -55,7 +55,7 @@
           { "name": "actions", "title": "", "breakpoints": "xs sm md" },
         ],
         "rows": [
-        {% for tr in g.member.accepted_trust_links() %}
+        {% for tr in g.member.accepted_trust_links().other_member(current_user).web_user_ref.name_surname %}
           {
             "index": `<span title='ID: {{ tr.id }}'>{{ loop.index }}</span>`,
             "name_surname": `{{ tr.other_member(current_user).web_user_ref.name_surname  }}`,
