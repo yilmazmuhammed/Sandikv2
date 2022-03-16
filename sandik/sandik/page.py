@@ -86,8 +86,8 @@ def sandik_index_page(sandik_id):
 @sandik_page_bp.route("/<int:sandik_id>/güven-halkam", methods=["GET", "POST"])
 @to_be_member_of_sandik_required
 def trust_links_page(sandik_id):
-    accepted_trust_links = g.member.accepted_trust_links()
-    g.accepted_trust_links = sorted(accepted_trust_links, key=lambda tr: tr.other_member(whose=current_user).web_user_ref.name_surname)
+    g.accepted_trust_links = sorted(g.member.accepted_trust_links(),
+                                    key=lambda tr: tr.other_member(whose=current_user).web_user_ref.name_surname)
     return render_template("sandik/trust_links_page.html",
                            page_info=LayoutPI(title="Güven halkam", active_dropdown="sandik"))
 
@@ -286,6 +286,9 @@ def member_summary_for_management_page(sandik_id, member_id):
     g.member = member
     g.summary_data = utils.get_member_summary_page(member=g.member)
     g.type = "management"
+
+    g.accepted_trust_links = sorted(g.member.accepted_trust_links(),
+                                    key=lambda tr: tr.other_member(whose=current_user).web_user_ref.name_surname)
 
     page_title = f"Üye özeti: {g.member.web_user_ref.name_surname}"
     return render_template("sandik/sandik_summary_for_member_page.html",
