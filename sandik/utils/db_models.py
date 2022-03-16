@@ -241,12 +241,12 @@ class Member(db.Entity):
     def accepted_trust_links(self):
         return select(t for t in TrustRelationship
                       if (t.requester_member_ref == self or t.receiver_member_ref == self)
-                      and t.status == TrustRelationship.STATUS.ACCEPTED).order_by(lambda tr: tr.other_member(whose=self).web_user_ref.name_surname)
+                      and t.status == TrustRelationship.STATUS.ACCEPTED)
 
     def waiting_trust_links(self):
         return select(t for t in TrustRelationship
                       if (t.requester_member_ref == self or t.receiver_member_ref == self)
-                      and t.status == TrustRelationship.STATUS.WAITING).order_by(lambda tr: tr.other_member(whose=self).web_user_ref.name_surname)
+                      and t.status == TrustRelationship.STATUS.WAITING)
 
     def total_balance_from_accepted_trust_links(self):
         amount = 0
