@@ -288,7 +288,7 @@ def member_summary_for_management_page(sandik_id, member_id):
     g.type = "management"
 
     g.accepted_trust_links = sorted(g.member.accepted_trust_links(),
-                                    key=lambda tr: tr.other_member(whose=current_user).web_user_ref.name_surname)
+                                    key=lambda tr: tr.other_member(whose=member).web_user_ref.name_surname)
 
     page_title = f"Üye özeti: {g.member.web_user_ref.name_surname}"
     return render_template("sandik/sandik_summary_for_member_page.html",
