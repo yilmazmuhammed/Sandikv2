@@ -49,7 +49,7 @@ def create_sandik_page():
 def sandik_detail_page(sandik_id):
     member = db.get_member(sandik_ref=g.sandik, web_user_ref=current_user)
     authority = current_user.get_sandik_authority(sandik=g.sandik)
-    if not member and not authority:
+    if not member and not authority and not current_user.is_admin():
         abort(403)
     return render_template("sandik/sandik_detail_page.html",
                            page_info=LayoutPI(title="Sandık detayı", active_dropdown="sandik"))
