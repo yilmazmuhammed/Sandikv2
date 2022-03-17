@@ -158,7 +158,7 @@
             { "name": "time", "title": "Tarih", "classes": "text-center" },
           ],
           "rows": [
-          {% for tr in g.member.accepted_trust_links() %}
+          {% for tr in g.accepted_trust_links %}
             {
               "index": `<span title='ID: {{ tr.id }}'>{{ loop.index }}</span>`,
               "name_surname": `{{ tr.other_member(g.member).web_user_ref.name_surname  }}`,
