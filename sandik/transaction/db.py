@@ -156,7 +156,7 @@ def create_debt(amount, share, money_transaction, created_by, start_period=None,
         "logged_sandik_ref": money_transaction.member_ref.sandik_ref,
         "logged_share_ref": share,
     }
-    print("create_debt - amount:", amount)
+
     debt = Debt(
         amount=amount, share_ref=share,
         number_of_installment=number_of_installment, starting_term=start_period, due_term=due_term,
