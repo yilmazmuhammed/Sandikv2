@@ -42,6 +42,20 @@ def to_be_member_of_sandik_required(func):
     return decorated_view
 
 
+def to_be_member_or_manager_of_sandik_required(func):
+    @wraps(func)
+    @login_required
+    @sandik_required
+    def decorated_view(*args, **kwargs):
+        member = db.get_member(sandik_ref=g.sandik, web_user_ref=current_user)
+        if not member and not current_user.has_permission(sandik=g.sandik, permission="read"):
+            abort(403, "Bu sayfayı görüntüleme yetkiniz bulunmamaktadır")
+
+        return func(*args, **kwargs)
+
+    return decorated_view
+
+
 def sandik_authorization_required(permission):
     def sandik_authorization_required_decorator(func):
         @sandik_required
