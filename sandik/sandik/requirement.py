@@ -9,12 +9,8 @@ from sandik.sandik import db
 
 def sandik_required(func):
     @wraps(func)
-    def decorated_view(*args, **kwargs):
-
-        if not kwargs.get("sandik_id"):
-            abort(404)
-
-        sandik = db.get_sandik(id=kwargs.get("sandik_id"))
+    def decorated_view(sandik_id, *args, **kwargs):
+        sandik = db.get_sandik(id=sandik_id)
         if not sandik:
             abort(404)
 
@@ -22,7 +18,7 @@ def sandik_required(func):
         if current_user.is_authenticated:
             g.member = db.get_member(sandik_ref=g.sandik, web_user_ref=current_user)
 
-        return func(*args, **kwargs)
+        return func(sandik_id=sandik_id, *args, **kwargs)
 
     return decorated_view
 
@@ -73,16 +69,12 @@ def sandik_authorization_required(permission):
 
 def trust_relationship_required(func):
     @wraps(func)
-    def decorated_view(*args, **kwargs):
-        print(kwargs.get("trust_relationship_id"))
-        if not kwargs.get("trust_relationship_id"):
-            abort(404)
-
-        trust_relationship = db.get_trust_relationship(id=kwargs.get("trust_relationship_id"))
+    def decorated_view(trust_relationship_id, *args, **kwargs):
+        trust_relationship = db.get_trust_relationship(id=trust_relationship_id)
         if not trust_relationship:
             abort(404)
 
         g.trust_relationship = trust_relationship
-        return func(*args, **kwargs)
+        return func(trust_relationship_id=trust_relationship_id, *args, **kwargs)
 
     return decorated_view

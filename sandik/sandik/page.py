@@ -45,8 +45,6 @@ def create_sandik_page():
 
 @sandik_page_bp.route("/<int:sandik_id>/detay")
 @to_be_member_or_manager_of_sandik_required
-@login_required
-@sandik_required
 def sandik_detail_page(sandik_id):
     return render_template("sandik/sandik_detail_page.html",
                            page_info=LayoutPI(title="Sandık detayı", active_dropdown="sandik"))

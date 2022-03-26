@@ -10,12 +10,8 @@ from sandik.general import db
 def notification_required(func):
     @wraps(func)
     @login_required
-    def decorated_view(*args, **kwargs):
-
-        if not kwargs.get("notification_id"):
-            abort(404)
-
-        notification = db.get_notification(id=kwargs.get("notification_id"))
+    def decorated_view(notification_id, *args, **kwargs):
+        notification = db.get_notification(id=notification_id)
         if not notification:
             abort(404)
 
@@ -23,6 +19,6 @@ def notification_required(func):
             abort(403)
 
         g.notification = notification
-        return func(*args, **kwargs)
+        return func(notification_id=notification_id, *args, **kwargs)
 
     return decorated_view
