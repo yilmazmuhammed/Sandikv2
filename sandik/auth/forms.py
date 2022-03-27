@@ -1,10 +1,10 @@
-from wtforms import PasswordField, SubmitField, BooleanField, StringField, EmailField
-from wtforms.validators import Email
+from wtforms import PasswordField, SubmitField, BooleanField, StringField, EmailField, TelField
+from wtforms.validators import Email, Optional
 
-from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator
+from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator, PhoneNumberValidator
 
 
-class RegisterForm(CustomFlaskForm):
+class WebUserForm(CustomFlaskForm):
     name = StringField(
         label="İsim:",
         validators=[
@@ -23,6 +23,15 @@ class RegisterForm(CustomFlaskForm):
         render_kw={"placeholder": "Soyisim"}
     )
 
+    phone_number = TelField(
+        label="Telefon numarası:",
+        validators=[
+            Optional(),
+            PhoneNumberValidator("Telefon numaranızı ülke kodunu seçerek, sayılar arasında boşluk olmadan giriniz.")
+        ],
+        render_kw={"placeholder": "Telefon numarası"}
+    )
+
     email_address = EmailField(
         "E-posta adresi:",
         validators=[
@@ -33,6 +42,14 @@ class RegisterForm(CustomFlaskForm):
         render_kw={"placeholder": "Email address"}
     )
 
+    submit = SubmitField(label="Gönder")
+
+    def __init__(self, form_title='Kullanıcı formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
+        self.email_address.render_kw["readonly"] = False
+
+
+class RegisterForm(WebUserForm):
     password = PasswordField(
         "Parola:",
         validators=[
@@ -53,8 +70,22 @@ class RegisterForm(CustomFlaskForm):
 
     submit = SubmitField(label="Kayıt ol")
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(form_title='Kayıt formu', f_class="form-validation", *args, **kwargs)
+    def __init__(self, form_title='Kayıt formu', *args, **kwargs):
+        super().__init__(form_title=form_title, f_class="form-validation", *args, **kwargs)
+
+
+class UpdateWebUserForm(WebUserForm):
+    submit = SubmitField(label="Kaydet")
+
+    def __init__(self, form_title='Kayıt formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
+        self.email_address.render_kw["readonly"] = True
+
+    def fill_from_web_user(self, web_user):
+        self.email_address.data = web_user.email_address
+        self.phone_number.data = web_user.phone_number
+        self.name.data = web_user.name
+        self.surname.data = web_user.surname
 
 
 class LoginForm(CustomFlaskForm):

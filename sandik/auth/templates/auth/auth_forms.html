@@ -1,5 +1,54 @@
 {% extends "auth/auth_layout.html" %}
 
+{% block css_block %}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/16.0.4/css/intlTelInput.css">
+{% endblock %}
+
+{% block js_block %}
+  {% block js_block2 %}{% endblock %}
+  <!--------------------------------------------------------------->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/16.0.4/js/intlTelInput.min.js"></script>
+  <script>
+    let fancy_phones = {};
+    console.log("asdsad");
+    $(document)
+      .ready(function () {
+        /* ------------------------ Uluslararası telefon formatı için tel alanları ----------------------- */
+        let inputs = document.getElementsByTagName('input');
+        console.log(inputs);
+        for(let i = 0; i < inputs.length; i++) {
+          if(inputs[i].type.toLowerCase() == 'tel') {
+          console.log(inputs[i]);
+            fancy_phones[inputs[i].id] = window.intlTelInput(inputs[i], {
+              initialCountry:"tr",
+              separateDialCode: true,
+              utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/16.0.4/js/utils.js",
+            });
+          }
+        }
+        /* ------------------------------------------------------------------------------------------------ */
+
+        /* --------------------------- Form değerlerini otomatik doldurma/seçme --------------------------- */
+        let parameters = getUrlVars();
+        for(let i=0; i<parameters.length; i++){
+          console.log(parameters[i],"->",parameters[parameters[i]]);
+          $("#"+parameters[i]).val(parameters[parameters[i]]);
+        }
+        /* ------------------------------------------------------------------------------------------------ */
+      })
+      .on("submit", "form", function (){
+        /* ----------------- Uluslararası telefon formatı için tel alanları gönderilirken ----------------- */
+        let inputs = document.getElementsByTagName('input');
+        for(let i = 0; i < inputs.length; i++) {
+          if(inputs[i].type.toLowerCase() === 'tel') {
+            $("#"+inputs[i].id).val(fancy_phones[inputs[i].id].getNumber());
+          }
+        }
+        /* ------------------------------------------------------------------------------------------------ */
+      });
+  </script>
+{% endblock %}
+
 {% block content %}
   <a class="wrapper  navbar-brand block m-t">{{ page_info.title }}</a>
   <div class="m-b-lg">

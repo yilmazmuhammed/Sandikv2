@@ -2,8 +2,8 @@ from flask import Blueprint, flash, request, redirect, render_template, url_for,
 from flask_login import login_user, login_required, logout_user, current_user
 
 from sandik.auth import db, forms
-from sandik.auth.exceptions import RegisterException
-from sandik.auth.requirement import admin_required
+from sandik.auth.exceptions import RegisterException, EmailAlreadyExist
+from sandik.auth.requirement import admin_required, web_user_required
 from sandik.auth.utils import Notification
 from sandik.utils import LayoutPI
 from sandik.utils.forms import flask_form_to_dict, FormPI
@@ -87,3 +87,33 @@ def confirm_web_user_page(web_user_id):
 def block_web_user_page(web_user_id):
     db.block_web_user(web_user_id, updated_by=current_user)
     return redirect(request.referrer)
+
+
+@web_user_required
+def update_web_user_page_base(web_user_id):
+    form = forms.UpdateWebUserForm()
+
+    if not form.is_submitted():
+        form.fill_from_web_user(web_user=g.web_user)
+    elif form.validate_on_submit():
+        form_data = flask_form_to_dict(request_form=request.form, exclude=["email_address"], with_empty_fields=True)
+        try:
+            db.update_web_user(web_user=g.web_user, updated_by=current_user, **form_data)
+            flash("Kullanıcı bilgileri güncellendi", "success")
+        except EmailAlreadyExist as ex:
+            flash(u"%s" % ex, 'danger')
+    return render_template("utils/form_layout.html",
+                           page_info=FormPI(title="Site kullanıcısını güncelle", form=form,
+                                            active_dropdown="web-users"))
+
+
+@auth_page_bp.route("/kullanici/<int:web_user_id>/guncelle", methods=["GET", "POST"])
+@admin_required
+def update_web_user_page(web_user_id):
+    return update_web_user_page_base(web_user_id=web_user_id)
+
+
+@auth_page_bp.route("/bilgilerimi-guncelle", methods=["GET", "POST"])
+@login_required
+def update_profile_page():
+    return update_web_user_page_base(web_user_id=current_user.id)

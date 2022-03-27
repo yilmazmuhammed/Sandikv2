@@ -34,65 +34,65 @@
   <!-- finish -->
 </head>
 <body>
-<div class="app app-header-fixed app-aside-fixed">
+  <div class="app app-header-fixed app-aside-fixed">
 
-  {%  include 'utils/layout/top_bar.html' %}
+    {%  include 'utils/layout/top_bar.html' %}
 
-  {%  include 'utils/layout/left_menu.html' %}
+    {%  include 'utils/layout/left_menu.html' %}
 
-  <!-- content -->
-  <div id="content" class="app-content" role="main">
-  	<div class="app-content-body">
+    <!-- content -->
+    <div id="content" class="app-content" role="main">
+      <div class="app-content-body">
 
-      {% if get_flashed_messages() %}
-        <div class="wrapper-md">
-          {% for category, msg in get_flashed_messages(with_categories=true) %}
-            <div class="col-12 alert alert-{{category}} text-center" role="alert">
-              {{ msg|safe }}
-            </div>
-          {% endfor %}
-        </div>
-      {% endif %}
+        {% if get_flashed_messages() %}
+          <div class="wrapper-md">
+            {% for category, msg in get_flashed_messages(with_categories=true) %}
+              <div class="col-12 alert alert-{{category}} text-center" role="alert">
+                {{ msg|safe }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
 
-      <!-- hbox layout -->
-      <!-- block content -->
-      {% block content_block %}
-      {% endblock %}
-      <!-- finish -->
-      <!-- /hbox layout -->
+        <!-- hbox layout -->
+        <!-- block content -->
+        {% block content_block %}
+        {% endblock %}
+        <!-- finish -->
+        <!-- /hbox layout -->
 
-	  </div>
+      </div>
+    </div>
+    <!-- /content -->
+
+    {%  include 'utils/layout/footer.html' %}
+
   </div>
-  <!-- /content -->
 
-  {%  include 'utils/layout/footer.html' %}
+  <script src="{{ url_for('static', filename='angulr_template/libs/jquery/jquery/dist/jquery.js') }}"></script>
+  <script src="{{ url_for('static', filename='angulr_template/libs/jquery/bootstrap/dist/js/bootstrap.js') }}"></script>
+  <script src="{{ url_for('static', filename='angulr_template/js/ui-load.js') }}"></script>
+  <script src="{{ url_for('static', filename='angulr_template/js/ui-jp.config.js') }}"></script>
+  <script src="{{ url_for('static', filename='angulr_template/js/ui-jp.js') }}"></script>
+  <script src="{{ url_for('static', filename='angulr_template/js/ui-nav.js') }}"></script>
+  <script src="{{ url_for('static', filename='angulr_template/js/ui-toggle.js') }}"></script>
+  <script src="{{ url_for('static', filename='angulr_template/js/ui-client.js') }}"></script>
 
-</div>
+  <!-- my custom -->
+  <script src="{{ url_for('static', filename='my_custom/js/footable.js') }}"></script>
+  <script src="{{ url_for('static', filename='my_custom/js/custom.js') }}"></script>
+  <script>
+    {% if page_info.active_dropdown %}
+      setTimeout(function() {
+        $('#{{ page_info.active_dropdown }}'+'-dropdown').addClass('active');
+      }, 500);
+    {% endif %}
+  </script>
 
-<script src="{{ url_for('static', filename='angulr_template/libs/jquery/jquery/dist/jquery.js') }}"></script>
-<script src="{{ url_for('static', filename='angulr_template/libs/jquery/bootstrap/dist/js/bootstrap.js') }}"></script>
-<script src="{{ url_for('static', filename='angulr_template/js/ui-load.js') }}"></script>
-<script src="{{ url_for('static', filename='angulr_template/js/ui-jp.config.js') }}"></script>
-<script src="{{ url_for('static', filename='angulr_template/js/ui-jp.js') }}"></script>
-<script src="{{ url_for('static', filename='angulr_template/js/ui-nav.js') }}"></script>
-<script src="{{ url_for('static', filename='angulr_template/js/ui-toggle.js') }}"></script>
-<script src="{{ url_for('static', filename='angulr_template/js/ui-client.js') }}"></script>
-
-<!-- my custom -->
-<script src="{{ url_for('static', filename='my_custom/js/footable.js') }}"></script>
-<script src="{{ url_for('static', filename='my_custom/js/custom.js') }}"></script>
-<script>
-  {% if page_info.active_dropdown %}
-    setTimeout(function() {
-      $('#{{ page_info.active_dropdown }}'+'-dropdown').addClass('active');
-    }, 500);
-  {% endif %}
-</script>
-
-<!-- block js_block -->
-{% block js_block %}
-{% endblock %}
-<!-- finish -->
+  <!-- block js_block -->
+  {% block js_block %}
+  {% endblock %}
+  <!-- finish -->
 
 </body>
 </html>

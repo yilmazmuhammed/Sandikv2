@@ -405,6 +405,7 @@ class Log(db.Entity):
 
         class WEB_USER:
             first, last = 100, 199
+            UPDATE = first + 2
             CONFIRM = first + 11
             BLOCK = first + 12
             REGISTER = first + 13

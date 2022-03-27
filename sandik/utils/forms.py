@@ -81,7 +81,7 @@ def custom_json_loads(string):
 
 
 def flask_form_to_dict(request_form: MultiDict, exclude=None, boolean_fields=None, default_values=None,
-                       json_fields=None, json_loads=custom_json_loads):
+                       json_fields=None, json_loads=custom_json_loads, with_empty_fields=False):
     if default_values is None:
         default_values = {}
     if json_fields is None:
@@ -95,7 +95,9 @@ def flask_form_to_dict(request_form: MultiDict, exclude=None, boolean_fields=Non
     result = {
         key: request_form.getlist(key)[0] if len(request_form.getlist(key)) == 1 else request_form.getlist(key)
         for key in request_form
-        if key not in exclude and not (len(request_form.getlist(key)) == 1 and request_form.getlist(key)[0] == "")
+        if key not in exclude and not (
+                not with_empty_fields and len(request_form.getlist(key)) == 1 and request_form.getlist(key)[0] == ""
+        )
     }
 
     default_values.update(result)
@@ -141,7 +143,7 @@ class PhoneNumberValidator(object):
             default_codes = []
         self.default_codes = default_codes
         if not message:
-            message = u'Telefon numaranızı başında "+" olarak uluslar arası telefon numarası formatında giriniz.'
+            message = u'Telefon numaranızı başında "+" olacak şekilde, uluslar arası telefon numarası formatında giriniz.'
         self.message = message
 
     def __call__(self, form, field):
