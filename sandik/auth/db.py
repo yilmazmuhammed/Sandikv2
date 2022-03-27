@@ -2,7 +2,7 @@ from passlib.hash import pbkdf2_sha256 as hasher
 from pony.orm import flush
 
 from sandik.auth.exceptions import EmailAlreadyExist
-from sandik.utils.db_models import WebUser, Log
+from sandik.utils.db_models import WebUser, Log, get_updated_fields
 
 
 def get_web_user(password=None, **kwargs) -> WebUser:
@@ -26,13 +26,24 @@ def get_admin_web_users():
     return select_web_users(lambda wu: wu.is_admin())
 
 
-def add_web_user(email_address, password, **kwargs):
+def add_web_user(email_address, password, **kwargs) -> WebUser:
     if get_web_user(email_address=email_address):
         raise EmailAlreadyExist('Bu e-posta adresiyle daha önce kaydolunmuş.')
 
     web_user = WebUser(email_address=email_address, password_hash=hasher.hash(password), **kwargs)
     Log(web_user_ref=get_or_create_bot_user(which="anonymous"), type=Log.TYPE.WEB_USER.REGISTER,
         logged_web_user_ref=web_user)
+    return web_user
+
+
+def update_web_user(web_user, updated_by, email_address=None, **kwargs) -> WebUser:
+    if email_address and get_web_user(email_address=email_address):
+        raise EmailAlreadyExist('Bu e-posta adresiyle daha önce kaydolunmuş.')
+
+    updated_fields = get_updated_fields(new_values=kwargs, db_object=web_user)
+    Log(web_user_ref=updated_by, type=Log.TYPE.WEB_USER.UPDATE, logged_web_user_ref=web_user,
+        detail=str(updated_fields))
+    web_user.set(**kwargs)
     return web_user
 
 

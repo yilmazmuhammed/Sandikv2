@@ -11,6 +11,10 @@
   <link rel="stylesheet" href="{{ url_for("static", filename="angulr_template/css/font.css") }}" type="text/css" />
   <link rel="stylesheet" href="{{ url_for("static", filename="angulr_template/css/app.css") }}" type="text/css" />
 
+  <!-- block css_block -->
+  {% block css_block %}
+  {% endblock %}
+  <!-- finish -->
 
 </head>
 <body>
@@ -20,5 +24,16 @@
       {% endblock %}
     </div>
   </div>
+
+
+  <script src="{{ url_for('static', filename='angulr_template/libs/jquery/jquery/dist/jquery.js') }}"></script>
+
+  <!-- my custom -->
+  <script src="{{ url_for('static', filename='my_custom/js/custom.js') }}"></script>
+  <!-- block js_block -->
+  {% block js_block %}
+  {% endblock %}
+  <!-- finish -->
+
 </body>
 </html>
