@@ -78,3 +78,17 @@ def trust_relationship_required(func):
         return func(trust_relationship_id=trust_relationship_id, *args, **kwargs)
 
     return decorated_view
+
+
+def sandik_type_required(sandik_type):
+    def sandik_type_required_decorator(func):
+        @sandik_required
+        @wraps(func)
+        def decorated_view(*args, **kwargs):
+            if g.sandik.type != sandik_type:
+                abort(404, "Bulunduğunuz sandığın sandık türünde bu işlem yapılamamaktadır.")
+            return func(*args, **kwargs)
+
+        return decorated_view
+
+    return sandik_type_required_decorator

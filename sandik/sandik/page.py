@@ -11,8 +11,9 @@ from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelatio
     MembershipException, MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
     ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, to_be_member_of_sandik_required, \
-    trust_relationship_required, to_be_member_or_manager_of_sandik_required
+    trust_relationship_required, to_be_member_or_manager_of_sandik_required, sandik_type_required
 from sandik.utils import LayoutPI, get_next_url, sandik_preferences
+from sandik.utils.db_models import Sandik
 
 from sandik.utils.forms import flask_form_to_dict, FormPI
 
@@ -79,6 +80,7 @@ def sandik_index_page(sandik_id):
 
 
 @sandik_page_bp.route("/<int:sandik_id>/guven-halkam", methods=["GET", "POST"])
+@sandik_type_required(sandik_type=Sandik.TYPE.WITH_TRUST_RELATIONSHIP)
 @to_be_member_of_sandik_required
 def trust_links_page(sandik_id):
     g.accepted_trust_links = sorted(g.member.accepted_trust_links(),
@@ -87,7 +89,8 @@ def trust_links_page(sandik_id):
                            page_info=LayoutPI(title="Güven halkam", active_dropdown="sandik"))
 
 
-@sandik_page_bp.route("/<int:sandik_id>/u-<int:member_id>/gb-gonder", methods=["GET", "POST"])
+@sandik_page_bp.route("/<int:sandik_id>/u-<int:member_id>/gb-gonder")
+@sandik_type_required(sandik_type=Sandik.TYPE.WITH_TRUST_RELATIONSHIP)
 @to_be_member_of_sandik_required
 def send_request_trust_link_page(sandik_id, member_id):
     receiver_member = db.get_member(id=member_id, sandik_ref=g.sandik)
@@ -96,7 +99,7 @@ def send_request_trust_link_page(sandik_id, member_id):
 
     try:
         trust_relationship = db.create_trust_relationship(requester_member=g.member, receiver_member=receiver_member,
-                                                          requested_by=current_user)
+                                                          created_by=current_user)
         utils.send_notification_for_trust_relationship(trust_relationship=trust_relationship)
     except TrustRelationshipAlreadyExist:
         flash("Bu üyeyle zaten aranızda bekleyen veya onaylanmış bir güven bağı var.", "warning")
@@ -107,7 +110,8 @@ def send_request_trust_link_page(sandik_id, member_id):
 
 
 @sandik_page_bp.route("/<int:sandik_id>/gb-<int:trust_relationship_id>/onayla")
-@login_required
+@sandik_type_required(sandik_type=Sandik.TYPE.WITH_TRUST_RELATIONSHIP)
+@to_be_member_of_sandik_required
 @trust_relationship_required
 def accept_trust_relationship_request_page(sandik_id, trust_relationship_id):
     if g.trust_relationship.receiver_member_ref.web_user_ref != current_user:
@@ -118,11 +122,13 @@ def accept_trust_relationship_request_page(sandik_id, trust_relationship_id):
 
 
 @sandik_page_bp.route("/<int:sandik_id>/gb-<int:trust_relationship_id>/kaldir")
+@sandik_type_required(sandik_type=Sandik.TYPE.WITH_TRUST_RELATIONSHIP)
+@to_be_member_of_sandik_required
 @trust_relationship_required
 def remove_trust_relationship_request_page(sandik_id, trust_relationship_id):
     if current_user not in [g.trust_relationship.receiver_member_ref.web_user_ref,
                             g.trust_relationship.requester_member_ref.web_user_ref]:
-        abort(403)
+        abort(403, "Başkasının güven bağını kaldıramazsınız")
 
     db.remove_trust_relationship_request(trust_relationship=g.trust_relationship, rejected_by=current_user)
     return redirect(request.referrer)

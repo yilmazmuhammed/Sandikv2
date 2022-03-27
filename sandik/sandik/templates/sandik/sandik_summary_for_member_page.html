@@ -346,13 +346,18 @@
 
       <!-- Güven halkam -->
       <div class="col-md-3 col-md-offset-1">
+
         <!-- Güven halkam -->
         <div class="panel panel-default">
           <div class="panel-heading font-bold">
-            {% if g.type == "member" %}
-            <span>Güven halkam</span>
-            {% elif g.type == "management" %}
-            <span>Üyenin güven halkası</span>
+            {% if g.sandik.is_type_with_trust_relationship() %}
+              {% if g.type == "member" %}
+              <span>Güven halkam</span>
+              {% elif g.type == "management" %}
+              <span>Üyenin güven halkası</span>
+              {% endif %}
+            {% else %}
+            <span>Sandık son durumu</span>
             {% endif %}
           </div>
           <div>
@@ -411,6 +416,7 @@
     </div>
 
     {% if g.type == "management" %}
+      <!-- Hisseler -->
       <div class="row">
 
         <!-- Hisseler -->
@@ -432,34 +438,37 @@
 
       </div>
 
-      <!-- Güven halkası -->
-      <div class="row">
+      {% if g.sandik.is_type_with_trust_relationship() %}
+        <!-- Güven halkası -->
+        <div class="row">
 
-        <!-- Güven bağı istekleri -->
-        <div class="col-md-6">
-          <div class="panel panel-default">
-            <div class="panel-heading font-bold">
-              <span>Güven bağı istekleri</span>
-            </div>
-            <div>
-              <table id="waiting-trust-links-table" class="table"></table>
+          <!-- Güven bağı istekleri -->
+          <div class="col-md-6">
+            <div class="panel panel-default">
+              <div class="panel-heading font-bold">
+                <span>Güven bağı istekleri</span>
+              </div>
+              <div>
+                <table id="waiting-trust-links-table" class="table"></table>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Güven halkam -->
-        <div class="col-md-6">
-          <div class="panel panel-default">
-            <div class="panel-heading font-bold">
-              <span>Güven halkam</span>
-            </div>
-            <div>
-              <table id="accepted-trust-links-table" class="table"></table>
+          <!-- Güven halkam -->
+          <div class="col-md-6">
+            <div class="panel panel-default">
+              <div class="panel-heading font-bold">
+                <span>Güven halkam</span>
+              </div>
+              <div>
+                <table id="accepted-trust-links-table" class="table"></table>
+              </div>
             </div>
           </div>
-        </div>
 
-      </div>
+        </div>
+      {% endif %}
+    
     {% endif %}
 
   </div>

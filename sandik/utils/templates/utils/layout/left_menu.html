@@ -29,11 +29,13 @@
                       <span>Özet</span>
                     </a>
                   </li>
+                  {% if g.sandik.is_type_with_trust_relationship() %}
                   <li>
                     <a href="{{ url_for('sandik_page_bp.trust_links_page', sandik_id=g.sandik.id) }}">
                       <span>Güven halkam</span>
                     </a>
                   </li>
+                  {% endif %}
                   <li>
                     <a href="{{ url_for('sandik_page_bp.sandik_detail_page', sandik_id=g.sandik.id) }}">
                       <span>Sandık detayı</span>

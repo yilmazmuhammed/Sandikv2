@@ -7,6 +7,7 @@ from wtforms.validators import NumberRange, Optional, Email
 from sandik.auth import db as auth_db
 from sandik.sandik import db
 from sandik.utils import sandik_preferences
+from sandik.utils.db_models import Sandik
 from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator
 
 
@@ -18,6 +19,15 @@ class SandikForm(CustomFlaskForm):
             max_length_validator("Sandık ismi", 100),
         ],
         id='name', render_kw={"placeholder": "Sandık ismi"}
+    )
+
+    type = SelectField(
+        label="Sandık türü:",
+        validators=[
+            input_required_validator("Sandık türü:"),
+        ],
+        choices=[("", "Sandık türünü seçiniz...")],
+        coerce=str,
     )
 
     # TODO IntegerField html5'ten import edilse nasıl oluyor
@@ -43,6 +53,7 @@ class SandikForm(CustomFlaskForm):
 
     def __init__(self, form_title='Kayıt formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
+        self.type.choices += list(Sandik.TYPE.strings.items())
 
 
 class SelectSandikForm(CustomFlaskForm):
