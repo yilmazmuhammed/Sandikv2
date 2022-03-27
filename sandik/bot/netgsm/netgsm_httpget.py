@@ -15,6 +15,7 @@ class NetGsmHttpGetApi:
         self.languages = ["TR"]
 
     def send_sms(self, message=None, phone_numbers=None, message_packages=None, message_header=None, language="TR"):
+        print(phone_numbers)
         if not message:
             raise Exception("'message' cannot be empty")
         if message_packages or len(phone_numbers) > 1:
