@@ -271,7 +271,7 @@ def membership_applications_to_sandik_page(sandik_id):
                            page_info=LayoutPI(title="Üyelik başvuruları", active_dropdown="members"))
 
 
-@sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/ozet", methods=["GET", "POST"])
+@sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/ozet")
 @sandik_authorization_required(permission="read")
 def member_summary_for_management_page(sandik_id, member_id):
     member = db.get_member(id=member_id, sandik_ref=g.sandik)
@@ -391,7 +391,7 @@ def create_sandik_authority_page(sandik_id):
     )
 
 
-@sandik_page_bp.route("/<int:sandik_id>/sandik-yetkileri/<int:sandik_authority_id>/sil", methods=["GET", "POST"])
+@sandik_page_bp.route("/<int:sandik_id>/sandik-yetkileri/<int:sandik_authority_id>/sil")
 @sandik_authorization_required(permission="admin")
 def delete_sandik_authority_page(sandik_id, sandik_authority_id):
     authority = db.get_sandik_authority(id=sandik_authority_id, sandik_ref=g.sandik)
@@ -445,7 +445,7 @@ def add_authorized_to_sandik_page(sandik_id):
     )
 
 
-@sandik_page_bp.route("/<int:sandik_id>/sandik-yetkilileri/<int:web_user_id>/kaldir", methods=["GET", "POST"])
+@sandik_page_bp.route("/<int:sandik_id>/sandik-yetkilileri/<int:web_user_id>/kaldir")
 @sandik_authorization_required(permission="admin")
 @web_user_required
 def remove_authorized_from_sandik_page(sandik_id, web_user_id):
@@ -455,6 +455,27 @@ def remove_authorized_from_sandik_page(sandik_id, web_user_id):
 
     db.delete_authorized_from_sandik(sandik_authority=authority, web_user=g.web_user, removed_by=current_user)
     return redirect(request.referrer)
+
+
+"""
+########################################################################################################################
+##############################################  Sms bildirimi sayfaları   ##############################################
+########################################################################################################################
+"""
+
+
+@sandik_page_bp.route("/<int:sandik_id>/sms-gonder", methods=["GET", "POST"])
+@sandik_authorization_required(permission="write")
+def send_sms_page(sandik_id):
+    form = forms.SendSmsForm()
+
+    if form.validate_on_submit():
+        form_data = flask_form_to_dict(request_form=request.form)
+        utils.send_sms_from_sandik(sandik=g.sandik, created_by=current_user, **form_data)
+        return redirect(url_for("sandik_page_bp.send_sms_page", sandik_id=sandik_id))
+
+    return render_template("utils/form_layout.html",
+                           page_info=FormPI(title="Sandık üyelerine SMS gönder", form=form, active_dropdown='sms'))
 
 
 """

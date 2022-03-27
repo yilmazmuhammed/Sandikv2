@@ -15,6 +15,7 @@ class THOUSANDS:
     TrustRelationshipException = 21
     MembershipException = 22
     SandikAuthorityException = 23
+    SmsPackageException = 24
     BankAccountException = 30
     AuthException = 40
 

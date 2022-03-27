@@ -1,13 +1,16 @@
+import os
+
 from flask import url_for
 
+from sandik.bot.sms import SmsBot
 from sandik.general import db as general_db
 from sandik.sandik import db
 from sandik.sandik.exceptions import MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
-    ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException
+    ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException, InvalidSmsType
 from sandik.sandik.exceptions import UpdateMemberException
 from sandik.transaction import utils as transaction_utils, db as transaction_db
 from sandik.utils import period as period_utils, sandik_preferences
-from sandik.utils.db_models import Member, Share, MoneyTransaction
+from sandik.utils.db_models import Member, Share, MoneyTransaction, SmsPackage
 
 
 def add_share_to_member(member, added_by, **kwargs):
@@ -51,6 +54,25 @@ def confirm_membership_application(sandik, web_user, confirmed_by):
                               contribution_amount=sandik.contribution_amount)
     add_share_to_member(member=member, added_by=confirmed_by)
     return member
+
+
+def send_sms_from_sandik(sandik, sms_type, created_by):
+    if int(sms_type) == SmsPackage.TYPE.SANDIK.THERE_IS_UNCONFIRMED_TRUST_RELATIONSHIP_REQUEST:
+        text = f"{sandik.name.upper()}\n" \
+               f"Bekleyen güven bağı isteğiniz var. İncelemek ve onaylamak için: " \
+               f"{url_for('sandik_page_bp.trust_links_page', sandik_id=sandik.id, _external=True)}"
+        web_users = []
+        for member in sandik.get_active_members():
+            if member.waiting_trust_links().count() > 0:
+                web_users.append(member.web_user_ref)
+    else:
+        raise InvalidSmsType("Geçersiz sms türü girildi. Lütfen sms türünü listeden seçiniz.")
+    sms_package = db.create_sms_package(text=text, header=os.getenv("SMS_BOT_DEFAULT_MESSAGE_HEADER"),
+                                        sandik_ref=sandik, web_users_set=web_users,
+                                        type=sms_type, created_by=created_by)
+    sms_bot = SmsBot()
+    sms_bot.send_sms_package(sms_package=sms_package)
+    return sms_package
 
 
 class Notification:
