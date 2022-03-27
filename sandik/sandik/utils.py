@@ -63,7 +63,7 @@ def send_sms_from_sandik(sandik, sms_type, created_by):
                f"{url_for('sandik_page_bp.trust_links_page', sandik_id=sandik.id, _external=True)}"
         web_users = []
         for member in sandik.get_active_members():
-            if member.waiting_trust_links().count() > 0:
+            if member.waiting_received_trust_relationships_request().count() > 0:
                 web_users.append(member.web_user_ref)
     else:
         raise InvalidSmsType("Geçersiz sms türü girildi. Lütfen sms türünü listeden seçiniz.")

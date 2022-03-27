@@ -248,6 +248,10 @@ class Member(db.Entity):
                       if (t.requester_member_ref == self or t.receiver_member_ref == self)
                       and t.status == TrustRelationship.STATUS.WAITING)
 
+    def waiting_received_trust_relationships_request(self):
+        return select(t for t in TrustRelationship
+                      if t.receiver_member_ref == self and t.status == TrustRelationship.STATUS.WAITING)
+
     def total_balance_from_accepted_trust_links(self):
         amount = 0
         amount += self.get_balance()
