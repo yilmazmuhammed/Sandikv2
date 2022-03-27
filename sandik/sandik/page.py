@@ -11,7 +11,7 @@ from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelatio
     MembershipException, MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
     ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, to_be_member_of_sandik_required, \
-    trust_relationship_required
+    trust_relationship_required, to_be_member_or_manager_of_sandik_required
 from sandik.utils import LayoutPI, get_next_url, sandik_preferences
 
 from sandik.utils.forms import flask_form_to_dict, FormPI
@@ -44,13 +44,8 @@ def create_sandik_page():
 
 
 @sandik_page_bp.route("/<int:sandik_id>/detay")
-@login_required
-@sandik_required
+@to_be_member_or_manager_of_sandik_required
 def sandik_detail_page(sandik_id):
-    member = db.get_member(sandik_ref=g.sandik, web_user_ref=current_user)
-    authority = current_user.get_sandik_authority(sandik=g.sandik)
-    if not member and not authority and not current_user.is_admin():
-        abort(403, "Bu sayfayı görüntüleme yetkiniz bulunmamaktadır")
     return render_template("sandik/sandik_detail_page.html",
                            page_info=LayoutPI(title="Sandık detayı", active_dropdown="sandik"))
 
@@ -83,7 +78,7 @@ def sandik_index_page(sandik_id):
 """
 
 
-@sandik_page_bp.route("/<int:sandik_id>/güven-halkam", methods=["GET", "POST"])
+@sandik_page_bp.route("/<int:sandik_id>/guven-halkam", methods=["GET", "POST"])
 @to_be_member_of_sandik_required
 def trust_links_page(sandik_id):
     g.accepted_trust_links = sorted(g.member.accepted_trust_links(),

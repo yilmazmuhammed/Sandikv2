@@ -29,7 +29,7 @@ class MoneyTransaction(db.Entity):
     amount = Required(Decimal)
     detail = Optional(str)
     type = Required(int)
-    is_fully_distributed = Required(bool)  # MoneyTransaction amount ile SubReceipts amountları toplamı eşit ise True
+    is_fully_distributed = Required(bool, default=False)  # MoneyTransaction amount ile SubReceipts amountları toplamı eşit ise True
     creation_type = Required(int)
     bank_transaction_ref = Optional(BankTransaction)
     logs_set = Set('Log')
@@ -344,6 +344,9 @@ class WebUser(db.Entity, UserMixin):
         if permission not in ["write", "read", "admin"]:
             raise Exception("Yanlış izin yetkisi girildi")
 
+        if self.is_admin():
+            return True
+
         authority = self.get_sandik_authority(sandik=sandik)
         if not authority:
             return False
@@ -486,7 +489,7 @@ class Log(db.Entity):
 class Sandik(db.Entity):
     id = PrimaryKey(int, auto=True)
     name = Required(str)
-    contribution_amount = Optional(Decimal, default=0)
+    contribution_amount = Required(Decimal, default=0)
     is_active = Required(bool, default=True)
     date_of_opening = Required(date, default=lambda: date.today())
     applicant_web_users_set = Set(WebUser)
@@ -595,11 +598,11 @@ class SandikAuthorityType(db.Entity):
     id = PrimaryKey(int, auto=True)
     name = Required(str)
     is_admin = Required(bool, default=False)
+    can_read = Required(bool, default=False)
+    can_write = Required(bool, default=False)
     logs_set = Set(Log)
     web_users_set = Set(WebUser)
     sandik_ref = Required(Sandik)
-    can_read = Required(bool, default=False)
-    can_write = Required(bool, default=False)
     # TODO Aynı sandıkta bir kullanıcının bir yetkisi olabilir
     # TODO before_update acaba Set'e eleman eklenirken de çalışıyor mu???
 
@@ -692,9 +695,9 @@ class Installment(db.Entity):
     amount = Required(Decimal)
     term = Required(str)
     is_fully_paid = Required(bool, default=False)
-    logs_set = Set(Log)
-    sub_receipts_set = Set('SubReceipt')
     debt_ref = Required(Debt)
+    sub_receipts_set = Set('SubReceipt')
+    logs_set = Set(Log)
 
     @property
     def share_ref(self):
