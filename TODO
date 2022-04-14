@@ -32,6 +32,8 @@ TODO    MINOR   Hisse silinmesinde sandık yöneticilerine bildirim gönder
 
 TODO    MINOR   Form hatası olunca birden fazla hata mesajı gösteriliyor
 
+TODO    MAJOR   Alert mesaj kutusu oluştur
+
 4- Banka entegrasyonu
 
 5- Performans iyileştirmeleri
