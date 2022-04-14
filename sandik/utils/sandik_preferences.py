@@ -7,6 +7,8 @@ from sandik.utils.db_models import Share, Member
 
 
 def max_number_of_installment(sandik, amount):
+    if amount <= 0:
+        return 0
     if 1 <= amount <= 2500:
         return 5
     elif 2501 <= amount <= 10000:

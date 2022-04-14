@@ -132,6 +132,10 @@ class Share(db.Entity):
     def get_unpaid_debts(self):
         return select(d for d in Debt if d.share_ref == self and d.get_unpaid_amount() > 0)
 
+    @property
+    def sandik_ref(self):
+        return self.member_ref.sandik_ref
+
 
 class Member(db.Entity):
     id = PrimaryKey(int, auto=True)
@@ -256,7 +260,7 @@ class Member(db.Entity):
             amount += link.other_member(whose=self).get_balance()
         return amount
 
-    def max_amount_can_borrow(self, use_untreated_amount):
+    def max_amount_can_borrow(self, use_untreated_amount=False):
         amount = self.total_balance_from_accepted_trust_links()
 
         from sandik.utils import sandik_preferences
