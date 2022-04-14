@@ -441,6 +441,7 @@ class Log(db.Entity):
         class DEBT:
             first, last = 600, 699
             CREATE = first + 1
+            DELETE = first + 3
 
         class INSTALLMENT:
             first, last = 700, 799
@@ -449,6 +450,7 @@ class Log(db.Entity):
         class PIECE_OF_DEBT:
             first, last = 800, 899
             CREATE = first + 1
+            DELETE = first + 3
 
         class CONTRIBUTION:
             first, last = 900, 999
@@ -477,6 +479,11 @@ class Log(db.Entity):
             first, last = 1300, 1399
             CREATE = first + 1
             UPDATE = first + 2
+
+        class RETRACTED:
+            first, last = 1400, 1499
+            CREATE = first + 1
+            DELETE = first + 3
 
         class LOG_LEVEL:
             first, last = 10000, 10099

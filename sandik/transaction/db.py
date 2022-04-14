@@ -98,7 +98,7 @@ def create_installments_of_debt(debt, created_by):
     return debt.installments_set
 
 
-def create_piece_of_debts(debt, created_by):
+def create_pieces_of_debt(debt, created_by):
     debt_amount = debt.amount
 
     member = debt.share_ref.member_ref
@@ -162,11 +162,11 @@ def create_debt(amount, share, money_transaction, created_by, start_period=None,
         number_of_installment=number_of_installment, starting_term=start_period, due_term=due_term,
         logs_set=Log(web_user_ref=created_by, type=Log.TYPE.DEBT.CREATE, **logged_ref_items),
         sub_receipt_ref=create_sub_receipt(money_transaction=money_transaction, amount=amount, is_auto=True,
-                                           created_by=created_by)
+                                           created_by=created_by, share_ref=share)
     )
 
     create_installments_of_debt(debt=debt, created_by=created_by)
-    create_piece_of_debts(debt=debt, created_by=created_by)
+    create_pieces_of_debt(debt=debt, created_by=created_by)
     return debt
 
 
@@ -200,7 +200,7 @@ def delete_sub_receipt(sub_receipt, removed_by):
     installment = sub_receipt.installment_ref
     money_transaction = sub_receipt.money_transaction_ref
     amount = sub_receipt.amount
-    flush()
+    # flush()
 
     Log(web_user_ref=removed_by, type=Log.TYPE.SUB_RECEIPT.DELETE, detail=str(sub_receipt.to_dict()),
         **logged_ref_items)
@@ -241,6 +241,75 @@ def delete_contribution(contribution, removed_by):
     for log in contribution.logs_set:
         log.detail += f", deleted_contribution_id: {contribution.id}"
     contribution.delete()
+
+
+def delete_piece_of_debt(piece_of_debt, removed_by):
+    logged_ref_items = {
+        "logged_member_ref": piece_of_debt.member_ref,
+        "logged_debt_ref": piece_of_debt.debt_ref,
+        "logged_sandik_ref": piece_of_debt.member_ref.sandik_ref,
+    }
+    Log(web_user_ref=removed_by, type=Log.TYPE.PIECE_OF_DEBT.DELETE, detail=str(piece_of_debt.to_dict()),
+        **logged_ref_items)
+    for log in piece_of_debt.logs_set:
+        log.detail += f", deleted_piece_of_debt_id: {piece_of_debt.id}"
+    piece_of_debt.delete()
+
+
+def delete_installment(installment, removed_by):
+    logged_ref_items = {
+        "logged_share_ref": installment.debt_ref.share_ref,
+        "logged_member_ref": installment.debt_ref.share_ref.member_ref,
+        "logged_sandik_ref": installment.debt_ref.share_ref.member_ref.sandik_ref,
+        "logged_debt_ref": installment.debt_ref,
+    }
+    Log(web_user_ref=removed_by, type=Log.TYPE.PIECE_OF_DEBT.DELETE, detail=str(installment.to_dict()),
+        **logged_ref_items)
+    for log in installment.logs_set:
+        log.detail += f", deleted_installment_id: {installment.id}"
+    installment.delete()
+
+
+def delete_installments_of_debt(debt, removed_by):
+    for installment in debt.installments_set:
+        delete_installment(installment=installment, removed_by=removed_by)
+
+
+def delete_pieces_of_debt(debt, removed_by):
+    for pod in debt.piece_of_debts_set:
+        delete_piece_of_debt(piece_of_debt=pod, removed_by=removed_by)
+
+
+def delete_debt(debt, removed_by):
+    delete_sub_receipt(sub_receipt=debt.sub_receipt_ref, removed_by=removed_by)
+
+    delete_installments_of_debt(debt=debt, removed_by=removed_by)
+    delete_pieces_of_debt(debt=debt, removed_by=removed_by)
+
+    logged_ref_items = {
+        "logged_share_ref": debt.share_ref,
+        "logged_member_ref": debt.share_ref.member_ref,
+        "logged_sandik_ref": debt.share_ref.member_ref.sandik_ref,
+    }
+    Log(web_user_ref=removed_by, type=Log.TYPE.DEBT.DELETE, detail=str(debt.to_dict()), **logged_ref_items)
+    for log in debt.logs_set:
+        log.detail += f", deleted_debt_id: {debt.id}"
+    debt.delete()
+
+
+def delete_retracted(retracted, removed_by):
+    delete_sub_receipt(sub_receipt=retracted.revenue_sub_receipt_ref, removed_by=removed_by)
+    delete_sub_receipt(sub_receipt=retracted.expense_sub_receipt_ref, removed_by=removed_by)
+    logged_ref_items = {
+        "logged_share_ref": retracted.revenue_sub_receipt_ref.share_ref,
+        "logged_member_ref": retracted.revenue_sub_receipt_ref.share_ref.member_ref,
+        "logged_sandik_ref": retracted.revenue_sub_receipt_ref.share_ref.member_ref.sandik_ref,
+    }
+    Log(web_user_ref=removed_by, type=Log.TYPE.RETRACTED.DELETE, detail=str(retracted.to_dict()),
+        **logged_ref_items)
+    for log in retracted.logs_set:
+        log.detail += f", deleted_retracted_id: {retracted.id}"
+    retracted.delete()
 
 
 def get_contribution(*args, **kwargs) -> Contribution:

@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, abort
+from flask import Blueprint, jsonify, request
 
 from sandik.sandik import db
 from sandik.sandik.requirement import sandik_authorization_required

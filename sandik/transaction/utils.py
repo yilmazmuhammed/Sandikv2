@@ -1,7 +1,7 @@
 from pony.orm import desc, flush  # ponyorm order_by icin lambda string'inde 'desc' fonksiyonukullaniliyor
 
 from sandik.transaction import db
-from sandik.transaction.exceptions import UndefinedRemoveOperation
+from sandik.transaction.exceptions import InvalidRemoveOperation
 from sandik.utils import period as period_utils
 from sandik.utils.db_models import Share, Member, MoneyTransaction, Contribution, Installment, Sandik, Debt, Log, \
     WebUser
@@ -359,23 +359,42 @@ def remove_sub_receipt_from_installment(sub_receipt, removed_by):
     return db.delete_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
 
 
+def remove_debt_and_its_sub_receipt(debt, removed_by):
+    # SubReceipt db.delete_debt fonksiyonunun  içinde siliniyor
+    db.delete_debt(debt=debt, removed_by=removed_by)
+
+
+def remove_retracted_and_its_sub_receipts(retracted, removed_by):
+    # SubReceipt'ler db.delete_retracted fonksiyonunun  içinde siliniyor
+    db.delete_retracted(retracted=retracted, removed_by=removed_by)
+
+
 def remove_sub_receipt(sub_receipt, removed_by):
     if sub_receipt.contribution_ref:
         remove_sub_receipt_from_contribution(sub_receipt=sub_receipt, removed_by=removed_by)
     elif sub_receipt.installment_ref:
         remove_sub_receipt_from_installment(sub_receipt=sub_receipt, removed_by=removed_by)
+    elif sub_receipt.debt_ref:
+        if sub_receipt.debt_ref.get_paid_amount() > 0:
+            raise InvalidRemoveOperation("Bir miktarı veya tamamı ödenen borçlar silinemez!")
+        remove_debt_and_its_sub_receipt(debt=sub_receipt.debt_ref, removed_by=removed_by)
+    elif sub_receipt.expense_retracted_ref or sub_receipt.revenue_retracted_ref:
+        remove_retracted_and_its_sub_receipts(
+            retracted=sub_receipt.expense_retracted_ref or sub_receipt.revenue_retracted_ref, removed_by=removed_by
+        )
     else:
-        raise UndefinedRemoveOperation("Tanımlanmamış sub receipt silme işlemi")
+        raise InvalidRemoveOperation("Tanımlanmamış sub receipt silme işlemi")
 
 
-def remove_money_transaction(money_transaction, removed_by):
+def remove_money_transaction(money_transaction: MoneyTransaction, removed_by):
     member = money_transaction.member_ref
-    flush()  # TODO acaba neden bunu koymuşum??
+    # db.delete_money_transaction fonksiyonu çağrıldıktan sonra member'i elimizde tutabilmek için flush() çağrılıyor
+    flush()
     for sub_receipt in money_transaction.sub_receipts_set:
         remove_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
     db.delete_money_transaction(money_transaction=money_transaction, removed_by=removed_by)
 
-    # Bir para işlemi silinince ödenmiş olan bazı ödemeler, ödenmemiş durumuna geçebilir.
+    # Bir para işlemi silinince ödenmiş olan bazı ödemeler, ödenmemiş durumuna geçebilir. (veya tam tersi)
     # Bu durumda üyenin işleme konmamış parası varsa bu parayla ödemeler tekrar ödenmelidir
     pay_unpaid_payments_from_untreated_amount_for_member(member=member, pay_future_payments=False,
                                                          created_by=removed_by)
