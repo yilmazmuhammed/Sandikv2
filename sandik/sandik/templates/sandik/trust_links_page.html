@@ -11,8 +11,8 @@
           { "name": "index", "title": "#", "classes": "text-center font-bold", },
           { "name": "name_surname", "title": "Üye", },
           {# { "name": "status", "title": "Durum", "classes": "text-center" }, #}
-          { "name": "time", "title": "İstek tarihi", "classes": "text-center" },
-          { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+          { "name": "time", "title": "İstek tarihi", "classes": "text-center", "breakpoints": "xs sm md" },
+          { "name": "actions", "title": "", },
         ],
         "rows": [
         {% for member in g.sandik.get_active_members().order_by("lambda m: m.web_user_ref.name_surname") %}
