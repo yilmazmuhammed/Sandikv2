@@ -360,6 +360,10 @@
                 <td>{% if g.member.is_active %}Aktif{% else %}Pasif{% endif %}</td>
               </tr>
               <tr class="row">
+                <th>Telefon numarası:</th>
+                <td>{{ g.member.web_user_ref.phone_number }}</td>
+              </tr>
+              <tr class="row">
                 <th>Birincil<br>banka hesabı:</th>
                 <td>
                   {% if g.member.web_user_ref.get_primary_bank_account() %}

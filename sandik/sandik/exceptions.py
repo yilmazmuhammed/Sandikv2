@@ -115,3 +115,16 @@ class ThereIsNotAuthorizedOfSandik(SandikAuthorityException):
 
 class ThereIsNoSandik(SandikException):
     pass
+
+
+class SmsPackageException(SandikException):
+    ERRCODE_THOUSAND = THOUSANDS.SmsPackageException
+
+    def __init__(self, msg="", errcode=1, create_log=True, **kwargs):
+        super().__init__(msg=msg, errcode=errcode, create_log=create_log,
+                         errcode_thousand=kwargs.pop("errcode_thousand", self.ERRCODE_THOUSAND),
+                         **kwargs)
+
+
+class InvalidSmsType(SmsPackageException):
+    pass
