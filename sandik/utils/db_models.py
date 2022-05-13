@@ -132,6 +132,10 @@ class Share(db.Entity):
     def get_unpaid_debts(self):
         return select(d for d in Debt if d.share_ref == self and d.get_unpaid_amount() > 0)
 
+    @property
+    def sandik_ref(self):
+        return self.member_ref.sandik_ref
+
 
 class Member(db.Entity):
     id = PrimaryKey(int, auto=True)
@@ -248,6 +252,10 @@ class Member(db.Entity):
                       if (t.requester_member_ref == self or t.receiver_member_ref == self)
                       and t.status == TrustRelationship.STATUS.WAITING)
 
+    def waiting_received_trust_relationships_request(self):
+        return select(t for t in TrustRelationship
+                      if t.receiver_member_ref == self and t.status == TrustRelationship.STATUS.WAITING)
+
     def total_balance_from_accepted_trust_links(self):
         amount = 0
         amount += self.get_balance()
@@ -256,7 +264,7 @@ class Member(db.Entity):
             amount += link.other_member(whose=self).get_balance()
         return amount
 
-    def max_amount_can_borrow(self, use_untreated_amount):
+    def max_amount_can_borrow(self, use_untreated_amount=False):
         amount = self.total_balance_from_accepted_trust_links()
 
         from sandik.utils import sandik_preferences
@@ -312,6 +320,7 @@ class WebUser(db.Entity, UserMixin):
     sandik_authority_types_set = Set('SandikAuthorityType')
     members_set = Set(Member)
     notifications_set = Set('Notification')
+    sms_packages_set = Set('SmsPackage')
 
     @property
     def is_active(self):
@@ -381,6 +390,7 @@ class Log(db.Entity):
     logged_share_ref = Optional(Share)
     logged_member_ref = Optional(Member)
     logged_sandik_ref = Optional('Sandik')
+    logged_sms_package_ref = Optional('SmsPackage')
     logged_web_user_ref = Optional(WebUser, reverse='logs_set')
     logged_sandik_authority_type_ref = Optional('SandikAuthorityType')
     logged_trust_relationship_ref = Optional('TrustRelationship')
@@ -478,6 +488,10 @@ class Log(db.Entity):
             CREATE = first + 1
             UPDATE = first + 2
 
+        class SMS_PACKAGE:
+            first, last = 1400, 1499
+            CREATE = first + 1
+
         class LOG_LEVEL:
             first, last = 10000, 10099
             INFO = first + 11
@@ -498,6 +512,7 @@ class Sandik(db.Entity):
     bank_accounts_set = Set('BankAccount')
     members_set = Set(Member)
     sandik_authority_types_set = Set('SandikAuthorityType')
+    sms_packages_set = Set('SmsPackage')
     type = Required(int)
 
     class TYPE:
@@ -861,6 +876,35 @@ class Retracted(db.Entity):
     @property
     def sandik_ref(self):
         return self.member_ref.sandik_ref
+
+
+class SmsPackage(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    text = Required(str)
+    header = Required(str)
+    type = Required(int)
+    status = Required(int, default=1)
+    web_users_set = Set(WebUser)
+    external_api_task_id = Optional(str)
+    logs_set = Set(Log)
+    sandik_ref = Optional(Sandik)
+
+    class TYPE:
+        class SANDIK:
+            THERE_IS_UNCONFIRMED_TRUST_RELATIONSHIP_REQUEST = 101
+
+        strings = {SANDIK.THERE_IS_UNCONFIRMED_TRUST_RELATIONSHIP_REQUEST: "Bekleyen güven bağı isteğiniz var"}
+
+    class STATUS:
+        SMS_PACKAGE_CREATED = 1
+
+    DYNAMIC_FIELDS = ['{name_surname}']
+
+    def is_n_to_n(self):
+        for field in self.DYNAMIC_FIELDS:
+            if field in self.text:
+                return True
+        return False
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")

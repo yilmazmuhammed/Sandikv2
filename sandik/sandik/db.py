@@ -5,7 +5,7 @@ from pony.orm import flush, select
 from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelationshipCreationException, \
     MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, ThereIsNotSandikAuthority
 from sandik.utils.db_models import Sandik, Log, SandikAuthorityType, Member, Share, TrustRelationship, \
-    get_updated_fields
+    get_updated_fields, SmsPackage
 
 
 def save():
@@ -207,6 +207,18 @@ def remove_trust_relationship_request(trust_relationship, rejected_by):
 
 def get_trust_relationship(**kwargs) -> TrustRelationship:
     return TrustRelationship.get(**kwargs)
+
+
+"""
+########################################################################################################################
+############################################  Sms bildirimi fonksiyonları   ############################################
+########################################################################################################################
+"""
+
+
+def create_sms_package(created_by, **kwargs) -> SmsPackage:
+    log = Log(web_user_ref=created_by, type=Log.TYPE.SMS_PACKAGE.CREATE)
+    return SmsPackage(logs_set=log, **kwargs)
 
 
 """

@@ -7,7 +7,7 @@ from wtforms.validators import NumberRange, Optional, Email
 from sandik.auth import db as auth_db
 from sandik.sandik import db
 from sandik.utils import sandik_preferences
-from sandik.utils.db_models import Sandik
+from sandik.utils.db_models import Sandik, SmsPackage
 from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator
 
 
@@ -274,7 +274,6 @@ class EditMemberForm(CustomFlaskForm):
 
 
 class AddShareForm(CustomFlaskForm):
-
     share_order_of_member = IntegerField(
         label="Hisse no:",
         render_kw={"disabled": ""},
@@ -292,3 +291,20 @@ class AddShareForm(CustomFlaskForm):
 
     def __init__(self, form_title='Hisse ekleme formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
+
+
+class SendSmsForm(CustomFlaskForm):
+    sms_type = SelectField(
+        label="Sms türü:",
+        validators=[
+            input_required_validator("Sms türü:"),
+        ],
+        choices=[("", "Sms türünü seçiniz...")],
+        coerce=str,
+    )
+
+    submit = SubmitField(label="Gönder")
+
+    def __init__(self, form_title='Hisse ekleme formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
+        self.sms_type.choices += list(SmsPackage.TYPE.strings.items())

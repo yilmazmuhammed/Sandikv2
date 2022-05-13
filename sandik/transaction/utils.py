@@ -41,7 +41,7 @@ def borrow_debt(amount, money_transaction, created_by):
     member = money_transaction.member_ref
 
     shares_with_max_amount_can_borrow = [(share, share.max_amount_can_borrow()) for share in member.shares_set]
-    sorted_shares_by_max_amount_can_borrow = sorted(shares_with_max_amount_can_borrow, key=lambda x: x[1])
+    sorted_shares_by_max_amount_can_borrow = sorted(shares_with_max_amount_can_borrow, key=lambda x: x[1], reverse=True)
 
     remaining_amount = amount
     optimal_share = None
