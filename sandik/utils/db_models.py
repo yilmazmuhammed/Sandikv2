@@ -515,6 +515,7 @@ class Sandik(db.Entity):
     sandik_authority_types_set = Set('SandikAuthorityType')
     sms_packages_set = Set('SmsPackage')
     type = Required(int)
+    sandik_rules_set = Set('SandikRule')
 
     class TYPE:
         CLASSIC = 1
@@ -906,6 +907,25 @@ class SmsPackage(db.Entity):
             if field in self.text:
                 return True
         return False
+
+
+class SandikRule(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    sandik_ref = Required(Sandik)
+    type = Required(int)
+    order = Required(int)
+    formula = Required(str)
+
+    class TYPE:
+        MAX_AMOUNT_OF_DEBT = 1
+        MAX_NUMBER_OF_INSTALLMENT = 2
+        MAX_NUMBER_OF_SHARE = 3
+
+        strings = {
+            MAX_AMOUNT_OF_DEBT: "Alınabilecek en fazla borç miktarı",
+            MAX_NUMBER_OF_INSTALLMENT: "Borç miktarına göre yapılabilecek en fazla taksit sayısı",
+            MAX_NUMBER_OF_SHARE: "En fazla açılabilecek hisse sayısı",
+        }
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")

@@ -20,6 +20,18 @@ CREATE INDEX "idx_sandikauthoritytype__sandik_ref" ON "sandikauthoritytype" ("sa
 
 ALTER TABLE "sandikauthoritytype" ADD CONSTRAINT "fk_sandikauthoritytype__sandik_ref" FOREIGN KEY ("sandik_ref") REFERENCES "sandik" ("id") ON DELETE CASCADE;
 
+CREATE TABLE "sandikrule" (
+  "id" SERIAL PRIMARY KEY,
+  "sandik_ref" INTEGER NOT NULL,
+  "type" INTEGER NOT NULL,
+  "order" INTEGER NOT NULL,
+  "formula" TEXT NOT NULL
+);
+
+CREATE INDEX "idx_sandikrule__sandik_ref" ON "sandikrule" ("sandik_ref");
+
+ALTER TABLE "sandikrule" ADD CONSTRAINT "fk_sandikrule__sandik_ref" FOREIGN KEY ("sandik_ref") REFERENCES "sandik" ("id") ON DELETE CASCADE;
+
 CREATE TABLE "smspackage" (
   "id" SERIAL PRIMARY KEY,
   "text" TEXT NOT NULL,
