@@ -425,6 +425,7 @@ class Log(db.Entity):
 
         class SANDIK:
             first, last = 200, 299
+            UPDATE = first + 2
             APPLY_FOR_MEMBERSHIP = first + 11
             CONFIRM_MEMBERSHIP_APPLICATION = first + 12
             REJECT_MEMBERSHIP_APPLICATION = first + 13

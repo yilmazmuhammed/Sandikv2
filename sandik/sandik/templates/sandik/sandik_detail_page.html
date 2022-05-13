@@ -52,7 +52,9 @@
         "columns": [
           { "name": "index", "title": "#"},
           { "name": "name_surname", "title": "Üye ismi" },
+          {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
           { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+          {% endif %}
         ],
         "rows": [
         {% for web_user in g.sandik.applicant_web_users_set.order_by("lambda wu: wu.name_surname.lower()") %}
@@ -104,7 +106,14 @@
               </tr>
               <tr class="row">
                 <th>Sandık türü:</th>
-                <td>{{ g.sandik.type_str() }}</td>
+                <td>
+                  {{ g.sandik.type_str() }}
+                  {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
+                  <span class="pull-right">
+                    {{ macros.button(url=url_for("sandik_page_bp.update_sandik_type_page", sandik_id=g.sandik.id), icon="glyphicon glyphicon-pencil", size="xs", type="info") }}
+                  </span>
+                  {% endif %}
+                </td>
               </tr>
               <tr class="row">
                 <th>Oluşturulma tarihi:</th>

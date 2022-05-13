@@ -10,7 +10,7 @@ from sandik.sandik.exceptions import MaxShareCountExceed, NotActiveMemberExcepti
 from sandik.sandik.exceptions import UpdateMemberException
 from sandik.transaction import utils as transaction_utils, db as transaction_db
 from sandik.utils import period as period_utils, sandik_preferences
-from sandik.utils.db_models import Member, Share, MoneyTransaction, TrustRelationship, SmsPackage
+from sandik.utils.db_models import Member, Share, MoneyTransaction, TrustRelationship, SmsPackage, Sandik
 
 
 def add_share_to_member(member, added_by, **kwargs):
@@ -28,8 +28,33 @@ def create_trust_relationships_with_all_members_of_sandik(member, created_by):
     sandik = member.sandik_ref
     for m in sandik.members_set:
         if member is not m:
+            trust_relationship = db.get_trust_relationship_between_two_member(member1=m, member2=member)
+            if not trust_relationship:
+                pass
+            elif trust_relationship.status == TrustRelationship.STATUS.ACCEPTED:
+                continue
+            elif trust_relationship.status == TrustRelationship.STATUS.WAITING:
+                db.remove_trust_relationship_request(trust_relationship=trust_relationship, rejected_by=created_by)
+
             db.create_trust_relationship(requester_member=member, receiver_member=m, created_by=created_by,
                                          status=TrustRelationship.STATUS.ACCEPTED)
+
+
+def create_trust_relationships_between_all_members_of_sandik(sandik, created_by):
+    for member in sandik.members_set:
+        create_trust_relationships_with_all_members_of_sandik(member=member, created_by=created_by)
+
+
+def remove_trust_relationships_of_member_with_all_members_of_sandik(member, removed_by):
+    for tr in member.accepted_trust_links():
+        db.remove_trust_relationship_request(trust_relationship=tr, rejected_by=removed_by)
+    for tr in member.waiting_trust_links():
+        db.remove_trust_relationship_request(trust_relationship=tr, rejected_by=removed_by)
+
+
+def remove_trust_relationships_from_sandik(sandik, removed_by):
+    for member in sandik.members_set:
+        remove_trust_relationships_of_member_with_all_members_of_sandik(member=member, removed_by=removed_by)
 
 
 def add_member_to_sandik(sandik, web_user, date_of_membership, contribution_amount, detail,
@@ -58,6 +83,14 @@ def update_member_of_sandik(member, updated_by, date_of_membership=None, **kwarg
         kwargs["date_of_membership"] = date_of_membership
 
     return db.update_member(member=member, updated_by=updated_by, **kwargs)
+
+
+def update_sandik_type(sandik, sandik_type: int, updated_by):
+    if sandik.type == Sandik.TYPE.CLASSIC and sandik_type == Sandik.TYPE.WITH_TRUST_RELATIONSHIP:
+        remove_trust_relationships_from_sandik(sandik=sandik, removed_by=updated_by)
+    elif sandik.type == Sandik.TYPE.WITH_TRUST_RELATIONSHIP and sandik_type == Sandik.TYPE.CLASSIC:
+        create_trust_relationships_between_all_members_of_sandik(sandik=sandik, created_by=updated_by)
+    db.update_sandik(sandik=sandik, type=sandik_type, updated_by=updated_by)
 
 
 def confirm_membership_application(sandik, web_user, confirmed_by):
@@ -211,8 +244,7 @@ def remove_member_from_sandik(member: Member, removed_by):
     db.update_member(member=member, updated_by=removed_by, is_active=False)
 
     # Güven bağları siliniyor
-    for tr in member.accepted_trust_links():
-        db.remove_trust_relationship_request(trust_relationship=tr, rejected_by=removed_by)
+    remove_trust_relationships_of_member_with_all_members_of_sandik(member=member, removed_by=removed_by)
 
     return refunded_money_transaction
 

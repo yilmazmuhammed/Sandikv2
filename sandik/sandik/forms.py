@@ -56,6 +56,24 @@ class SandikForm(CustomFlaskForm):
         self.type.choices += list(Sandik.TYPE.strings.items())
 
 
+class SandikTypeForm(CustomFlaskForm):
+
+    type = SelectField(
+        label="Sandık türü:",
+        validators=[
+            input_required_validator("Sandık türü:"),
+        ],
+        choices=[("", "Sandık türünü seçiniz...")],
+        coerce=str,
+    )
+
+    submit = SubmitField(label="Kaydet")
+
+    def __init__(self, form_title='Sandık türü formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
+        self.type.choices += [(str(value), text )for value, text in Sandik.TYPE.strings.items()]
+
+
 class SelectSandikForm(CustomFlaskForm):
     sandik = SelectField(
         label="Sandık:",
@@ -71,6 +89,7 @@ class SelectSandikForm(CustomFlaskForm):
     def __init__(self, form_title='Sandık seçim formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.sandik.choices += db.sandiks_form_choices()
+
 
 
 class SelectMemberForm(CustomFlaskForm):

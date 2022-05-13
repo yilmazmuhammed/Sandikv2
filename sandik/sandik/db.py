@@ -85,6 +85,13 @@ def sandiks_form_choices():
     return choices
 
 
+def update_sandik(sandik, updated_by, **kwargs) -> Sandik:
+    updated_fields = get_updated_fields(new_values=kwargs, db_object=sandik)
+    Log(web_user_ref=updated_by, type=Log.TYPE.SANDIK.UPDATE, logged_sandik_ref=sandik, detail=str(updated_fields))
+    sandik.set(**kwargs)
+    return sandik
+
+
 """
 ########################################################################################################################
 ############################################  Sandık üyeliği fonksiyonları  ############################################
@@ -102,7 +109,7 @@ def apply_for_membership(sandik, applied_by):
     sandik.applicant_web_users_set.add(applied_by)
 
 
-def reject_membership_application(sandik, web_user, rejected_by) -> Sandik:
+def reject_membership_application(sandik, web_user, rejected_by):
     sandik.applicant_web_users_set.remove(web_user)
     Log(web_user_ref=rejected_by, type=Log.TYPE.SANDIK.REJECT_MEMBERSHIP_APPLICATION,
         logged_web_user_ref=web_user, logged_sandik_ref=sandik)
@@ -140,7 +147,7 @@ def update_share(share, updated_by, **kwargs):
     return share
 
 
-def update_member(member, updated_by, **kwargs):
+def update_member(member, updated_by, **kwargs) -> Member:
     updated_fields = get_updated_fields(new_values=kwargs, db_object=member)
     Log(web_user_ref=updated_by, type=Log.TYPE.MEMBER.UPDATE, logged_member_ref=member, detail=str(updated_fields))
     member.set(**kwargs)

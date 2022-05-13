@@ -72,6 +72,25 @@ def sandik_index_page(sandik_id):
         return redirect(url_for("sandik_page_bp.sandik_detail_page", sandik_id=sandik_id))
 
 
+@sandik_page_bp.route("/<int:sandik_id>/sandik-turunu-guncelle", methods=["GET", "POST"])
+@sandik_authorization_required(permission="write")
+def update_sandik_type_page(sandik_id):
+    form = forms.SandikTypeForm()
+    if form.validate_on_submit():
+        if g.sandik.type != int(form.type.data):
+            utils.update_sandik_type(sandik=g.sandik, sandik_type=int(form.type.data), updated_by=current_user)
+        else:
+            flash("Aynı sandık türü seçildiği için değişiklik yapılmadı.", "warning")
+
+        return redirect(url_for("sandik_page_bp.update_sandik_type_page", sandik_id=sandik_id))
+
+    if not form.is_submitted():
+        form.type.data = str(g.sandik.type)
+
+    return render_template("utils/form_layout.html",
+                           page_info=FormPI(title="Sandık türünü değiştir", form=form, active_dropdown='sandik'))
+
+
 """
 ########################################################################################################################
 ################################################  Güven bağı sayfaları  ################################################
@@ -234,7 +253,7 @@ def update_member_of_sandik_page(sandik_id, member_id):
         except (WebUserNotFound, MembershipException) as e:
             flash(str(e), "danger")
 
-    if request.method == "GET":
+    if not form.is_submitted():
         form.fill_values_with_member(member=member)
 
     return render_template("utils/form_layout.html",
