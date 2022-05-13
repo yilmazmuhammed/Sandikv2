@@ -24,8 +24,9 @@ def add_share_to_member(member, added_by, **kwargs):
 def create_trust_relationships_with_all_members_of_sandik(member, created_by):
     sandik = member.sandik_ref
     for m in sandik.members_set:
-        db.create_trust_relationship(requester_member=member, receiver_member=m, created_by=created_by,
-                                     status=TrustRelationship.STATUS.ACCEPTED)
+        if member is not m:
+            db.create_trust_relationship(requester_member=member, receiver_member=m, created_by=created_by,
+                                         status=TrustRelationship.STATUS.ACCEPTED)
 
 
 def add_member_to_sandik(sandik, web_user, date_of_membership, contribution_amount, detail,
@@ -36,7 +37,7 @@ def add_member_to_sandik(sandik, web_user, date_of_membership, contribution_amou
     for i in range(number_of_share):
         add_share_to_member(member=member, added_by=added_by, date_of_opening=date_of_membership)
 
-    if sandik.is_type_with_trust_relationship():
+    if sandik.is_type_classic():
         create_trust_relationships_with_all_members_of_sandik(member=member, created_by=added_by)
 
     return member
@@ -61,7 +62,7 @@ def confirm_membership_application(sandik, web_user, confirmed_by):
                               contribution_amount=sandik.contribution_amount)
     add_share_to_member(member=member, added_by=confirmed_by)
 
-    if sandik.is_type_with_trust_relationship():
+    if sandik.is_type_classic():
         create_trust_relationships_with_all_members_of_sandik(member=member, created_by=confirmed_by)
 
     return member
