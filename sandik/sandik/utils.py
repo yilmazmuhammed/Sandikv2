@@ -65,6 +65,9 @@ def send_sms_from_sandik(sandik, sms_type, created_by):
         for member in sandik.get_active_members():
             if member.waiting_received_trust_relationships_request().count() > 0:
                 web_users.append(member.web_user_ref)
+    elif int(sms_type) == SmsPackage.TYPE.SANDIK.THERE_IS_UNPAID_AND_DUE_PAYMENTS:
+        # TODO
+        pass
     else:
         raise InvalidSmsType("Geçersiz sms türü girildi. Lütfen sms türünü listeden seçiniz.")
     sms_package = db.create_sms_package(text=text, header=os.getenv("SMS_BOT_DEFAULT_MESSAGE_HEADER"),

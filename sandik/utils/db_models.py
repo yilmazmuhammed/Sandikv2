@@ -875,13 +875,20 @@ class SmsPackage(db.Entity):
     class TYPE:
         class SANDIK:
             THERE_IS_UNCONFIRMED_TRUST_RELATIONSHIP_REQUEST = 101
+            THERE_IS_UNPAID_AND_DUE_PAYMENTS = 102
 
-        strings = {SANDIK.THERE_IS_UNCONFIRMED_TRUST_RELATIONSHIP_REQUEST: "Bekleyen güven bağı isteğiniz var"}
+        strings = {
+            SANDIK.THERE_IS_UNCONFIRMED_TRUST_RELATIONSHIP_REQUEST: "Bekleyen güven bağı isteğiniz var",
+            SANDIK.THERE_IS_UNPAID_AND_DUE_PAYMENTS: "Ödenmemiş ve vadesi gelmiş ödemeniz var",
+        }
 
     class STATUS:
         SMS_PACKAGE_CREATED = 1
 
-    DYNAMIC_FIELDS = ['{name_surname}']
+    DYNAMIC_FIELDS = [
+        '{name_surname}',
+        "{sum_of_unpaid_and_due_payments}"
+    ]
 
     def is_n_to_n(self):
         for field in self.DYNAMIC_FIELDS:
