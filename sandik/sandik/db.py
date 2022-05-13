@@ -178,17 +178,18 @@ def get_trust_relationship_between_two_member(member1, member2) -> TrustRelation
                                       or (tr.requester_member_ref == member2 and tr.receiver_member_ref == member1)))
 
 
-def create_trust_relationship(requester_member, receiver_member, requested_by) -> TrustRelationship:
+def create_trust_relationship(requester_member, receiver_member, created_by,
+                              status=TrustRelationship.STATUS.WAITING) -> TrustRelationship:
     if requester_member == receiver_member:
         raise TrustRelationshipCreationException("Bir üye kendi kendine güven bağı kuramaz")
 
     tr = get_trust_relationship_between_two_member(member1=requester_member, member2=receiver_member)
     if tr:
         raise TrustRelationshipAlreadyExist()
-    Log(web_user_ref=requested_by, type=Log.TYPE.TRUST_RELATIONSHIP.CREATE,
+    Log(web_user_ref=created_by, type=Log.TYPE.TRUST_RELATIONSHIP.CREATE,
         logged_sandik_ref=requester_member.sandik_ref)
     return TrustRelationship(requester_member_ref=requester_member, receiver_member_ref=receiver_member,
-                             status=TrustRelationship.STATUS.WAITING)
+                             status=status)
 
 
 def accept_trust_relationship_request(trust_relationship, confirmed_by):

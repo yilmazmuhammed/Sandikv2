@@ -513,6 +513,23 @@ class Sandik(db.Entity):
     members_set = Set(Member)
     sandik_authority_types_set = Set('SandikAuthorityType')
     sms_packages_set = Set('SmsPackage')
+    type = Required(int)
+
+    class TYPE:
+        CLASSIC = 1
+        WITH_TRUST_RELATIONSHIP = 2
+
+        strings = {CLASSIC: "Klasik sistem", WITH_TRUST_RELATIONSHIP: "Güven bağlı sistem"}
+
+    def is_type_with_trust_relationship(self):
+        print("is_type_with_trust_relationship:", self.type == self.TYPE.WITH_TRUST_RELATIONSHIP)
+        return self.type == self.TYPE.WITH_TRUST_RELATIONSHIP
+
+    def is_type_classic(self):
+        return self.type == self.TYPE.CLASSIC
+
+    def type_str(self):
+        return self.TYPE.strings.get(self.type, "UNKNOWN")
 
     def get_active_members(self):
         return self.members_set.filter(lambda m: m.is_active)

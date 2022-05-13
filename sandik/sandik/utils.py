@@ -10,7 +10,7 @@ from sandik.sandik.exceptions import MaxShareCountExceed, NotActiveMemberExcepti
 from sandik.sandik.exceptions import UpdateMemberException
 from sandik.transaction import utils as transaction_utils, db as transaction_db
 from sandik.utils import period as period_utils, sandik_preferences
-from sandik.utils.db_models import Member, Share, MoneyTransaction, SmsPackage
+from sandik.utils.db_models import Member, Share, MoneyTransaction, TrustRelationship, SmsPackage
 
 
 def add_share_to_member(member, added_by, **kwargs):
@@ -24,6 +24,14 @@ def add_share_to_member(member, added_by, **kwargs):
     return share
 
 
+def create_trust_relationships_with_all_members_of_sandik(member, created_by):
+    sandik = member.sandik_ref
+    for m in sandik.members_set:
+        if member is not m:
+            db.create_trust_relationship(requester_member=member, receiver_member=m, created_by=created_by,
+                                         status=TrustRelationship.STATUS.ACCEPTED)
+
+
 def add_member_to_sandik(sandik, web_user, date_of_membership, contribution_amount, detail,
                          number_of_share, added_by):
     member = db.create_member(sandik=sandik, web_user=web_user, created_by=added_by,
@@ -31,6 +39,9 @@ def add_member_to_sandik(sandik, web_user, date_of_membership, contribution_amou
                               date_of_membership=date_of_membership)
     for i in range(number_of_share):
         add_share_to_member(member=member, added_by=added_by, date_of_opening=date_of_membership)
+
+    if sandik.is_type_classic():
+        create_trust_relationships_with_all_members_of_sandik(member=member, created_by=added_by)
 
     return member
 
@@ -53,6 +64,10 @@ def confirm_membership_application(sandik, web_user, confirmed_by):
     member = db.create_member(sandik=sandik, web_user=web_user, confirmed_by=confirmed_by,
                               contribution_amount=sandik.contribution_amount)
     add_share_to_member(member=member, added_by=confirmed_by)
+
+    if sandik.is_type_classic():
+        create_trust_relationships_with_all_members_of_sandik(member=member, created_by=confirmed_by)
+
     return member
 
 
