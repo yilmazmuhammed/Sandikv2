@@ -27,8 +27,8 @@ jQuery(function($){
 			{ "name": "term", "title": "Dönem" },
 			{ "name": "name_surname", "title": "İsim Soyisim" },
 			{ "name": "transaction_type", "title": "İşlem türü", "breakpoints": "xs", },
-			{ "name": "amount", "title": "Miktar", },
 			{ "name": "remaining_amount", "title": "Ödenmemiş miktar", },
+			{ "name": "amount", "title": "Miktar", },
 			{ "name": "is_fully_paid", "title": "Ödenme durumu", "breakpoints": "xs sm md", },
 			{ "name": "detail", "title": "Detay", "breakpoints": "xs sm md", },
 			{ "name": "sub_receipts", "title": "", "breakpoints": "xs sm md lg", },
@@ -42,7 +42,7 @@ jQuery(function($){
         {% set detail='' %}
       {% elif isinstance(p, Installment) %}
         {% set id_prefix='i' %}
-        {% set transaction_type='Taksit' %}
+        {% set transaction_type='Taksit (' + p.get_installment_no()|string+ '/' +p.debt_ref.number_of_installment|string+')' %}
         {% set detail='Borç: #'+p.debt_ref.id|string %}
       {% else %}
         {% set id_prefix='UNKNOWN' %}
@@ -137,7 +137,7 @@ jQuery(function($){
         {% set detail='' %}
       {% elif isinstance(p, Installment) %}
         {% set id_prefix='i' %}
-        {% set transaction_type='Taksit' %}
+        {% set transaction_type='Taksit (' + p.get_installment_no()|string+ '/' +p.debt_ref.number_of_installment|string+')' %}
         {% set detail='Borç: #'+p.debt_ref.id|string %}
       {% else %}
         {% set id_prefix='UNKNOWN' %}

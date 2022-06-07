@@ -762,6 +762,10 @@ class Installment(db.Entity):
             from sandik.utils.exceptions import UnexpectedValue
             raise UnexpectedValue("ERRCODE: 0011, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
 
+    def get_installment_no(self):
+        installments = self.debt_ref.installments_set.order_by(lambda i: i.term)[:][:]
+        return installments.index(self) + 1
+
 
 class SubReceipt(db.Entity):
     """TODO - Bir SubReceipt aynı anda Contribution, Debt veya Installment'ten biriyle ilişkili olmak zorundadır. Daha az veya daha fazlası olamaz."""
