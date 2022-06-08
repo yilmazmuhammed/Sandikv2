@@ -349,12 +349,9 @@ class WebUser(db.Entity, UserMixin):
     def get_sandik_authority(self, sandik):
         return self.sandik_authority_types_set.filter(sandik_ref=sandik).get()
 
-    def has_permission(self, sandik, permission):
+    def has_sandik_authority(self, sandik, permission):
         if permission not in ["write", "read", "admin"]:
             raise Exception("Yanlış izin yetkisi girildi")
-
-        if self.is_admin():
-            return True
 
         authority = self.get_sandik_authority(sandik=sandik)
         if not authority:
@@ -366,6 +363,9 @@ class WebUser(db.Entity, UserMixin):
         if permission == "read" and (authority.can_read or authority.can_write or authority.is_admin):
             return True
         return False
+
+    def has_permission(self, sandik, permission):
+        return self.is_admin() or self.has_sandik_authority(sandik=sandik, permission=permission)
 
     def get_primary_bank_account(self):
         return self.bank_accounts_set.select(is_primary=True).get()
