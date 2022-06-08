@@ -87,7 +87,7 @@
             { "name": "total_contribution", "title": "Ödenen aidatlar", "classes": "text-center" },
             { "name": "total_debt", "title": "Alınan borçlar", "classes": "text-center", },
             { "name": "total_installment", "title": "Ödenen taksitler", "classes": "text-center",  },
-            { "name": "final_status", "title": "Son durum", "classes": "text-center", },
+            { "name": "final_status", "title": "Mil sonu", "classes": "text-center", },
             {% if g.type == "management" %}
             { "name": "actions", "title": "", "breakpoints": "xs sm md lg" },
             {% endif %}
@@ -96,10 +96,10 @@
           {% for share in g.member.shares_set.order_by("lambda s: s.share_order_of_member") %}
             {
               "order": `<span title='ID: {{ share.id }}'>{{ share.share_order_of_member }}</span>`,
-              "total_contribution": `xxx{{ share.sum_of_paid_contributions() }}`,
-              "total_debt": `xxx{{ share.final_status("debt") }}`,
-              "total_installment": `xxx{{ share.final_status("installment") }}`,
-              "final_status": `xxx{{ share.final_status("total") }}`,
+              "total_contribution": `{{ share.sum_of_paid_contributions() }}`,
+              "total_debt": `{{ share.sum_of_debts() }}`,
+              "total_installment": `{{ share.sum_of_paid_installments() }}`,
+              "final_status": `{{ share.sum_of_unpaid_amount_of_debts() }}`,
               {% if g.type == "management" %}
               "actions": `
                 {% if share.is_active %}
@@ -115,10 +115,10 @@
           {% endfor %}
           {
             "order": `<span title='Member ID: {{ g.member.id }}'>Üye Durumu</span>`,
-            "total_contribution": `xxx{{ g.member.sum_of_paid_contributions() }}`,
-            "total_debt": `xxx{{ g.member.final_status("debt") }}`,
-            "total_installment": `xxx{{ g.member.sum_of_paid_installments() }}`,
-            "final_status": `xxx{{ g.member.final_status("total") }}`,
+            "total_contribution": `{{ g.member.sum_of_paid_contributions() }}`,
+            "total_debt": `{{ g.member.sum_of_debts() }}`,
+            "total_installment": `{{ g.member.sum_of_paid_installments() }}`,
+            "final_status": `{{ g.member.sum_of_unpaid_amount_of_debts() }}`,
             {% if g.type == "management" %}
             "actions": ``,
             {% endif %}
@@ -242,7 +242,7 @@
               </tr>
               <tr class="row">
                 <th>Alınan borç:</th>
-                <td>{{ g.member.final_status("debt") }} ₺</td>
+                <td>{{ g.member.sum_of_debts() }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Ödenen taksit:</th>
@@ -418,6 +418,7 @@
             </table>
           </div>
         </div>
+
         <!-- Sandığa katkım -->
         <div class="panel panel-default">
           <div class="panel-heading font-bold">
@@ -450,6 +451,7 @@
             </table>
           </div>
         </div>
+
       </div>
 
     </div>

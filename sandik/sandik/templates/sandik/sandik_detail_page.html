@@ -156,15 +156,15 @@
               <tbody>
               <tr class="row">
                 <th>Toplanan aidat:</th>
-                <td>{{ g.sandik.final_status("contribution") }} ₺</td>
+                <td>{{ g.sandik.sum_of_contributions() }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Verilen borç:</th>
-                <td>{{ g.sandik.final_status("debt") }} ₺</td>
+                <td>{{ g.sandik.sum_of_debts() }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Toplanan taksit:</th>
-                <td>{{ g.sandik.final_status("installment") }} ₺</td>
+                <td>{{ g.sandik.sum_of_paid_installments() }} ₺</td>
               </tr>
               <tr class="row">
                 <th>İşleme konmamış:</th>
@@ -172,7 +172,7 @@
               </tr>
               <tr class="row">
                 <th>Son durum:</th>
-                <td>{{ g.sandik.final_status("total") }} ₺</td>
+                <td>{{ g.sandik.get_final_status() }} ₺</td>
               </tr>
               </tbody>
             </table>
