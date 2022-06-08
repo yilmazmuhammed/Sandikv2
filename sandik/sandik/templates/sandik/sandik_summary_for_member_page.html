@@ -434,14 +434,18 @@
                 <th>Verilen borç:</th>
                 <td>{{ g.member.get_loaned_amount() }} ₺</td>
               </tr>
-              <tr class="row">
-                <th>Toplanan taksit:</th>
-                <td>{{ g.member.get_paid_amount_of_loaned() }} ₺</td>
-              </tr>
-              {# <tr class="row"> #}
-              {#   <th>Şu an ki bakiye:</th> #}
-              {#   <td>{{ g.member.get_balance() }} ₺</td> #}
-              {# </tr> #}
+              {% if g.sandik.is_type_with_trust_relationship() %}
+                <tr class="row">
+                  <th>Toplanan taksit:</th>
+                  <td>{{ g.member.get_paid_amount_of_loaned() }} ₺</td>
+                </tr>
+                {% if current_user.is_admin() %}
+                  <tr class="row">
+                    <th>Şu an ki bakiye:</th>
+                    <td>{{ g.member.get_balance() }} ₺</td>
+                  </tr>
+                {% endif %}
+              {% endif %}
               </tbody>
             </table>
           </div>
