@@ -99,7 +99,7 @@
               "total_contribution": `{{ share.sum_of_paid_contributions() }}`,
               "total_debt": `{{ share.sum_of_debts() }}`,
               "total_installment": `{{ share.sum_of_paid_installments() }}`,
-              "final_status": `{{ share.sum_of_unpaid_amount_of_debts() }}`,
+              "final_status": `xxx{{ share.sum_of_unpaid_amount_of_debts() }}`,
               {% if g.type == "management" %}
               "actions": `
                 {% if share.is_active %}
@@ -118,7 +118,7 @@
             "total_contribution": `{{ g.member.sum_of_paid_contributions() }}`,
             "total_debt": `{{ g.member.sum_of_debts() }}`,
             "total_installment": `{{ g.member.sum_of_paid_installments() }}`,
-            "final_status": `{{ g.member.sum_of_unpaid_amount_of_debts() }}`,
+            "final_status": `xxx{{ g.member.sum_of_unpaid_amount_of_debts() }}`,
             {% if g.type == "management" %}
             "actions": ``,
             {% endif %}
