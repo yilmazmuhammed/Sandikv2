@@ -914,7 +914,8 @@ class SandikRule(db.Entity):
     sandik_ref = Required(Sandik)
     type = Required(int)
     order = Required(int)
-    formula = Required(str)
+    condition_formula = Required(str)
+    value_formula = Required(str)
 
     class TYPE:
         MAX_AMOUNT_OF_DEBT = 1
@@ -925,6 +926,17 @@ class SandikRule(db.Entity):
             MAX_AMOUNT_OF_DEBT: "Alınabilecek en fazla borç miktarı",
             MAX_NUMBER_OF_INSTALLMENT: "Borç miktarına göre yapılabilecek en fazla taksit sayısı",
             MAX_NUMBER_OF_SHARE: "En fazla açılabilecek hisse sayısı",
+        }
+
+    class FORMULA_VARIABLE:
+        TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_MEMBER = "uye_toplam_aidat"
+        TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_SHARE = "hisse_toplam_aidat"
+        AMOUNT_OF_DEBT = "borc-miktari"
+
+        strings = {
+            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_MEMBER: "Üyenin ödediği toplam aidat miktarı",
+            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_SHARE: "Hisse için ödenen toplam aidat miktarı",
+            AMOUNT_OF_DEBT: "Borç miktarı",
         }
 
 

@@ -25,7 +25,8 @@ CREATE TABLE "sandikrule" (
   "sandik_ref" INTEGER NOT NULL,
   "type" INTEGER NOT NULL,
   "order" INTEGER NOT NULL,
-  "formula" TEXT NOT NULL
+  "condition_formula" TEXT NOT NULL,
+  "value_formula" TEXT NOT NULL
 );
 
 CREATE INDEX "idx_sandikrule__sandik_ref" ON "sandikrule" ("sandik_ref");

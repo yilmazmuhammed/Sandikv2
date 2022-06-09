@@ -11,7 +11,7 @@ from sandik.sandik.api import sandik_api_bp
 from sandik.sandik.page import sandik_page_bp
 from sandik.transaction.page import transaction_page_bp
 from sandik.utils import CustomJSONEncoder, sandik_preferences
-from sandik.utils.db_models import MoneyTransaction, Installment, Contribution
+from sandik.utils.db_models import MoneyTransaction, Installment, Contribution, SandikRule
 
 
 def initialize_flask() -> Flask:
@@ -51,6 +51,7 @@ def jinja2_integration(flask_app):
     flask_app.jinja_env.globals.update(Installment=Installment)
     flask_app.jinja_env.globals.update(Contribution=Contribution)
     flask_app.jinja_env.globals.update(sandik_preferences=sandik_preferences)
+    flask_app.jinja_env.globals.update(SandikRule=SandikRule)
 
 
 def create_app() -> Flask:

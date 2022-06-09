@@ -7,7 +7,7 @@ from wtforms.validators import NumberRange, Optional, Email
 from sandik.auth import db as auth_db
 from sandik.sandik import db
 from sandik.utils import sandik_preferences
-from sandik.utils.db_models import Sandik, SmsPackage
+from sandik.utils.db_models import Sandik, SmsPackage, SandikRule
 from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator
 
 
@@ -57,7 +57,6 @@ class SandikForm(CustomFlaskForm):
 
 
 class SandikTypeForm(CustomFlaskForm):
-
     type = SelectField(
         label="Sandık türü:",
         validators=[
@@ -71,7 +70,7 @@ class SandikTypeForm(CustomFlaskForm):
 
     def __init__(self, form_title='Sandık türü formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
-        self.type.choices += [(str(value), text )for value, text in Sandik.TYPE.strings.items()]
+        self.type.choices += [(str(value), text) for value, text in Sandik.TYPE.strings.items()]
 
 
 class SelectSandikForm(CustomFlaskForm):
@@ -89,7 +88,6 @@ class SelectSandikForm(CustomFlaskForm):
     def __init__(self, form_title='Sandık seçim formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.sandik.choices += db.sandiks_form_choices()
-
 
 
 class SelectMemberForm(CustomFlaskForm):
@@ -327,3 +325,51 @@ class SendSmsForm(CustomFlaskForm):
     def __init__(self, form_title='Hisse ekleme formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.sms_type.choices += list(SmsPackage.TYPE.strings.items())
+
+
+"""
+########################################################################################################################
+#############################################  Sandık kuralları formları   #############################################
+########################################################################################################################
+"""
+
+
+class SandikRuleForm(CustomFlaskForm):
+
+    type = SelectField(
+        label="Kural türü:",
+        validators=[
+            input_required_validator("Kural türü:"),
+        ],
+        choices=[("", "Kural türünü seçiniz...")],
+        coerce=str,
+    )
+
+    condition_formula = StringField(
+        "Koşul formülü",
+        validators=[
+            input_required_validator("Koşul formülü"),
+        ],
+        render_kw={"placeholder": "Koşul formülü"}
+    )
+
+    value_formula = StringField(
+        "Değer formülü",
+        validators=[
+            input_required_validator("Değer formülü"),
+        ],
+        render_kw={"placeholder": "Değer formülü"}
+    )
+
+    submit = SubmitField(label="Gönder")
+
+    def __init__(self, form_title='Sandık kuralı ekleme formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
+        self.type.choices += list(SandikRule.TYPE.strings.items())
+
+
+"""
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+"""

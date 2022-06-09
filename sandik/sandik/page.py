@@ -505,6 +505,27 @@ def send_sms_page(sandik_id):
 
 """
 ########################################################################################################################
+#############################################  Sandık kuralları sayfaları   ############################################
+########################################################################################################################
+"""
+
+
+@sandik_page_bp.route("/<int:sandik_id>/sandik-kurali-ekle", methods=["GET", "POST"])
+@sandik_authorization_required(permission="write")
+def add_sandik_rule_page(sandik_id):
+    form = forms.SandikRuleForm()
+
+    if form.validate_on_submit():
+        form_data = flask_form_to_dict(request_form=request.form)
+        print(form_data)
+        return redirect(url_for("sandik_page_bp.add_sandik_rule_page", sandik_id=sandik_id))
+
+    return render_template("sandik/add_sandik_rule_page.html",
+                           page_info=FormPI(title="Sandık kuralı ekle", form=form, active_dropdown='sandik-rules'))
+
+
+"""
+########################################################################################################################
 ########################################################################################################################
 ########################################################################################################################
 """
