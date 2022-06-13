@@ -2,10 +2,11 @@ from datetime import datetime
 
 from wtforms import StringField, IntegerField, TextAreaField, SubmitField, SelectField, BooleanField, EmailField, \
     DateField, DecimalField
-from wtforms.validators import NumberRange, Optional, Email
+from wtforms.validators import NumberRange, Optional, Email, ValidationError
 
 from sandik.auth import db as auth_db
-from sandik.sandik import db
+from sandik.sandik import db, utils
+from sandik.sandik.exceptions import InvalidRuleVariable, InvalidRuleCharacter
 from sandik.utils import sandik_preferences
 from sandik.utils.db_models import Sandik, SmsPackage, SandikRule
 from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator
@@ -334,8 +335,32 @@ class SendSmsForm(CustomFlaskForm):
 """
 
 
-class SandikRuleForm(CustomFlaskForm):
+class SandikRuleFormulaValidator(object):
+    def __init__(self, message=None, variable_list=None):
+        if variable_list is None:
+            variable_list = []
+        self.message = message or "Sandık formülü geçerli değil!"
+        self.variable_list = variable_list
+        self.comparison_operators = ["<", "<=", "==", ">=", ">"]
+        self.math_signs = ["+", "-", "*", "/"]
 
+    def __call__(self, form, field):
+        try:
+            utils.rule_formula_validator(formula_string=field.data, variables=self.variable_list,
+                                         operators=self.comparison_operators + self.math_signs)
+        except InvalidRuleVariable as variable_name:
+            raise ValidationError(f"{self.message}: {variable_name} geçerli bir değişken değil")
+        except InvalidRuleCharacter as character_index:
+            raise ValidationError(f"{self.message} "
+                                  f"<br>- Formül matematik işaretleri, karşılaştırma işaretleri, karamlar ve "
+                                  f"değişkenler dışında başka bir karakter içeremez."
+                                  f"<br>Matematiksel işaretler: {self.math_signs}"
+                                  f"<br>Karşılaştırma işaretleri: {self.comparison_operators}"
+                                  f"<br>Geçerli değişkenler: {self.variable_list}"
+                                  f"<br>Hata {character_index}. karakterde tespit edildi.")
+
+
+class SandikRuleForm(CustomFlaskForm):
     type = SelectField(
         label="Kural türü:",
         validators=[
@@ -348,7 +373,7 @@ class SandikRuleForm(CustomFlaskForm):
     condition_formula = StringField(
         "Koşul formülü",
         validators=[
-            input_required_validator("Koşul formülü"),
+            SandikRuleFormulaValidator(variable_list=SandikRule.FORMULA_VARIABLE.strings.keys()),
         ],
         render_kw={"placeholder": "Koşul formülü"}
     )
@@ -357,6 +382,7 @@ class SandikRuleForm(CustomFlaskForm):
         "Değer formülü",
         validators=[
             input_required_validator("Değer formülü"),
+            SandikRuleFormulaValidator(variable_list=SandikRule.FORMULA_VARIABLE.strings.keys()),
         ],
         render_kw={"placeholder": "Değer formülü"}
     )

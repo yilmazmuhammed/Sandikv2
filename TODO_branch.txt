@@ -1,6 +1,7 @@
 - DONE Sandık kuralı string'inin nasıl tutulacağına karar verilecek
     - DONE Kural değişkenleri belirlenecek
-- TODO Sandık kuralı ekleme formu sayfası eklenecek
-    - TODO Form kaydedilince formüllerin geçerlilik doğrulaması yapılacak
+- DONE Sandık kuralı ekleme formu sayfası eklenecek
+    - DONE Form kaydedilince formüllerin geçerlilik doğrulaması yapılacak
 - TODO Sandık kurallarının gösterildiği sayfa eklenecek
-    - TODOKural öncelikleri bu sayfada aşağı-yukarı okları ile ayarlanabilecek
+    - TODO Kural öncelikleri bu sayfada aşağı-yukarı okları ile ayarlanabilecek
+- TODO sandik_preferences kurallara göre işlenecek şekilde güncellenecek

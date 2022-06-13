@@ -394,6 +394,7 @@ class Log(db.Entity):
     logged_web_user_ref = Optional(WebUser, reverse='logs_set')
     logged_sandik_authority_type_ref = Optional('SandikAuthorityType')
     logged_trust_relationship_ref = Optional('TrustRelationship')
+    logged_sandik_rule_ref = Optional('SandikRule')
 
     class TYPE:
         CREATE = 1
@@ -491,6 +492,10 @@ class Log(db.Entity):
 
         class SMS_PACKAGE:
             first, last = 1400, 1499
+            CREATE = first + 1
+
+        class SANDIK_RULE:
+            first, last = 1500, 1599
             CREATE = first + 1
 
         class LOG_LEVEL:
@@ -914,8 +919,9 @@ class SandikRule(db.Entity):
     sandik_ref = Required(Sandik)
     type = Required(int)
     order = Required(int)
-    condition_formula = Required(str)
+    condition_formula = Optional(str)
     value_formula = Required(str)
+    logs_set = Set(Log)
 
     class TYPE:
         MAX_AMOUNT_OF_DEBT = 1

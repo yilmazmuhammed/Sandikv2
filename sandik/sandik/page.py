@@ -516,8 +516,9 @@ def add_sandik_rule_page(sandik_id):
     form = forms.SandikRuleForm()
 
     if form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form)
-        print(form_data)
+        utils.add_sandik_rule_to_sandik(condition_formula=form.condition_formula.data,
+                                        value_formula=form.value_formula.data,
+                                        type=form.type.data, sandik=g.sandik, created_by=current_user)
         return redirect(url_for("sandik_page_bp.add_sandik_rule_page", sandik_id=sandik_id))
 
     return render_template("sandik/add_sandik_rule_page.html",

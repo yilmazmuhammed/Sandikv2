@@ -5,7 +5,7 @@ from pony.orm import flush, select
 from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelationshipCreationException, \
     MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, ThereIsNotSandikAuthority
 from sandik.utils.db_models import Sandik, Log, SandikAuthorityType, Member, Share, TrustRelationship, \
-    get_updated_fields, SmsPackage
+    get_updated_fields, SmsPackage, SandikRule
 
 
 def save():
@@ -226,6 +226,22 @@ def get_trust_relationship(**kwargs) -> TrustRelationship:
 def create_sms_package(created_by, **kwargs) -> SmsPackage:
     log = Log(web_user_ref=created_by, type=Log.TYPE.SMS_PACKAGE.CREATE)
     return SmsPackage(logs_set=log, **kwargs)
+
+
+"""
+########################################################################################################################
+###########################################  Sandık kuralları fonksiyonları   ##########################################
+########################################################################################################################
+"""
+
+
+def get_last_rule_order(sandik, type):
+    return select(rule.order for rule in sandik.sandik_rules_set if rule.type == type).max() or 0
+
+
+def create_sandik_rule(sandik, created_by, **kwargs) -> SandikRule:
+    log = Log(web_user_ref=created_by, type=Log.TYPE.SANDIK_RULE.CREATE)
+    return SandikRule(logs_set=log, sandik_ref=sandik, **kwargs)
 
 
 """
