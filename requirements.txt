@@ -6,11 +6,11 @@ Flask-JSGlue~=0.3.1
 Flask-Login==0.6.1
 Flask-WTF~=1.0.0
 passlib~=1.7.4
-phonenumbers~=8.12.17
+phonenumbers==8.12.50
 pony==0.7.14
 psycopg2
 python-dateutil~=2.8.2
 Werkzeug==2.1.2
 WTForms~=3.0.1
-requests~=2.27.1
+requests==2.28.0
 Jinja2~=3.0.3
