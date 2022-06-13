@@ -95,9 +95,13 @@ def update_bank_account_page(bank_account_id):
         abort(404, "Banka hesabı bulunamadı!")
     elif bank_account.web_user_ref and bank_account.web_user_ref != current_user:
         abort(403, "Başkasının banka hesabını düzenleyemezsiniz!")
-    elif bank_account.sandik_ref and not current_user.has_permission(sandik=bank_account.sandik_ref,
-                                                                     permission="write"):
-        abort(403, "Sandıkta yazma yetkiniz bulunmamakta!")
+    elif bank_account.sandik_ref and not current_user.has_sandik_authority(sandik=bank_account.sandik_ref,
+                                                                           permission="write"):
+        if current_user.is_admin():
+            flash("Bu sayfaya erişim için sandık yetkiniz bulunmamaktadır. "
+                  "Fakat site yöneticisi olduğunuz için erişebiliyorsunuz.", "warning")
+        else:
+            abort(403, "Sandıkta yazma yetkiniz bulunmamaktadır!")
 
     form = forms.BankAccountForm()
     if request.method == "GET":

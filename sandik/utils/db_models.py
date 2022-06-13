@@ -90,19 +90,14 @@ class Share(db.Entity):
             if sr.contribution_ref and sr.money_transaction_ref.is_type_expense()
         ).sum()
 
-    def final_status(self, t_type):
-        if t_type == "contribution":
-            return self.sum_of_paid_contributions()
-        elif t_type == "debt":
-            return select(sr.amount for sr in self.sub_receipts_set if sr.debt_ref).sum()
-        elif t_type == "installment":
-            return select(sr.amount for sr in self.sub_receipts_set if sr.installment_ref).sum()
-        elif t_type == "total":
-            return "xxx"
-            revenue = select(sr.amount for sr in self.sub_receipts_set
-                             if sr.installment_ref or sr.contribution_ref).sum()
-            expense = select(sr.amount for sr in self.sub_receipts_set if sr.debt_ref).sum()
-            return revenue - expense
+    def sum_of_paid_installments(self):
+        return select(i.get_paid_amount() for i in Installment if i.debt_ref.share_ref == self).sum()
+
+    def sum_of_debts(self):
+        return select(d.amount for d in Debt if d.share_ref == self).sum()
+
+    def sum_of_unpaid_amount_of_debts(self):
+        return select(d.get_unpaid_amount() for d in Debt if d.share_ref == self).sum()
 
     def max_amount_can_borrow(self, use_untreated_amount=False):
         amount = self.member_ref.total_balance_from_accepted_trust_links()
@@ -218,21 +213,12 @@ class Member(db.Entity):
         return select(sr.amount for sr in SubReceipt if
                       sr.installment_ref and sr.money_transaction_ref.member_ref == self).sum()
 
-    def final_status(self, t_type):
-        if t_type == "contribution":
-            return self.sum_of_paid_contributions()
-        elif t_type == "debt":
-            return select(sr.amount for sr in SubReceipt if
-                          sr.debt_ref and sr.money_transaction_ref.member_ref == self).sum()
-        elif t_type == "installment":
-            return self.sum_of_paid_installments()
-        elif t_type == "total":
-            return "xxx"
-            revenue = select(mt.amount for mt in self.money_transactions_set if
-                             mt.type == MoneyTransaction.TYPE.REVENUE).sum()
-            expense = select(mt.amount for mt in self.money_transactions_set if
-                             mt.type == MoneyTransaction.TYPE.EXPENSE).sum()
-            return revenue - expense
+    def sum_of_debts(self):
+        return select(
+            sr.amount for sr in SubReceipt if sr.debt_ref and sr.money_transaction_ref.member_ref == self).sum()
+
+    def sum_of_unpaid_amount_of_debts(self):
+        return select(d.get_unpaid_amount() for d in Debt if d.share_ref.member_ref == self).sum()
 
     def get_trust_link_with_member(self, other_member):
         return TrustRelationship.get(
@@ -349,12 +335,9 @@ class WebUser(db.Entity, UserMixin):
     def get_sandik_authority(self, sandik):
         return self.sandik_authority_types_set.filter(sandik_ref=sandik).get()
 
-    def has_permission(self, sandik, permission):
+    def has_sandik_authority(self, sandik, permission):
         if permission not in ["write", "read", "admin"]:
             raise Exception("Yanlış izin yetkisi girildi")
-
-        if self.is_admin():
-            return True
 
         authority = self.get_sandik_authority(sandik=sandik)
         if not authority:
@@ -366,6 +349,9 @@ class WebUser(db.Entity, UserMixin):
         if permission == "read" and (authority.can_read or authority.can_write or authority.is_admin):
             return True
         return False
+
+    def has_permission(self, sandik, permission):
+        return self.is_admin() or self.has_sandik_authority(sandik=sandik, permission=permission)
 
     def get_primary_bank_account(self):
         return self.bank_accounts_set.select(is_primary=True).get()
@@ -544,22 +530,24 @@ class Sandik(db.Entity):
         installment_count = select(i for i in Installment if i.share_ref.member_ref.sandik_ref == self).count()
         return contribution_count + debt_count + installment_count
 
-    def final_status(self, t_type):
-        if t_type == "contribution":
-            return select(sr.amount for sr in SubReceipt if
-                          sr.contribution_ref and sr.money_transaction_ref.member_ref.sandik_ref == self).sum()
-        elif t_type == "debt":
-            return select(sr.amount for sr in SubReceipt if
-                          sr.debt_ref and sr.money_transaction_ref.member_ref.sandik_ref == self).sum()
-        elif t_type == "installment":
-            return select(sr.amount for sr in SubReceipt if
-                          sr.installment_ref and sr.money_transaction_ref.member_ref.sandik_ref == self).sum()
-        elif t_type == "total":
-            revenue = select(mt.amount for mt in MoneyTransaction if
-                             mt.member_ref.sandik_ref == self and mt.type == MoneyTransaction.TYPE.REVENUE).sum()
-            expense = select(mt.amount for mt in MoneyTransaction if
-                             mt.member_ref.sandik_ref == self and mt.type == MoneyTransaction.TYPE.EXPENSE).sum()
-            return revenue - expense
+    def sum_of_paid_installments(self):
+        return select(sr.amount for sr in SubReceipt if
+                      sr.installment_ref and sr.money_transaction_ref.member_ref.sandik_ref == self).sum()
+
+    def sum_of_contributions(self):
+        return select(sr.amount for sr in SubReceipt if
+                      sr.contribution_ref and sr.money_transaction_ref.member_ref.sandik_ref == self).sum()
+
+    def sum_of_debts(self):
+        return select(sr.amount for sr in SubReceipt if
+                      sr.debt_ref and sr.money_transaction_ref.member_ref.sandik_ref == self).sum()
+
+    def get_final_status(self):
+        revenue = select(mt.amount for mt in MoneyTransaction if
+                         mt.member_ref.sandik_ref == self and mt.type == MoneyTransaction.TYPE.REVENUE).sum()
+        expense = select(mt.amount for mt in MoneyTransaction if
+                         mt.member_ref.sandik_ref == self and mt.type == MoneyTransaction.TYPE.EXPENSE).sum()
+        return revenue - expense
 
     def has_application(self):
         return self.applicant_web_users_set.count() > 0
@@ -761,6 +749,10 @@ class Installment(db.Entity):
             rollback()
             from sandik.utils.exceptions import UnexpectedValue
             raise UnexpectedValue("ERRCODE: 0011, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+
+    def get_installment_no(self):
+        installments = self.debt_ref.installments_set.order_by(lambda i: i.term)[:][:]
+        return installments.index(self) + 1
 
 
 class SubReceipt(db.Entity):
