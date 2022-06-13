@@ -28,7 +28,7 @@
             {% set detail='' %}
           {% elif isinstance(p, Installment) %}
             {% set id_prefix='i' %}
-            {% set transaction_type='Taksit' %}
+            {% set transaction_type='Taksit (' + p.get_installment_no()|string+ '/' +p.debt_ref.number_of_installment|string+')' %}
             {% set detail='Borç: #'+p.debt_ref.id|string %}
           {% else %}
             {% set id_prefix='UNKNOWN' %}
