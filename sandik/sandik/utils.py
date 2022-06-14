@@ -280,9 +280,14 @@ def remove_share_from_member(share: Share, removed_by, refunded_money_transactio
 
 
 def rule_formula_validator(formula_string, variables, operators):
+    # TODO
+    # if formula_type is None:
+    #     raise InvalidArgument("type is None")
+
     data = formula_string.replace(' ', '')
     operators = sorted(operators, reverse=True, key=lambda o: len(o))
     i = 0
+    operator_counts = 0
     while i < len(data):
         if data[i] == "{":
             variable = data[i + 1:].split("}")[0]
@@ -297,9 +302,15 @@ def rule_formula_validator(formula_string, variables, operators):
         for operator in operators:
             if data[i: i + len(operator)] == operator:
                 i += len(operator)
+                operator_counts += 1
                 break
         else:
             raise InvalidRuleCharacter(i)
+    # TODO
+    # if formula_type == "value" and operator_counts != 0:
+    #     raise RuleOperatorCountException(f"{formula_type} -> {operator_counts}")
+    # if formula_type == "condition" and operator_counts != 1:
+    #     raise RuleOperatorCountException(f"{formula_type} -> {operator_counts}")
 
 
 def add_sandik_rule_to_sandik(condition_formula, value_formula, type, sandik, **kwargs):

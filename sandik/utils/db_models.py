@@ -5,6 +5,7 @@ from datetime import date
 from datetime import datetime
 from decimal import Decimal
 
+import cexprtk
 from flask_login import UserMixin
 from pony.orm import *
 
@@ -80,6 +81,14 @@ class Share(db.Entity):
     sub_receipts_set = Set('SubReceipt')
     contributions_set = Set('Contribution')
     debts_set = Set('Debt')
+
+    @property
+    def web_user_ref(self):
+        return self.member_ref.web_user_ref
+
+    @property
+    def name_surname(self):
+        return self.web_user_ref.name_surname
 
     def sum_of_paid_contributions(self):
         return select(
@@ -923,6 +932,38 @@ class SandikRule(db.Entity):
     value_formula = Required(str)
     logs_set = Set(Log)
 
+    def parse_formula(self, formula, whose):
+        formula_without_variables = ""
+        formula = formula.replace(' ', '')
+
+        variable_functions = self.FORMULA_VARIABLE.functions
+
+        i = 0
+        while i < len(formula):
+            # Değişken tespiti
+            if formula[i] == "{":
+                variable = formula[i + 1:].split("}")[0]
+                value = variable_functions[variable](whose=whose)
+                formula_without_variables += str(value)
+                i += 1 + len(variable) + 1
+                continue
+
+            formula_without_variables += formula[i]
+            i += 1
+
+        return formula_without_variables
+
+    def calculate_formula(self, formula, **kwargs):
+        parsed_formula = self.parse_formula(formula=formula, **kwargs)
+        result = cexprtk.evaluate_expression(parsed_formula or "1", {})
+        return result
+
+    def evaluate_condition_formula(self, **kwargs):
+        return self.calculate_formula(formula=self.condition_formula, **kwargs)
+
+    def evaluate_value_formula(self, **kwargs):
+        return self.calculate_formula(formula=self.value_formula, **kwargs)
+
     class TYPE:
         MAX_AMOUNT_OF_DEBT = 1
         MAX_NUMBER_OF_INSTALLMENT = 2
@@ -943,6 +984,40 @@ class SandikRule(db.Entity):
             TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_MEMBER: "Üyenin ödediği toplam aidat miktarı",
             TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_SHARE: "Hisse için ödenen toplam aidat miktarı",
             AMOUNT_OF_DEBT: "Borç miktarı",
+        }
+
+        functions = {
+            "TEMPLATE": lambda whose=None, amount=None: print(),
+            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_SHARE: lambda whose=None, amount=None: whose.total_amount_of_paid_contribution(),
+            AMOUNT_OF_DEBT: lambda whose=None, amount=None: amount,
+        }
+
+    class MATH_SIGN:
+        ADDITION = "+"
+        EXTRACTION = "-"
+        MULTIPLICATION = "*"
+        DIVISION = "/"
+
+        strings = {
+            ADDITION: ADDITION,
+            EXTRACTION: EXTRACTION,
+            MULTIPLICATION: MULTIPLICATION,
+            DIVISION: DIVISION,
+        }
+
+    class COMPARISON_OPERATOR:
+        LT = "<"
+        LE = "<="
+        EQ = "=="
+        GE = ">="
+        GT = ">"
+
+        strings = {
+            LT: LT,
+            LE: LE,
+            EQ: EQ,
+            GE: GE,
+            GT: GT,
         }
 
 

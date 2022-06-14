@@ -33,15 +33,15 @@
           <!-- Matematiksel işlemler -->
           <div class="row">
             <h5 style="margin-bottom: 10px;">Matematiksel işaretler:</h5>
-            {% for sign in ["+","-","*","/"] %}
-              <span id="{{ sign }}" class="btn btn-sm btn-primary formula_sign_button" style="margin-bottom: 10px;">{{ sign }}</span>
+            {% for key, text in SandikRule.MATH_SIGN.strings.items() %}
+              <span id="{{ key }}" class="btn btn-sm btn-primary formula_sign_button" style="margin-bottom: 10px;">{{ text }}</span>
             {% endfor %}
           </div>
           <!-- Karşılaştırma işaretleri -->
           <div class="row">
             <h5 style="margin-bottom: 10px;">Karşılaştırma işaretleri:</h5>
-            {% for sign in ["<","<=","==",">=", ">"] %}
-              <span id="{{ sign }}" class="btn btn-sm btn-primary formula_sign_button" style="margin-bottom: 10px;">{{ sign }}</span>
+            {% for key, text in SandikRule.COMPARISON_OPERATOR.strings.items() %}
+              <span id="{{ key }}" class="btn btn-sm btn-primary formula_sign_button" style="margin-bottom: 10px;">{{ text }}</span>
             {% endfor %}
           </div>
         </div>

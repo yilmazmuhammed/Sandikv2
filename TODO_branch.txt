@@ -4,4 +4,5 @@
     - DONE Form kaydedilince formüllerin geçerlilik doğrulaması yapılacak
 - TODO Sandık kurallarının gösterildiği sayfa eklenecek
     - TODO Kural öncelikleri bu sayfada aşağı-yukarı okları ile ayarlanabilecek
-- TODO sandik_preferences kurallara göre işlenecek şekilde güncellenecek
+- DONE sandik_preferences kurallara göre işlenecek şekilde güncellenecek
+- TODO Kural formülünün geçerli olup olmadığının tespiti kütüphane ile yapılacak

@@ -2,23 +2,18 @@ import math
 
 from dateutil.relativedelta import relativedelta
 
+from sandik.sandik.exceptions import NoValidRuleFound
 from sandik.utils import period as period_utils
-from sandik.utils.db_models import Share, Member
+from sandik.utils.db_models import Share, Member, SandikRule
 
 
 def max_number_of_installment(sandik, amount):
-    if amount <= 0:
-        return 0
-    if 1 <= amount <= 2500:
-        return 5
-    elif 2501 <= amount <= 10000:
-        return 10
-    elif 10001 <= amount <= 22500:
-        return 15
-    elif 22500 <= amount <= 40000:
-        return 20
+    for rule in sandik.sandik_rules_set.select(lambda r: r.type == SandikRule.TYPE.MAX_NUMBER_OF_INSTALLMENT):
+        if rule.evaluate_condition_formula(amount=amount):
+            return int(rule.evaluate_value_formula())
     else:
-        return 20
+        raise NoValidRuleFound(f"\"{amount}₺\" borç için kaç taksit yapılacağını tespit etmek için geçerli kural bulunamadı!"
+                               f"<br>Lütfen önce borç miktarı için kaç taksit yapılacağına dair sandık kuralı ekleyiniz.")
 
 
 def get_start_period(sandik, debt_date):
@@ -28,8 +23,18 @@ def get_start_period(sandik, debt_date):
 
 def remaining_debt_balance(sandik, whose):
     if isinstance(whose, Share):
-        contribution_amount = whose.total_amount_of_paid_contribution()
-        max_debt_balance = math.ceil(contribution_amount * 3 / 1000) * 1000
+        for rule in sandik.sandik_rules_set.select(lambda r: r.type == SandikRule.TYPE.MAX_AMOUNT_OF_DEBT):
+            if rule.evaluate_condition_formula(whose=whose):
+                max_debt_of_share = rule.evaluate_value_formula(whose=whose)
+                print(f"max_debt_of_share: {max_debt_of_share}")
+                break
+        else:
+            raise NoValidRuleFound(f"Hissenin alabileceği borç miktarını tespit etmek için geçerli kural bulunamadı."
+                                   f"<br>Lütfen önce açılabilecek en fazla hisse sayısı için sandık kuralı ekleyiniz."
+                                   f"<br>Üye: {whose.name_surname}"
+                                   f"<br>Hisse: {whose.id}"
+                                   f"<br>Aidat miktarı: {whose.total_amount_of_paid_contribution()}")
+        max_debt_balance = math.ceil(max_debt_of_share / 1000) * 1000
         max_debt_balance = max_debt_balance if max_debt_balance != 0 else 1000
         unpaid_installments_amount = whose.total_amount_unpaid_installments()
         return max_debt_balance - unpaid_installments_amount
@@ -40,4 +45,9 @@ def remaining_debt_balance(sandik, whose):
 
 
 def get_max_number_of_share(sandik):
-    return 5
+    for rule in sandik.sandik_rules_set.select(lambda r: r.type == SandikRule.TYPE.MAX_NUMBER_OF_SHARE):
+        if rule.evaluate_condition_formula():
+            return int(rule.evaluate_value_formula())
+    else:
+        raise NoValidRuleFound(f"Açılabilecek maksimum hisse sayısını tespit etmek için geçerli kural bulunamadı!"
+                               f"<br>Lütfen önce açılabilecek en fazla hisse sayısı için sandık kuralı ekleyiniz.")
