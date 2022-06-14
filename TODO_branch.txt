@@ -5,4 +5,5 @@
 - TODO Sandık kurallarının gösterildiği sayfa eklenecek
     - TODO Kural öncelikleri bu sayfada aşağı-yukarı okları ile ayarlanabilecek
 - DONE sandik_preferences kurallara göre işlenecek şekilde güncellenecek
+    - TODO kuralların bulunamadığı durumlarda form sayfalarında flash mesajı, bilgilendirme sayfalarında metin dönüşü göster
 - TODO Kural formülünün geçerli olup olmadığının tespiti kütüphane ile yapılacak
