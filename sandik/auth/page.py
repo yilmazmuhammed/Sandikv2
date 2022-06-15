@@ -1,11 +1,11 @@
 from flask import Blueprint, flash, request, redirect, render_template, url_for, g
 from flask_login import login_user, login_required, logout_user, current_user
 
-from sandik.auth import db, forms
+from sandik.auth import db, forms, utils
 from sandik.auth.exceptions import RegisterException, EmailAlreadyExist
 from sandik.auth.requirement import admin_required, web_user_required
 from sandik.auth.utils import Notification
-from sandik.utils import LayoutPI
+from sandik.utils import LayoutPI, get_next_url
 from sandik.utils.forms import flask_form_to_dict, FormPI
 
 auth_page_bp = Blueprint(
@@ -117,3 +117,24 @@ def update_web_user_page(web_user_id):
 @login_required
 def update_profile_page():
     return update_web_user_page_base(web_user_id=current_user.id)
+
+
+@auth_page_bp.route("/parola-guncelle", methods=["GET", "POST"])
+@login_required
+def update_password_page():
+    form = forms.UpdatePasswordForm()
+
+    if form.validate_on_submit():
+        if form.new_password.data != form.new_password_verification.data:
+            flash(u"Parolalar eşleşmiyor!", 'danger')
+        elif not db.get_web_user(web_user=current_user, password=form.old_password.data):
+            flash(u"Eski parola doğrulanamadı!", 'danger')
+
+        db.update_web_user(web_user=current_user, updated_by=current_user, password=form.new_password.data)
+        flash("Kullanıcı parolası güncellendi", "success")
+        next_url = get_next_url(request.args, default_url=url_for("general_page_bp.index_page"))
+        return redirect(next_url)
+
+    return render_template("utils/form_layout.html",
+                           page_info=FormPI(title="Kullanıcı parolasını güncelle", form=form,
+                                            active_dropdown="web-users"))

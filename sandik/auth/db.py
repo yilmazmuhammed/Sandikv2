@@ -5,8 +5,8 @@ from sandik.auth.exceptions import EmailAlreadyExist
 from sandik.utils.db_models import WebUser, Log, get_updated_fields
 
 
-def get_web_user(password=None, **kwargs) -> WebUser:
-    web_user = WebUser.get(**kwargs)
+def get_web_user(password=None, web_user=None, **kwargs) -> WebUser:
+    web_user = web_user or WebUser.get(**kwargs)
     if web_user and password:
         if not hasher.verify(password, web_user.password_hash):
             return None
@@ -39,6 +39,9 @@ def add_web_user(email_address, password, **kwargs) -> WebUser:
 def update_web_user(web_user, updated_by, email_address=None, **kwargs) -> WebUser:
     if email_address and get_web_user(email_address=email_address):
         raise EmailAlreadyExist('Bu e-posta adresiyle daha önce kaydolunmuş.')
+
+    if kwargs.get("password"):
+        kwargs["password_hash"] = hasher.hash(kwargs.pop("password"))
 
     updated_fields = get_updated_fields(new_values=kwargs, db_object=web_user)
     Log(web_user_ref=updated_by, type=Log.TYPE.WEB_USER.UPDATE, logged_web_user_ref=web_user,

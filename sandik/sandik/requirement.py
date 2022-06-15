@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import abort, g
+from flask import abort, g, flash
 from flask_login import current_user
 
 from sandik.auth.requirement import login_required
@@ -44,8 +44,13 @@ def to_be_member_or_manager_of_sandik_required(func):
     @sandik_required
     def decorated_view(*args, **kwargs):
         member = db.get_member(sandik_ref=g.sandik, web_user_ref=current_user)
-        if not member and not current_user.has_permission(sandik=g.sandik, permission="read"):
-            abort(403, "Bu sayfayı görüntüleme yetkiniz bulunmamaktadır")
+        if member or current_user.has_sandik_authority(sandik=g.sandik, permission="read"):
+            pass
+        elif current_user.is_admin():
+            flash("Bu sayfaya erişim için sandık yetkiniz bulunmamaktadır. "
+                  "Fakat site yöneticisi olduğunuz için erişebiliyorsunuz.", "warning")
+        else:
+            abort(403, "Bu sayfaya erişim yetkiniz bulunmamaktadır.")
 
         return func(*args, **kwargs)
 
@@ -58,8 +63,14 @@ def sandik_authorization_required(permission):
         @login_required
         @wraps(func)
         def decorated_view(*args, **kwargs):
-            if not current_user.is_admin() and not current_user.has_permission(sandik=g.sandik, permission=permission):
+            if current_user.has_sandik_authority(sandik=g.sandik, permission=permission):
+                pass
+            elif current_user.is_admin():
+                flash("Bu sayfaya erişim için sandık yetkiniz bulunmamaktadır. "
+                      "Fakat site yöneticisi olduğunuz için erişebiliyorsunuz.", "warning")
+            else:
                 abort(403, "Bu sayfaya erişim yetkiniz bulunmamaktadır.")
+
             return func(*args, **kwargs)
 
         return decorated_view

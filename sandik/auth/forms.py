@@ -116,3 +116,37 @@ class LoginForm(CustomFlaskForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(form_title='Giriş yap', f_class="form-validation", *args, **kwargs)
+
+
+class UpdatePasswordForm(CustomFlaskForm):
+    old_password = PasswordField(
+        "Eski parola:",
+        validators=[
+            input_required_validator("Eski parola"),
+            max_length_validator("Eski parola", 30),
+        ],
+        render_kw={"placeholder": "Eski parola"}
+    )
+
+    new_password = PasswordField(
+        "Yeni parola:",
+        validators=[
+            input_required_validator("Yeni parola"),
+            max_length_validator("Yeni parola", 30),
+        ],
+        render_kw={"placeholder": "Yeni parola"}
+    )
+
+    new_password_verification = PasswordField(
+        "Yeni parola tekrarı:",
+        validators=[
+            input_required_validator("Yeni parola tekrarı"),
+            max_length_validator("Yeni parola tekrarı", 30),
+        ],
+        render_kw={"placeholder": "Yeni parola tekrarı"}
+    )
+
+    submit = SubmitField(label="Kaydet")
+
+    def __init__(self, form_title='Parola güncelleme formu', *args, **kwargs):
+        super().__init__(form_title=form_title, f_class="form-validation", *args, **kwargs)
