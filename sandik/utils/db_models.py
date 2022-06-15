@@ -5,6 +5,7 @@ from datetime import date
 from datetime import datetime
 from decimal import Decimal
 
+import cexprtk
 from flask_login import UserMixin
 from pony.orm import *
 
@@ -80,6 +81,14 @@ class Share(db.Entity):
     sub_receipts_set = Set('SubReceipt')
     contributions_set = Set('Contribution')
     debts_set = Set('Debt')
+
+    @property
+    def web_user_ref(self):
+        return self.member_ref.web_user_ref
+
+    @property
+    def name_surname(self):
+        return self.web_user_ref.name_surname
 
     def sum_of_paid_contributions(self):
         return select(
@@ -380,6 +389,7 @@ class Log(db.Entity):
     logged_web_user_ref = Optional(WebUser, reverse='logs_set')
     logged_sandik_authority_type_ref = Optional('SandikAuthorityType')
     logged_trust_relationship_ref = Optional('TrustRelationship')
+    logged_sandik_rule_ref = Optional('SandikRule')
 
     class TYPE:
         CREATE = 1
@@ -479,6 +489,11 @@ class Log(db.Entity):
             first, last = 1400, 1499
             CREATE = first + 1
 
+        class SANDIK_RULE:
+            first, last = 1500, 1599
+            CREATE = first + 1
+            UPDATE = first + 2
+
         class LOG_LEVEL:
             first, last = 10000, 10099
             INFO = first + 11
@@ -501,6 +516,7 @@ class Sandik(db.Entity):
     sandik_authority_types_set = Set('SandikAuthorityType')
     sms_packages_set = Set('SmsPackage')
     type = Required(int)
+    sandik_rules_set = Set('SandikRule')
 
     class TYPE:
         CLASSIC = 1
@@ -898,6 +914,113 @@ class SmsPackage(db.Entity):
             if field in self.text:
                 return True
         return False
+
+
+class SandikRule(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    sandik_ref = Required(Sandik)
+    type = Required(int)
+    order = Required(int)
+    condition_formula = Optional(str)
+    value_formula = Required(str)
+    logs_set = Set(Log)
+
+    def parse_formula(self, formula, **kwargs):
+        formula_without_variables = ""
+        formula = formula.replace(' ', '')
+
+        variable_functions = self.FORMULA_VARIABLE.functions
+
+        i = 0
+        while i < len(formula):
+            # Değişken tespiti
+            if formula[i] == "{":
+                variable = formula[i + 1:].split("}")[0]
+                value = variable_functions[variable](**kwargs)
+                formula_without_variables += str(value)
+                i += 1 + len(variable) + 1
+                continue
+
+            formula_without_variables += formula[i]
+            i += 1
+
+        return formula_without_variables
+
+    def calculate_formula(self, formula, **kwargs):
+        parsed_formula = self.parse_formula(formula=formula, **kwargs)
+        result = cexprtk.evaluate_expression(parsed_formula or "1", {})
+        return result
+
+    def evaluate_condition_formula(self, **kwargs):
+        return self.calculate_formula(formula=self.condition_formula, **kwargs)
+
+    def evaluate_value_formula(self, **kwargs):
+        return self.calculate_formula(formula=self.value_formula, **kwargs)
+
+    class TYPE:
+        MAX_AMOUNT_OF_DEBT = 1
+        MAX_NUMBER_OF_INSTALLMENT = 2
+        MAX_NUMBER_OF_SHARE = 3
+
+        strings = {
+            MAX_AMOUNT_OF_DEBT: "Alınabilecek en fazla borç miktarı",
+            MAX_NUMBER_OF_INSTALLMENT: "Borç miktarına göre yapılabilecek en fazla taksit sayısı",
+            MAX_NUMBER_OF_SHARE: "En fazla açılabilecek hisse sayısı",
+        }
+
+    class FORMULA_TYPE:
+        CONDITION = "condition"
+        VALUE = "value"
+
+        strings = {
+            VALUE: VALUE,
+            CONDITION: CONDITION,
+        }
+
+    class FORMULA_VARIABLE:
+        TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_MEMBER = "uye_toplam_aidat"
+        TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_SHARE = "hisse_toplam_aidat"
+        AMOUNT_OF_DEBT = "borc-miktari"
+
+        strings = {
+            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_MEMBER: "Üyenin ödediği toplam aidat miktarı",
+            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_SHARE: "Hisse için ödenen toplam aidat miktarı",
+            AMOUNT_OF_DEBT: "Borç miktarı",
+        }
+
+        functions = {
+            "TEMPLATE": lambda whose=None, amount=None: print(),
+            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_SHARE: lambda whose=None, amount=None: whose.total_amount_of_paid_contribution(),
+            AMOUNT_OF_DEBT: lambda whose=None, amount=None: amount,
+        }
+
+    class ARITHMETIC_OPERATOR:
+        ADDITION = "+"
+        EXTRACTION = "-"
+        MULTIPLICATION = "*"
+        DIVISION = "/"
+
+        strings = {
+            ADDITION: ADDITION,
+            EXTRACTION: EXTRACTION,
+            MULTIPLICATION: MULTIPLICATION,
+            DIVISION: DIVISION,
+        }
+
+    class COMPARISON_OPERATOR:
+        LT = "<"
+        LE = "<="
+        EQ = "=="
+        GE = ">="
+        GT = ">"
+
+        strings = {
+            LT: LT,
+            LE: LE,
+            EQ: EQ,
+            GE: GE,
+            GT: GT,
+        }
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")

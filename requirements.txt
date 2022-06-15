@@ -14,3 +14,4 @@ Werkzeug==2.1.2
 WTForms~=3.0.1
 requests==2.28.0
 Jinja2~=3.0.3
+cexprtk~=0.4.0

@@ -6,11 +6,12 @@ from sandik.bot.sms import SmsBot
 from sandik.general import db as general_db
 from sandik.sandik import db
 from sandik.sandik.exceptions import MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
-    ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException, InvalidSmsType
+    ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException, InvalidSmsType, \
+    InvalidRuleVariable, InvalidRuleCharacter, InvalidArgument, RuleOperatorCountException
 from sandik.sandik.exceptions import UpdateMemberException
 from sandik.transaction import utils as transaction_utils, db as transaction_db
 from sandik.utils import period as period_utils, sandik_preferences
-from sandik.utils.db_models import Member, Share, MoneyTransaction, TrustRelationship, SmsPackage, Sandik
+from sandik.utils.db_models import Member, Share, MoneyTransaction, TrustRelationship, SmsPackage, Sandik, SandikRule
 
 
 def add_share_to_member(member, added_by, **kwargs):
@@ -276,3 +277,51 @@ def remove_share_from_member(share: Share, removed_by, refunded_money_transactio
     db.update_share(share=share, updated_by=removed_by, is_active=False)
 
     return refunded_money_transaction
+
+
+def rule_formula_validator(formula_string, variables, operators, formula_type):
+    if formula_type not in SandikRule.FORMULA_TYPE.strings.keys():
+        raise InvalidArgument(f"type is {formula_type} not in {SandikRule.FORMULA_TYPE.strings.keys()}")
+
+    data = formula_string.replace(' ', '')
+    operators = sorted(operators, reverse=True, key=lambda o: len(o))
+    i = 0
+    operator_counts = 0
+    while i < len(data):
+        if data[i] == "{":
+            variable = data[i + 1:].split("}")[0]
+            if variable not in variables:
+                raise InvalidRuleVariable("{" + variable + "}")
+            i += 1 + len(variable) + 1
+            continue
+        elif data[i].isnumeric():
+            i += 1
+            continue
+
+        for operator in operators:
+            if data[i: i + len(operator)] == operator:
+                i += len(operator)
+                operator_counts += 1
+                break
+        else:
+            raise InvalidRuleCharacter(i)
+    if formula_type == SandikRule.FORMULA_TYPE.VALUE and operator_counts != 0:
+        raise RuleOperatorCountException(f"Değer formülünde karşılaştırma işareti bulunamaz")
+    if formula_type == SandikRule.FORMULA_TYPE.CONDITION and operator_counts > 1:
+        raise RuleOperatorCountException(f"Koşul formülünde en fazla 1 tane karşılaştırma işareti bulunmalıdır.")
+
+
+def add_sandik_rule_to_sandik(condition_formula, value_formula, type, sandik, **kwargs):
+    try:
+        comp_ops = list(SandikRule.COMPARISON_OPERATOR.strings.keys())
+        arith_ops = list(SandikRule.ARITHMETIC_OPERATOR.strings.keys())
+        rule_formula_validator(formula_string=condition_formula, variables=SandikRule.FORMULA_VARIABLE.strings.keys(),
+                               operators=comp_ops + arith_ops, formula_type=SandikRule.FORMULA_TYPE.CONDITION)
+        rule_formula_validator(formula_string=value_formula, variables=SandikRule.FORMULA_VARIABLE.strings.keys(),
+                               operators=comp_ops + arith_ops, formula_type=SandikRule.FORMULA_TYPE.VALUE)
+    except InvalidRuleVariable as e:
+        raise InvalidRuleVariable(f"Sandık kuralı geçersiz değişken veya geçersiz karakter içeriyor: {e}")
+
+    order = db.get_last_rule_order(sandik=sandik, type=type) + 1
+    return db.create_sandik_rule(condition_formula=condition_formula, value_formula=value_formula, type=type,
+                                 order=order, sandik=sandik, **kwargs)

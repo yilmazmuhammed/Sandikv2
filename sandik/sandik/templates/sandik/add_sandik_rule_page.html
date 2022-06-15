@@ -1,0 +1,60 @@
+{% extends "utils/form_layout.html" %}
+
+{% block js_block2 %}
+{{ JSGlue.include() }}
+<script>
+  let activeElement = null;
+  function add_text_to_cursor(text){
+
+    if(activeElement != null && activeElement.tagName == "INPUT"){
+      let selectionStart = activeElement.selectionStart;
+      let newCursorPosition = selectionStart + text.length;
+      let stringBeforeCursor = activeElement.value.substring(0, selectionStart);
+      let stringAfterCursor = activeElement.value.substring(activeElement.selectionEnd);
+      activeElement.value = stringBeforeCursor + text + stringAfterCursor;
+      activeElement.focus();
+      activeElement.setSelectionRange(cursorNewPosition, cursorNewPosition);
+    }
+  }
+
+  $(document)
+    .ready(function () {
+      let formula_variables_box = `
+        <div class="btn-toolbar list-group-item bg-light text-center" style="margin-bottom: 25px;">
+          <div class="row text-center h4 font-bold" style="margin-bottom: 10px;">Formül değişkenleri</div>
+          <!-- Formül değişkenleri -->
+          <div class="row">
+            {% for key, text in SandikRule.FORMULA_VARIABLE.strings.items() %}
+              <span id="{{ key }}" class="btn btn-sm btn-primary formula_variable_button" style="margin-bottom: 10px;">{{ text }}</span>
+            {% endfor %}
+          </div>
+          <!-- Matematiksel işlemler -->
+          <div class="row">
+            <h5 style="margin-bottom: 10px;">Matematiksel işaretler:</h5>
+            {% for key, text in SandikRule.ARITHMETIC_OPERATOR.strings.items() %}
+              <span id="{{ key }}" class="btn btn-sm btn-primary formula_sign_button" style="margin-bottom: 10px;">{{ text }}</span>
+            {% endfor %}
+          </div>
+          <!-- Karşılaştırma işaretleri -->
+          <div class="row">
+            <h5 style="margin-bottom: 10px;">Karşılaştırma işaretleri:</h5>
+            {% for key, text in SandikRule.COMPARISON_OPERATOR.strings.items() %}
+              <span id="{{ key }}" class="btn btn-sm btn-primary formula_sign_button" style="margin-bottom: 10px;">{{ text }}</span>
+            {% endfor %}
+          </div>
+        </div>
+      `;
+      $("#form").before(formula_variables_box);
+
+    })
+    .on("focus", "input", function (element){
+      activeElement = document.activeElement;
+    })
+    .on("click", ".formula_sign_button", function (element){
+      add_text_to_cursor(element.target.id);
+    })
+    .on("click", ".formula_variable_button", function (element){
+      add_text_to_cursor("{" + element.target.id + "}");
+    });
+</script>
+{% endblock %}

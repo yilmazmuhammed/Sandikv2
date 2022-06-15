@@ -4,7 +4,7 @@ from pony.orm import desc, rollback
 from werkzeug.utils import redirect
 
 from sandik.sandik import db as sandik_db
-from sandik.sandik.exceptions import ThereIsNoMember, ThereIsNoShare
+from sandik.sandik.exceptions import ThereIsNoMember, ThereIsNoShare, NoValidRuleFound
 from sandik.sandik.requirement import sandik_authorization_required, to_be_member_of_sandik_required
 from sandik.transaction import forms, utils
 from sandik.transaction.authorization import money_transaction_required, contribution_required
@@ -43,7 +43,7 @@ def add_money_transaction_by_manager_page(sandik_id):
                 created_by=current_user, **form_data
             )
             return redirect(url_for("transaction_page_bp.add_money_transaction_by_manager_page", sandik_id=sandik_id))
-        except MaximumDebtAmountExceeded as e:
+        except (MaximumDebtAmountExceeded, NoValidRuleFound) as e:
             # rollback()
             flash(str(e), "danger")
         except Exception as e:

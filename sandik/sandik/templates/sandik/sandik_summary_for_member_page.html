@@ -278,7 +278,7 @@
               <tbody>
               <tr class="row text-center" onclick="$('#detailed-borrowing-table').toggle(); $('#detailed-borrowing-table-icon').toggleClass('fa-angle-down').toggleClass('fa-angle-up');">
                 <th>Alabileceğim miktar:</th>
-                <td class="font-bold text-primary">{{ g.member.max_amount_can_borrow(use_untreated_amount=False) }} ₺</td>
+                <td class="font-bold text-primary">{{ catch_exception(g.member.max_amount_can_borrow, use_untreated_amount=False) or "---" }} ₺</td>
                 <td>
                   <span>
                     <i class="fas fa-angle-down" id="detailed-borrowing-table-icon"></i>
@@ -297,14 +297,14 @@
               </thead>
               <tbody>
               {% for share in g.member.shares_set.order_by('lambda s: s.share_order_of_member') %}
-              {% set max_debt_amount=sandik_preferences.remaining_debt_balance(sandik=share.sandik_ref, whose=share) %}
+              {% set max_debt_amount=catch_exception(sandik_preferences.remaining_debt_balance, sandik=share.sandik_ref, whose=share) or "---"  %}
                 <tr class="row text-center">
                   <td>Hisse {{ share.share_order_of_member }}</td>
                   <td>{{ max_debt_amount }} ₺</td>
-                  <td>{{ sandik_preferences.max_number_of_installment(sandik=share.sandik_ref, amount=max_debt_amount) }}</td>
+                  <td>{{ catch_exception(sandik_preferences.max_number_of_installment, sandik=share.sandik_ref, amount=max_debt_amount) or "---" }}</td>
                 </tr>
               {% endfor %}
-              {% set max_debt_amount=sandik_preferences.remaining_debt_balance(sandik=g.member.sandik_ref, whose=g.member) %}
+              {% set max_debt_amount=catch_exception(sandik_preferences.remaining_debt_balance, sandik=g.member.sandik_ref, whose=g.member) or "---" %}
               <tr class="row text-center font-bold">
                 <td class="">Toplam</td>
                 <td>{{ max_debt_amount }} ₺</td>

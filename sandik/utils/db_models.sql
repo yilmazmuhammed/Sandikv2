@@ -4,7 +4,8 @@ CREATE TABLE "sandik" (
   "contribution_amount" DECIMAL(12, 2) NOT NULL,
   "is_active" BOOLEAN NOT NULL,
   "date_of_opening" DATE NOT NULL,
-  "detail" TEXT NOT NULL
+  "detail" TEXT NOT NULL,
+  "type" INTEGER NOT NULL
 );
 
 CREATE TABLE "sandikauthoritytype" (
@@ -19,6 +20,19 @@ CREATE TABLE "sandikauthoritytype" (
 CREATE INDEX "idx_sandikauthoritytype__sandik_ref" ON "sandikauthoritytype" ("sandik_ref");
 
 ALTER TABLE "sandikauthoritytype" ADD CONSTRAINT "fk_sandikauthoritytype__sandik_ref" FOREIGN KEY ("sandik_ref") REFERENCES "sandik" ("id") ON DELETE CASCADE;
+
+CREATE TABLE "sandikrule" (
+  "id" SERIAL PRIMARY KEY,
+  "type" INTEGER NOT NULL,
+  "order" INTEGER NOT NULL,
+  "sandik_ref" INTEGER NOT NULL,
+  "condition_formula" TEXT NOT NULL,
+  "value_formula" TEXT NOT NULL
+);
+
+CREATE INDEX "idx_sandikrule__sandik_ref" ON "sandikrule" ("sandik_ref");
+
+ALTER TABLE "sandikrule" ADD CONSTRAINT "fk_sandikrule__sandik_ref" FOREIGN KEY ("sandik_ref") REFERENCES "sandik" ("id") ON DELETE CASCADE;
 
 CREATE TABLE "smspackage" (
   "id" SERIAL PRIMARY KEY,
@@ -283,6 +297,7 @@ CREATE TABLE "log" (
   "logged_sms_package_ref" INTEGER,
   "logged_web_user_ref" INTEGER,
   "logged_sandik_authority_type_ref" INTEGER,
+  "logged_sandik_rule_ref" INTEGER,
   "logged_trust_relationship_ref" INTEGER
 );
 
@@ -307,6 +322,8 @@ CREATE INDEX "idx_log__logged_retracted_ref" ON "log" ("logged_retracted_ref");
 CREATE INDEX "idx_log__logged_sandik_authority_type_ref" ON "log" ("logged_sandik_authority_type_ref");
 
 CREATE INDEX "idx_log__logged_sandik_ref" ON "log" ("logged_sandik_ref");
+
+CREATE INDEX "idx_log__logged_sandik_rule_ref" ON "log" ("logged_sandik_rule_ref");
 
 CREATE INDEX "idx_log__logged_share_ref" ON "log" ("logged_share_ref");
 
@@ -338,6 +355,8 @@ ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_sandik_authority_type_ref" FORE
 
 ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_sandik_ref" FOREIGN KEY ("logged_sandik_ref") REFERENCES "sandik" ("id") ON DELETE SET NULL;
 
+ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_sandik_rule_ref" FOREIGN KEY ("logged_sandik_rule_ref") REFERENCES "sandikrule" ("id") ON DELETE SET NULL;
+
 ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_share_ref" FOREIGN KEY ("logged_share_ref") REFERENCES "share" ("id") ON DELETE SET NULL;
 
 ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_sms_package_ref" FOREIGN KEY ("logged_sms_package_ref") REFERENCES "smspackage" ("id") ON DELETE SET NULL;
@@ -360,9 +379,9 @@ CREATE TABLE "installment" (
 
 CREATE INDEX "idx_installment__debt_ref" ON "installment" ("debt_ref");
 
-ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_installment_ref" FOREIGN KEY ("logged_installment_ref") REFERENCES "installment" ("id") ON DELETE SET NULL;
-
 ALTER TABLE "subreceipt" ADD CONSTRAINT "fk_subreceipt__installment_ref" FOREIGN KEY ("installment_ref") REFERENCES "installment" ("id") ON DELETE SET NULL;
+
+ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_installment_ref" FOREIGN KEY ("logged_installment_ref") REFERENCES "installment" ("id") ON DELETE SET NULL;
 
 CREATE TABLE "debt" (
   "id" SERIAL PRIMARY KEY,
@@ -382,8 +401,8 @@ ALTER TABLE "debt" ADD CONSTRAINT "fk_debt__share_ref" FOREIGN KEY ("share_ref")
 
 ALTER TABLE "debt" ADD CONSTRAINT "fk_debt__sub_receipt_ref" FOREIGN KEY ("sub_receipt_ref") REFERENCES "subreceipt" ("id");
 
-ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_debt_ref" FOREIGN KEY ("logged_debt_ref") REFERENCES "debt" ("id") ON DELETE SET NULL;
-
 ALTER TABLE "installment" ADD CONSTRAINT "fk_installment__debt_ref" FOREIGN KEY ("debt_ref") REFERENCES "debt" ("id") ON DELETE CASCADE;
+
+ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_debt_ref" FOREIGN KEY ("logged_debt_ref") REFERENCES "debt" ("id") ON DELETE SET NULL;
 
 ALTER TABLE "pieceofdebt" ADD CONSTRAINT "fk_pieceofdebt__debt_ref" FOREIGN KEY ("debt_ref") REFERENCES "debt" ("id") ON DELETE CASCADE

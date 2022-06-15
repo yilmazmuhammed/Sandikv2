@@ -1,0 +1,67 @@
+{% extends "utils/layout.html" %}
+{% import "utils/parts/macros.html" as macros %}
+
+{% block js_block %}
+  <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+  <script>
+    jQuery(function($){
+      {% for rule_type_key, rule_type_value in SandikRule.TYPE.strings.items() %}
+        $('#{{ rule_type_key }}-table').footable({
+          "toggleColumn": "first",
+          "paging": {
+            "enabled": true,
+            "size": 10
+          },
+          "columns": [
+            { "name": "order", "title": "#", "breakpoints": "xs sm"},
+            { "name": "condition_formula", "title": "Koşul formülü" },
+            { "name": "value_formula", "title": "Değer formülü", },
+            { "name": "actions", "title": "", "breakpoints": "xs", },
+          ],
+          "rows": [
+          {% for r in g.sandik_rules[rule_type_key] %}
+            {
+              "order": `<span title='ID: {{ r.id }}'>{{ r.order }}</span>`,
+              "condition_formula": `{{ r.condition_formula }}`,
+              "value_formula": `{{ r.value_formula }}`,
+              "actions": `
+              {{ macros.button(url=url_for("sandik_page_bp.raise_order_of_sandik_rule_page", sandik_id=g.sandik.id, sandik_rule_id=r.id), icon="fa-solid fa-arrow-up", type='default', size='xs', title='Yukarı taşı') }}
+              {{ macros.button(url=url_for("sandik_page_bp.lower_order_of_sandik_rule_page", sandik_id=g.sandik.id, sandik_rule_id=r.id), icon="fa-solid fa-arrow-down", type='default', size='xs', title='Aşağı taşı') }}
+              `,
+            },
+          {% endfor %}
+          ]
+        });
+      {% endfor %}
+
+    });
+  </script>
+{% endblock %}
+
+{% block content_block %}
+  {{ macros.page_header(page_info.title) }}
+  <div class="wrapper-md">
+
+    <div class="row">
+
+      {% for rule_type_key, rule_type_value in SandikRule.TYPE.strings.items() %}
+        <!-- Yaklaşan ödemelerim -->
+        <div class="col-md-6">
+          <div class="panel panel-default">
+            <div class="panel-heading font-bold">
+              <span>{{ rule_type_value }}</span>
+              <span class="pull-right">
+                {{ macros.button(url=url_for("sandik_page_bp.add_sandik_rule_page", sandik_id=g.sandik.id, type=rule_type_key, next=request.base_url), icon='fa fa-plus', type='default', size='sm', title='Yeni kural ekle') }}
+              </span>
+            </div>
+            <div>
+              <table id="{{ rule_type_key }}-table" class="table"></table>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+
+    </div>
+
+  </div>
+{% endblock %}

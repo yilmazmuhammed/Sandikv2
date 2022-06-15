@@ -9,9 +9,10 @@ from sandik.sandik import forms, db, utils
 from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelationshipCreationException, \
     MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, SandikAuthorityException, AddMemberException, \
     MembershipException, MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
-    ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException
+    ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException, NoValidRuleFound, \
+    RuleOperatorCountException
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, to_be_member_of_sandik_required, \
-    trust_relationship_required, to_be_member_or_manager_of_sandik_required, sandik_type_required
+    trust_relationship_required, to_be_member_or_manager_of_sandik_required, sandik_type_required, sandik_rule_required
 from sandik.utils import LayoutPI, get_next_url, sandik_preferences
 from sandik.utils.db_models import Sandik
 
@@ -212,9 +213,7 @@ def add_member_to_sandik_page(sandik_id):
             utils.Notification.MembershipApplication.send_confirming_notification(sandik=g.sandik, web_user=web_user)
 
             return redirect(url_for("sandik_page_bp.members_of_sandik_page", sandik_id=sandik_id))
-        except AddMemberException as e:
-            flash(str(e), "danger")
-        except WebUserIsAlreadyMember as e:
+        except (AddMemberException, WebUserIsAlreadyMember, NoValidRuleFound) as e:
             flash(str(e), "danger")
 
     if request.method == "GET":
@@ -322,11 +321,19 @@ def add_share_to_member_page(sandik_id, member_id):
     if not member:
         abort(404, "Üye bulunamadı")
 
-    max_share_count = sandik_preferences.get_max_number_of_share(sandik=member.sandik_ref)
-    if member.shares_set.select(lambda s: s.is_active).count() >= max_share_count:
-        flash(f"Bir üyenin en fazla {max_share_count} adet hissesi olabilir.", "danger")
-        return redirect(request.referrer or url_for("sandik_page_bp.member_summary_for_management_page",
-                                                    sandik_id=sandik_id, member_id=member_id))
+    # Üyenin hisse sayısı açılabilecek hisse sayısından küçük mü diye kontrol ediliyor
+    danger_msg = None
+    try:
+        max_share_count = sandik_preferences.get_max_number_of_share(sandik=member.sandik_ref)
+        if member.shares_set.select(lambda s: s.is_active).count() >= max_share_count:
+            danger_msg = f"Bir üyenin en fazla {max_share_count} adet hissesi olabilir."
+    except NoValidRuleFound as e:
+        danger_msg = str(e)
+    finally:
+        if danger_msg:
+            flash(danger_msg, "danger")
+            return redirect(request.referrer or url_for("sandik_page_bp.member_summary_for_management_page",
+                                                        sandik_id=sandik_id, member_id=member_id))
 
     form = forms.AddShareForm()
     form.share_order_of_member.data = db.get_last_share_order(member) + 1
@@ -341,7 +348,7 @@ def add_share_to_member_page(sandik_id, member_id):
             return redirect(
                 url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=sandik_id, member_id=member_id)
             )
-        except MaxShareCountExceed as e:
+        except (MaxShareCountExceed, NoValidRuleFound) as e:
             flash(str(e), "danger")
 
     return render_template("utils/form_layout.html",
@@ -501,6 +508,59 @@ def send_sms_page(sandik_id):
 
     return render_template("utils/form_layout.html",
                            page_info=FormPI(title="Sandık üyelerine SMS gönder", form=form, active_dropdown='sms'))
+
+
+"""
+########################################################################################################################
+#############################################  Sandık kuralları sayfaları   ############################################
+########################################################################################################################
+"""
+
+
+@sandik_page_bp.route("/<int:sandik_id>/sandik-kurali-ekle", methods=["GET", "POST"])
+@sandik_authorization_required(permission="write")
+def add_sandik_rule_page(sandik_id):
+    form = forms.SandikRuleForm()
+
+    if form.validate_on_submit():
+        try:
+            utils.add_sandik_rule_to_sandik(condition_formula=form.condition_formula.data,
+                                            value_formula=form.value_formula.data,
+                                            type=form.type.data, sandik=g.sandik, created_by=current_user)
+            next_url = get_next_url(
+                request.args, default_url=url_for("sandik_page_bp.add_sandik_rule_page", sandik_id=sandik_id)
+            )
+            return redirect(next_url)
+        except RuleOperatorCountException as e:
+            flash(str(e), "danger")
+    return render_template("sandik/add_sandik_rule_page.html",
+                           page_info=FormPI(title="Sandık kuralı ekle", form=form, active_dropdown='sandik-rules'))
+
+
+@sandik_page_bp.route("/<int:sandik_id>/sandik-kurallari")
+@sandik_authorization_required(permission="read")
+def sandik_rules_page(sandik_id):
+    g.sandik_rules = db.get_sandik_rules_groups_by_category(sandik=g.sandik)
+    return render_template("sandik/sandik_rules_page.html",
+                           page_info=LayoutPI(title="Sandık kuralları", active_dropdown="sandik-rules"))
+
+
+@sandik_page_bp.route("/<int:sandik_id>/sk-<int:sandik_rule_id>/yukari-tasi")
+@sandik_authorization_required(permission="write")
+@sandik_rule_required
+def raise_order_of_sandik_rule_page(sandik_id, sandik_rule_id):
+    if not db.raise_order_of_sandik_rule(sandik_rule=g.sandik_rule, updated_by=current_user):
+        flash("Sandık kuralı zaten en öncelikli durumda", "warning")
+    return redirect(request.referrer or url_for("sandik_page_bp.sandik_rules_page", sandik_id=sandik_id))
+
+
+@sandik_page_bp.route("/<int:sandik_id>/sk-<int:sandik_rule_id>/asagi-tasi")
+@sandik_authorization_required(permission="write")
+@sandik_rule_required
+def lower_order_of_sandik_rule_page(sandik_id, sandik_rule_id):
+    if not db.lower_order_of_sandik_rule(sandik_rule=g.sandik_rule, updated_by=current_user):
+        flash("Sandık kuralı zaten en az öncelikli durumda", "warning")
+    return redirect(request.referrer or url_for("sandik_page_bp.sandik_rules_page", sandik_id=sandik_id))
 
 
 """

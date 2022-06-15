@@ -2,12 +2,14 @@ from datetime import datetime
 
 from wtforms import StringField, IntegerField, TextAreaField, SubmitField, SelectField, BooleanField, EmailField, \
     DateField, DecimalField
-from wtforms.validators import NumberRange, Optional, Email
+from wtforms.validators import NumberRange, Optional, Email, ValidationError
 
 from sandik.auth import db as auth_db
-from sandik.sandik import db
+from sandik.sandik import db, utils
+from sandik.sandik.exceptions import InvalidRuleVariable, InvalidRuleCharacter, RuleOperatorCountException, \
+    NoValidRuleFound
 from sandik.utils import sandik_preferences
-from sandik.utils.db_models import Sandik, SmsPackage
+from sandik.utils.db_models import Sandik, SmsPackage, SandikRule
 from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator
 
 
@@ -57,7 +59,6 @@ class SandikForm(CustomFlaskForm):
 
 
 class SandikTypeForm(CustomFlaskForm):
-
     type = SelectField(
         label="Sandık türü:",
         validators=[
@@ -71,7 +72,7 @@ class SandikTypeForm(CustomFlaskForm):
 
     def __init__(self, form_title='Sandık türü formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
-        self.type.choices += [(str(value), text )for value, text in Sandik.TYPE.strings.items()]
+        self.type.choices += [(str(value), text) for value, text in Sandik.TYPE.strings.items()]
 
 
 class SelectSandikForm(CustomFlaskForm):
@@ -89,7 +90,6 @@ class SelectSandikForm(CustomFlaskForm):
     def __init__(self, form_title='Sandık seçim formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.sandik.choices += db.sandiks_form_choices()
-
 
 
 class SelectMemberForm(CustomFlaskForm):
@@ -238,10 +238,13 @@ class AddMemberForm(CustomFlaskForm):
     def __init__(self, sandik, form_title='Üye ekleme formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.web_user.choices += auth_db.web_users_form_choices(exclusions=sandik.members_set.web_user_ref)
-        max_share = sandik_preferences.get_max_number_of_share(sandik=sandik)
-        self.number_of_share.validators.append(
-            NumberRange(message=f"Hisse sayısı {max_share}'dan fazla olamaz", max=max_share)
-        )
+        try:
+            max_share = sandik_preferences.get_max_number_of_share(sandik=sandik)
+            self.number_of_share.validators.append(
+                NumberRange(message=f"Hisse sayısı {max_share}'dan fazla olamaz", max=max_share)
+            )
+        except NoValidRuleFound:
+            pass
 
 
 class EditMemberForm(CustomFlaskForm):
@@ -327,3 +330,78 @@ class SendSmsForm(CustomFlaskForm):
     def __init__(self, form_title='Hisse ekleme formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.sms_type.choices += list(SmsPackage.TYPE.strings.items())
+
+
+"""
+########################################################################################################################
+#############################################  Sandık kuralları formları   #############################################
+########################################################################################################################
+"""
+
+
+class SandikRuleFormulaValidator(object):
+    def __init__(self, formula_type, message=None):
+        self.message = message or "Sandık formülü geçerli değil!"
+        self.formula_type = formula_type
+        self.variable_list = SandikRule.FORMULA_VARIABLE.strings.keys()
+        self.comparison_operators = list(SandikRule.COMPARISON_OPERATOR.strings.keys())
+        self.arithmetic_operators = list(SandikRule.ARITHMETIC_OPERATOR.strings.keys())
+
+    def __call__(self, form, field):
+        try:
+            utils.rule_formula_validator(formula_string=field.data, variables=self.variable_list,
+                                         operators=self.comparison_operators + self.arithmetic_operators,
+                                         formula_type=self.formula_type)
+        except RuleOperatorCountException as e:
+            raise ValidationError(str(e))
+        except InvalidRuleVariable as variable_name:
+            raise ValidationError(f"{self.message}: {variable_name} geçerli bir değişken değil")
+        except InvalidRuleCharacter as character_index:
+            raise ValidationError(f"{self.message} "
+                                  f"<br>- Formül matematik işaretleri, karşılaştırma işaretleri, karamlar ve "
+                                  f"değişkenler dışında başka bir karakter içeremez."
+                                  f"<br>Matematiksel işaretler: {self.arithmetic_operators}"
+                                  f"<br>Karşılaştırma işaretleri: {self.comparison_operators}"
+                                  f"<br>Geçerli değişkenler: {self.variable_list}"
+                                  f"<br>Hata {character_index}. karakterde tespit edildi.")
+
+
+class SandikRuleForm(CustomFlaskForm):
+    type = SelectField(
+        label="Kural türü:",
+        validators=[
+            input_required_validator("Kural türü:"),
+        ],
+        choices=[("", "Kural türünü seçiniz...")],
+        coerce=str,
+    )
+
+    condition_formula = StringField(
+        "Koşul formülü",
+        validators=[
+            SandikRuleFormulaValidator(formula_type=SandikRule.FORMULA_TYPE.CONDITION),
+        ],
+        render_kw={"placeholder": "Koşul formülü"}
+    )
+
+    value_formula = StringField(
+        "Değer formülü",
+        validators=[
+            input_required_validator("Değer formülü"),
+            SandikRuleFormulaValidator(formula_type=SandikRule.FORMULA_TYPE.VALUE),
+        ],
+        render_kw={"placeholder": "Değer formülü"}
+    )
+
+    submit = SubmitField(label="Gönder")
+
+    def __init__(self, form_title='Sandık kuralı ekleme formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
+        self.type.choices += list(SandikRule.TYPE.strings.items())
+
+
+"""
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+"""

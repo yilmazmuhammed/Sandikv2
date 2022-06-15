@@ -128,3 +128,33 @@ class SmsPackageException(SandikException):
 
 class InvalidSmsType(SmsPackageException):
     pass
+
+
+class SandikRuleException(SandikException):
+    ERRCODE_THOUSAND = THOUSANDS.SandikRuleException
+
+    def __init__(self, msg="", errcode=1, create_log=False, **kwargs):
+        super().__init__(msg=msg, errcode=errcode, create_log=create_log,
+                         errcode_thousand=kwargs.pop("errcode_thousand", self.ERRCODE_THOUSAND),
+                         **kwargs)
+    pass
+
+
+class InvalidRuleVariable(SandikRuleException):
+    pass
+
+
+class InvalidRuleCharacter(SandikRuleException):
+    pass
+
+
+class RuleOperatorCountException(SandikRuleException):
+    pass
+
+
+class InvalidArgument(SandikRuleException):
+    pass
+
+
+class NoValidRuleFound(SandikRuleException):
+    pass

@@ -103,3 +103,16 @@ def sandik_type_required(sandik_type):
         return decorated_view
 
     return sandik_type_required_decorator
+
+
+def sandik_rule_required(func):
+    @wraps(func)
+    def decorated_view(sandik_rule_id, *args, **kwargs):
+        sandik_rule = db.get_sandik_rule(id=sandik_rule_id)
+        if not sandik_rule:
+            abort(404)
+
+        g.sandik_rule = sandik_rule
+        return func(sandik_rule_id=sandik_rule_id, *args, **kwargs)
+
+    return decorated_view

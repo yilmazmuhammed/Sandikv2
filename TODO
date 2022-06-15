@@ -34,6 +34,8 @@ TODO    MINOR   Form hatası olunca birden fazla hata mesajı gösteriliyor
 
 TODO    MAJOR   Alert mesaj kutusu oluştur
 
+TODO    MINOR   catch_exception fonksiyonunda exception oluşursa flash mesajı gönder ve html'de bunu göster
+
 4- Banka entegrasyonu
 
 5- Performans iyileştirmeleri
