@@ -11,8 +11,8 @@ def base_sandik_rule_function(sandik, rule_type, no_rule_msg, result_cast=None, 
     for rule in sandik.sandik_rules_set.select(lambda r: r.type == rule_type):
         if rule.evaluate_condition_formula(**kwargs):
             if result_cast:
-                return result_cast(rule.evaluate_value_formula())
-            return rule.evaluate_value_formula()
+                return result_cast(rule.evaluate_value_formula(**kwargs))
+            return rule.evaluate_value_formula(**kwargs)
     else:
         raise NoValidRuleFound(no_rule_msg)
 
