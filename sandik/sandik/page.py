@@ -9,7 +9,7 @@ from sandik.sandik import forms, db, utils
 from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelationshipCreationException, \
     MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, SandikAuthorityException, AddMemberException, \
     MembershipException, MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
-    ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException
+    ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException, NoValidRuleFound
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, to_be_member_of_sandik_required, \
     trust_relationship_required, to_be_member_or_manager_of_sandik_required, sandik_type_required, sandik_rule_required
 from sandik.utils import LayoutPI, get_next_url, sandik_preferences
@@ -212,9 +212,7 @@ def add_member_to_sandik_page(sandik_id):
             utils.Notification.MembershipApplication.send_confirming_notification(sandik=g.sandik, web_user=web_user)
 
             return redirect(url_for("sandik_page_bp.members_of_sandik_page", sandik_id=sandik_id))
-        except AddMemberException as e:
-            flash(str(e), "danger")
-        except WebUserIsAlreadyMember as e:
+        except (AddMemberException, WebUserIsAlreadyMember, NoValidRuleFound) as e:
             flash(str(e), "danger")
 
     if request.method == "GET":
@@ -322,11 +320,19 @@ def add_share_to_member_page(sandik_id, member_id):
     if not member:
         abort(404, "Üye bulunamadı")
 
-    max_share_count = sandik_preferences.get_max_number_of_share(sandik=member.sandik_ref)
-    if member.shares_set.select(lambda s: s.is_active).count() >= max_share_count:
-        flash(f"Bir üyenin en fazla {max_share_count} adet hissesi olabilir.", "danger")
-        return redirect(request.referrer or url_for("sandik_page_bp.member_summary_for_management_page",
-                                                    sandik_id=sandik_id, member_id=member_id))
+    # Üyenin hisse sayısı açılabilecek hisse sayısından küçük mü diye kontrol ediliyor
+    danger_msg = None
+    try:
+        max_share_count = sandik_preferences.get_max_number_of_share(sandik=member.sandik_ref)
+        if member.shares_set.select(lambda s: s.is_active).count() >= max_share_count:
+            danger_msg = f"Bir üyenin en fazla {max_share_count} adet hissesi olabilir."
+    except NoValidRuleFound as e:
+        danger_msg = str(e)
+    finally:
+        if danger_msg:
+            flash(danger_msg, "danger")
+            return redirect(request.referrer or url_for("sandik_page_bp.member_summary_for_management_page",
+                                                        sandik_id=sandik_id, member_id=member_id))
 
     form = forms.AddShareForm()
     form.share_order_of_member.data = db.get_last_share_order(member) + 1
@@ -341,7 +347,7 @@ def add_share_to_member_page(sandik_id, member_id):
             return redirect(
                 url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=sandik_id, member_id=member_id)
             )
-        except MaxShareCountExceed as e:
+        except (MaxShareCountExceed, NoValidRuleFound) as e:
             flash(str(e), "danger")
 
     return render_template("utils/form_layout.html",

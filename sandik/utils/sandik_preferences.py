@@ -7,13 +7,11 @@ from sandik.utils import period as period_utils
 from sandik.utils.db_models import Share, Member, SandikRule
 
 
-def max_number_of_installment(sandik, amount, without_raise=False):
+def max_number_of_installment(sandik, amount):
     for rule in sandik.sandik_rules_set.select(lambda r: r.type == SandikRule.TYPE.MAX_NUMBER_OF_INSTALLMENT):
         if rule.evaluate_condition_formula(amount=amount):
             return int(rule.evaluate_value_formula())
     else:
-        if without_raise:
-            return None
         raise NoValidRuleFound(f"\"{amount}₺\" borç için kaç taksit yapılacağını tespit etmek için geçerli kural bulunamadı!"
                                f"<br>Lütfen önce borç miktarı için kaç taksit yapılacağına dair sandık kuralı ekleyiniz.")
 
@@ -23,7 +21,7 @@ def get_start_period(sandik, debt_date):
     return period_utils.date_to_period(period_date)
 
 
-def remaining_debt_balance(sandik, whose, without_raise=False):
+def remaining_debt_balance(sandik, whose):
     if isinstance(whose, Share):
         for rule in sandik.sandik_rules_set.select(lambda r: r.type == SandikRule.TYPE.MAX_AMOUNT_OF_DEBT):
             if rule.evaluate_condition_formula(whose=whose):
@@ -31,8 +29,6 @@ def remaining_debt_balance(sandik, whose, without_raise=False):
                 print(f"max_debt_of_share: {max_debt_of_share}")
                 break
         else:
-            if without_raise:
-                return None
             raise NoValidRuleFound(f"Hissenin alabileceği borç miktarını tespit etmek için geçerli kural bulunamadı."
                                    f"<br>Lütfen önce açılabilecek en fazla hisse sayısı için sandık kuralı ekleyiniz."
                                    f"<br>Üye: {whose.name_surname}"
@@ -48,12 +44,10 @@ def remaining_debt_balance(sandik, whose, without_raise=False):
         raise Exception("whose 'Share' yada 'Member' olmalıdır")
 
 
-def get_max_number_of_share(sandik, without_raise=False):
+def get_max_number_of_share(sandik):
     for rule in sandik.sandik_rules_set.select(lambda r: r.type == SandikRule.TYPE.MAX_NUMBER_OF_SHARE):
         if rule.evaluate_condition_formula():
             return int(rule.evaluate_value_formula())
     else:
-        if without_raise:
-            return None
         raise NoValidRuleFound(f"Açılabilecek maksimum hisse sayısını tespit etmek için geçerli kural bulunamadı!"
-                               f"<br>Lütfen önce açılabilecek en fazla hisse sayısı için sandık kuralı ekleyiniz.")
+                               f"<br>Lütfen önce açılabilecek hisse sayısı için sandık kuralı ekleyiniz.")
