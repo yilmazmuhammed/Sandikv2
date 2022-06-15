@@ -51,7 +51,7 @@
             <div class="panel-heading font-bold">
               <span>{{ rule_type_value }}</span>
               <span class="pull-right">
-                {{ macros.button(url=url_for("sandik_page_bp.add_sandik_rule_page", sandik_id=g.sandik.id, type=rule_type_key), icon='fa fa-plus', type='default', size='sm', title='Yeni kural ekle') }}
+                {{ macros.button(url=url_for("sandik_page_bp.add_sandik_rule_page", sandik_id=g.sandik.id, type=rule_type_key, next=request.base_url), icon='fa fa-plus', type='default', size='sm', title='Yeni kural ekle') }}
               </span>
             </div>
             <div>

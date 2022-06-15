@@ -280,8 +280,8 @@ def remove_share_from_member(share: Share, removed_by, refunded_money_transactio
 
 
 def rule_formula_validator(formula_string, variables, operators, formula_type):
-    if formula_type is None or formula_type not in ["condition", "value"]:
-        raise InvalidArgument(f"type is {formula_type}")
+    if formula_type not in SandikRule.FORMULA_TYPE.strings.keys():
+        raise InvalidArgument(f"type is {formula_type} not in {SandikRule.FORMULA_TYPE.strings.keys()}")
 
     data = formula_string.replace(' ', '')
     operators = sorted(operators, reverse=True, key=lambda o: len(o))
@@ -305,18 +305,20 @@ def rule_formula_validator(formula_string, variables, operators, formula_type):
                 break
         else:
             raise InvalidRuleCharacter(i)
-    if formula_type == "value" and operator_counts != 0:
+    if formula_type == SandikRule.FORMULA_TYPE.VALUE and operator_counts != 0:
         raise RuleOperatorCountException(f"Değer formülünde karşılaştırma işareti bulunamaz")
-    if formula_type == "condition" and operator_counts > 1:
+    if formula_type == SandikRule.FORMULA_TYPE.CONDITION and operator_counts > 1:
         raise RuleOperatorCountException(f"Koşul formülünde en fazla 1 tane karşılaştırma işareti bulunmalıdır.")
 
 
 def add_sandik_rule_to_sandik(condition_formula, value_formula, type, sandik, **kwargs):
     try:
+        comp_ops = list(SandikRule.COMPARISON_OPERATOR.strings.keys())
+        arith_ops = list(SandikRule.ARITHMETIC_OPERATOR.strings.keys())
         rule_formula_validator(formula_string=condition_formula, variables=SandikRule.FORMULA_VARIABLE.strings.keys(),
-                               operators=["+", "-", "*", "/", "<", "<=", "==", ">=", ">"], formula_type="condition")
+                               operators=comp_ops + arith_ops, formula_type=SandikRule.FORMULA_TYPE.CONDITION)
         rule_formula_validator(formula_string=value_formula, variables=SandikRule.FORMULA_VARIABLE.strings.keys(),
-                               operators=["+", "-", "*", "/", "<", "<=", "==", ">=", ">"], formula_type="value")
+                               operators=comp_ops + arith_ops, formula_type=SandikRule.FORMULA_TYPE.VALUE)
     except InvalidRuleVariable as e:
         raise InvalidRuleVariable(f"Sandık kuralı geçersiz değişken veya geçersiz karakter içeriyor: {e}")
 

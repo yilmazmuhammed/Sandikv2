@@ -976,6 +976,15 @@ class SandikRule(db.Entity):
             MAX_NUMBER_OF_SHARE: "En fazla açılabilecek hisse sayısı",
         }
 
+    class FORMULA_TYPE:
+        CONDITION = "condition"
+        VALUE = "value"
+
+        strings = {
+            VALUE: VALUE,
+            CONDITION: CONDITION,
+        }
+
     class FORMULA_VARIABLE:
         TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_MEMBER = "uye_toplam_aidat"
         TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_SHARE = "hisse_toplam_aidat"
@@ -993,7 +1002,7 @@ class SandikRule(db.Entity):
             AMOUNT_OF_DEBT: lambda whose=None, amount=None: amount,
         }
 
-    class MATH_SIGN:
+    class ARITHMETIC_OPERATOR:
         ADDITION = "+"
         EXTRACTION = "-"
         MULTIPLICATION = "*"

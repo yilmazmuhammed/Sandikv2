@@ -7,13 +7,21 @@ from sandik.utils import period as period_utils
 from sandik.utils.db_models import Share, Member, SandikRule
 
 
-def max_number_of_installment(sandik, amount):
-    for rule in sandik.sandik_rules_set.select(lambda r: r.type == SandikRule.TYPE.MAX_NUMBER_OF_INSTALLMENT):
-        if rule.evaluate_condition_formula(amount=amount):
-            return int(rule.evaluate_value_formula())
+def base_sandik_rule_function(sandik, rule_type, no_rule_msg, result_cast=None, **kwargs):
+    for rule in sandik.sandik_rules_set.select(lambda r: r.type == rule_type):
+        if rule.evaluate_condition_formula(**kwargs):
+            if result_cast:
+                return result_cast(rule.evaluate_value_formula())
+            return rule.evaluate_value_formula()
     else:
-        raise NoValidRuleFound(f"\"{amount}₺\" borç için kaç taksit yapılacağını tespit etmek için geçerli kural bulunamadı!"
-                               f"<br>Lütfen önce borç miktarı için kaç taksit yapılacağına dair sandık kuralı ekleyiniz.")
+        raise NoValidRuleFound(no_rule_msg)
+
+
+def max_number_of_installment(sandik, amount):
+    no_rule_msg = f"\"{amount}₺\" borç için kaç taksit yapılacağını tespit etmek için geçerli kural bulunamadı!" \
+                  f"<br>Lütfen önce borç miktarı için kaç taksit yapılacağına dair sandık kuralı ekleyiniz."
+    return base_sandik_rule_function(sandik=sandik, rule_type=SandikRule.TYPE.MAX_NUMBER_OF_INSTALLMENT,
+                                     no_rule_msg=no_rule_msg, result_cast=int, amount=amount)
 
 
 def get_start_period(sandik, debt_date):
@@ -23,17 +31,12 @@ def get_start_period(sandik, debt_date):
 
 def remaining_debt_balance(sandik, whose):
     if isinstance(whose, Share):
-        for rule in sandik.sandik_rules_set.select(lambda r: r.type == SandikRule.TYPE.MAX_AMOUNT_OF_DEBT):
-            if rule.evaluate_condition_formula(whose=whose):
-                max_debt_of_share = rule.evaluate_value_formula(whose=whose)
-                print(f"max_debt_of_share: {max_debt_of_share}")
-                break
-        else:
-            raise NoValidRuleFound(f"Hissenin alabileceği borç miktarını tespit etmek için geçerli kural bulunamadı."
-                                   f"<br>Lütfen önce açılabilecek en fazla hisse sayısı için sandık kuralı ekleyiniz."
-                                   f"<br>Üye: {whose.name_surname}"
-                                   f"<br>Hisse: {whose.id}"
-                                   f"<br>Aidat miktarı: {whose.total_amount_of_paid_contribution()}")
+        no_rule_msg = f"Hissenin alabileceği borç miktarını tespit etmek için geçerli kural bulunamadı." \
+                      f"<br>Lütfen önce açılabilecek en fazla hisse sayısı için sandık kuralı ekleyiniz." \
+                      f"<br>Üye: {whose.name_surname} <br>Hisse: {whose.id}" \
+                      f"<br>Aidat miktarı: {whose.total_amount_of_paid_contribution()}"
+        max_debt_of_share = base_sandik_rule_function(sandik=sandik, rule_type=SandikRule.TYPE.MAX_AMOUNT_OF_DEBT,
+                                                      no_rule_msg=no_rule_msg, whose=whose)
         max_debt_balance = math.ceil(max_debt_of_share / 1000) * 1000
         max_debt_balance = max_debt_balance if max_debt_balance != 0 else 1000
         unpaid_installments_amount = whose.total_amount_unpaid_installments()
@@ -45,9 +48,7 @@ def remaining_debt_balance(sandik, whose):
 
 
 def get_max_number_of_share(sandik):
-    for rule in sandik.sandik_rules_set.select(lambda r: r.type == SandikRule.TYPE.MAX_NUMBER_OF_SHARE):
-        if rule.evaluate_condition_formula():
-            return int(rule.evaluate_value_formula())
-    else:
-        raise NoValidRuleFound(f"Açılabilecek maksimum hisse sayısını tespit etmek için geçerli kural bulunamadı!"
-                               f"<br>Lütfen önce açılabilecek hisse sayısı için sandık kuralı ekleyiniz.")
+    no_rule_msg = f"Açılabilecek maksimum hisse sayısını tespit etmek için geçerli kural bulunamadı!" \
+                  f"<br>Lütfen önce açılabilecek hisse sayısı için sandık kuralı ekleyiniz."
+    return base_sandik_rule_function(sandik=sandik, rule_type=SandikRule.TYPE.MAX_NUMBER_OF_SHARE,
+                                     no_rule_msg=no_rule_msg, result_cast=int)

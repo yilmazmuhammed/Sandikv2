@@ -527,7 +527,10 @@ def add_sandik_rule_page(sandik_id):
             utils.add_sandik_rule_to_sandik(condition_formula=form.condition_formula.data,
                                             value_formula=form.value_formula.data,
                                             type=form.type.data, sandik=g.sandik, created_by=current_user)
-            return redirect(url_for("sandik_page_bp.add_sandik_rule_page", sandik_id=sandik_id))
+            next_url = get_next_url(
+                request.args, default_url=url_for("sandik_page_bp.add_sandik_rule_page", sandik_id=sandik_id)
+            )
+            return redirect(next_url)
         except RuleOperatorCountException as e:
             flash(str(e), "danger")
     return render_template("sandik/add_sandik_rule_page.html",

@@ -6,8 +6,6 @@
   let activeElement = null;
   function add_text_to_cursor(text){
 
-  console.log(activeElement);
-  console.log(text);
     if(activeElement != null && activeElement.tagName == "INPUT"){
       let selectionStart = activeElement.selectionStart;
       let newCursorPosition = selectionStart + text.length;
@@ -22,7 +20,7 @@
   $(document)
     .ready(function () {
       let formula_variables_box = `
-        <div class="btn-toolbar list-group-item bg-light text-center">
+        <div class="btn-toolbar list-group-item bg-light text-center" style="margin-bottom: 25px;">
           <div class="row text-center h4 font-bold" style="margin-bottom: 10px;">Formül değişkenleri</div>
           <!-- Formül değişkenleri -->
           <div class="row">
@@ -33,7 +31,7 @@
           <!-- Matematiksel işlemler -->
           <div class="row">
             <h5 style="margin-bottom: 10px;">Matematiksel işaretler:</h5>
-            {% for key, text in SandikRule.MATH_SIGN.strings.items() %}
+            {% for key, text in SandikRule.ARITHMETIC_OPERATOR.strings.items() %}
               <span id="{{ key }}" class="btn btn-sm btn-primary formula_sign_button" style="margin-bottom: 10px;">{{ text }}</span>
             {% endfor %}
           </div>
