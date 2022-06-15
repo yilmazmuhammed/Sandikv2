@@ -11,7 +11,7 @@ from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelatio
     MembershipException, MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
     ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, to_be_member_of_sandik_required, \
-    trust_relationship_required, to_be_member_or_manager_of_sandik_required, sandik_type_required
+    trust_relationship_required, to_be_member_or_manager_of_sandik_required, sandik_type_required, sandik_rule_required
 from sandik.utils import LayoutPI, get_next_url, sandik_preferences
 from sandik.utils.db_models import Sandik
 
@@ -523,6 +523,32 @@ def add_sandik_rule_page(sandik_id):
 
     return render_template("sandik/add_sandik_rule_page.html",
                            page_info=FormPI(title="Sandık kuralı ekle", form=form, active_dropdown='sandik-rules'))
+
+
+@sandik_page_bp.route("/<int:sandik_id>/sandik-kurallari")
+@sandik_authorization_required(permission="read")
+def sandik_rules_page(sandik_id):
+    g.sandik_rules = db.get_sandik_rules_groups_by_category(sandik=g.sandik)
+    return render_template("sandik/sandik_rules_page.html",
+                           page_info=LayoutPI(title="Sandık kuralları", active_dropdown="sandik-rules"))
+
+
+@sandik_page_bp.route("/<int:sandik_id>/sk-<int:sandik_rule_id>/yukari-tasi")
+@sandik_authorization_required(permission="write")
+@sandik_rule_required
+def raise_order_of_sandik_rule_page(sandik_id, sandik_rule_id):
+    if not db.raise_order_of_sandik_rule(sandik_rule=g.sandik_rule, updated_by=current_user):
+        flash("Sandık kuralı zaten en öncelikli durumda", "warning")
+    return redirect(request.referrer or url_for("sandik_page_bp.sandik_rules_page", sandik_id=sandik_id))
+
+
+@sandik_page_bp.route("/<int:sandik_id>/sk-<int:sandik_rule_id>/asagi-tasi")
+@sandik_authorization_required(permission="write")
+@sandik_rule_required
+def lower_order_of_sandik_rule_page(sandik_id, sandik_rule_id):
+    if not db.lower_order_of_sandik_rule(sandik_rule=g.sandik_rule, updated_by=current_user):
+        flash("Sandık kuralı zaten en az öncelikli durumda", "warning")
+    return redirect(request.referrer or url_for("sandik_page_bp.sandik_rules_page", sandik_id=sandik_id))
 
 
 """

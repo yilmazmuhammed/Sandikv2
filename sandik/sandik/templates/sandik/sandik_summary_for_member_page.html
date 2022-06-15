@@ -297,14 +297,14 @@
               </thead>
               <tbody>
               {% for share in g.member.shares_set.order_by('lambda s: s.share_order_of_member') %}
-              {% set max_debt_amount=sandik_preferences.remaining_debt_balance(sandik=share.sandik_ref, whose=share) %}
+              {% set max_debt_amount=sandik_preferences.remaining_debt_balance(sandik=share.sandik_ref, whose=share, without_raise=True) or "---"  %}
                 <tr class="row text-center">
                   <td>Hisse {{ share.share_order_of_member }}</td>
                   <td>{{ max_debt_amount }} ₺</td>
-                  <td>{{ sandik_preferences.max_number_of_installment(sandik=share.sandik_ref, amount=max_debt_amount) }}</td>
+                  <td>{{ sandik_preferences.max_number_of_installment(sandik=share.sandik_ref, amount=max_debt_amount, without_raise=True) or "---"  }}</td>
                 </tr>
               {% endfor %}
-              {% set max_debt_amount=sandik_preferences.remaining_debt_balance(sandik=g.member.sandik_ref, whose=g.member) %}
+              {% set max_debt_amount=sandik_preferences.remaining_debt_balance(sandik=g.member.sandik_ref, whose=g.member, without_raise=True) or "---" %}
               <tr class="row text-center font-bold">
                 <td class="">Toplam</td>
                 <td>{{ max_debt_amount }} ₺</td>

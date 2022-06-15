@@ -244,6 +244,49 @@ def create_sandik_rule(sandik, created_by, **kwargs) -> SandikRule:
     return SandikRule(logs_set=log, sandik_ref=sandik, **kwargs)
 
 
+def get_sandik_rule(**kwargs) -> SandikRule:
+    return SandikRule.get(**kwargs)
+
+
+def get_sandik_rules_groups_by_category(sandik):
+    sandik_rules = {}
+    for rule_type in SandikRule.TYPE.strings.keys():
+        sandik_rules[rule_type] = sandik.sandik_rules_set.filter(lambda r: r.type == rule_type).order_by(
+            lambda r: r.order)
+    return sandik_rules
+
+
+def update_sandik_rule(sandik_rule, updated_by, **kwargs) -> SandikRule:
+    updated_fields = get_updated_fields(new_values=kwargs, db_object=sandik_rule)
+    Log(web_user_ref=updated_by, type=Log.TYPE.SANDIK_RULE.UPDATE, logged_sandik_rule_ref=sandik_rule,
+        detail=str(updated_fields))
+    sandik_rule.set(**kwargs)
+    return sandik_rule
+
+
+def raise_order_of_sandik_rule(sandik_rule, updated_by):
+    if sandik_rule.order == 1:
+        return False
+
+    above_rule = get_sandik_rule(sandik_ref=sandik_rule.sandik_ref, type=sandik_rule.type,
+                                 order=sandik_rule.order - 1)
+    update_sandik_rule(sandik_rule=above_rule, updated_by=updated_by, order=above_rule.order + 1)
+    update_sandik_rule(sandik_rule=sandik_rule, updated_by=updated_by, order=sandik_rule.order - 1)
+
+    return True
+
+
+def lower_order_of_sandik_rule(sandik_rule, updated_by):
+    if sandik_rule.order == get_last_rule_order(sandik=sandik_rule.sandik_ref, type=sandik_rule.type):
+        return False
+    bottom_rule = get_sandik_rule(sandik_ref=sandik_rule.sandik_ref, type=sandik_rule.type,
+                                  order=sandik_rule.order + 1)
+    update_sandik_rule(sandik_rule=bottom_rule, updated_by=updated_by, order=bottom_rule.order - 1)
+    update_sandik_rule(sandik_rule=sandik_rule, updated_by=updated_by, order=sandik_rule.order + 1)
+
+    return None
+
+
 """
 ########################################################################################################################
 ########################################################################################################################

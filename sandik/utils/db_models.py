@@ -506,6 +506,7 @@ class Log(db.Entity):
         class SANDIK_RULE:
             first, last = 1500, 1599
             CREATE = first + 1
+            UPDATE = first + 2
 
         class LOG_LEVEL:
             first, last = 10000, 10099
@@ -932,7 +933,7 @@ class SandikRule(db.Entity):
     value_formula = Required(str)
     logs_set = Set(Log)
 
-    def parse_formula(self, formula, whose):
+    def parse_formula(self, formula, **kwargs):
         formula_without_variables = ""
         formula = formula.replace(' ', '')
 
@@ -943,7 +944,7 @@ class SandikRule(db.Entity):
             # Değişken tespiti
             if formula[i] == "{":
                 variable = formula[i + 1:].split("}")[0]
-                value = variable_functions[variable](whose=whose)
+                value = variable_functions[variable](**kwargs)
                 formula_without_variables += str(value)
                 i += 1 + len(variable) + 1
                 continue
