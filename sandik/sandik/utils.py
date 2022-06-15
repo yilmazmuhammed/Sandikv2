@@ -286,7 +286,7 @@ def rule_formula_validator(formula_string, variables, operators, formula_type):
     data = formula_string.replace(' ', '')
     operators = sorted(operators, reverse=True, key=lambda o: len(o))
     i = 0
-    operator_counts = 0
+    comp_operator_counts = 0
     while i < len(data):
         if data[i] == "{":
             variable = data[i + 1:].split("}")[0]
@@ -301,13 +301,14 @@ def rule_formula_validator(formula_string, variables, operators, formula_type):
         for operator in operators:
             if data[i: i + len(operator)] == operator:
                 i += len(operator)
-                operator_counts += 1
+                if operator in SandikRule.COMPARISON_OPERATOR.strings.keys():
+                    comp_operator_counts += 1
                 break
         else:
             raise InvalidRuleCharacter(i)
-    if formula_type == SandikRule.FORMULA_TYPE.VALUE and operator_counts != 0:
+    if formula_type == SandikRule.FORMULA_TYPE.VALUE and comp_operator_counts != 0:
         raise RuleOperatorCountException(f"Değer formülünde karşılaştırma işareti bulunamaz")
-    if formula_type == SandikRule.FORMULA_TYPE.CONDITION and operator_counts > 1:
+    if formula_type == SandikRule.FORMULA_TYPE.CONDITION and comp_operator_counts > 1:
         raise RuleOperatorCountException(f"Koşul formülünde en fazla 1 tane karşılaştırma işareti bulunmalıdır.")
 
 
