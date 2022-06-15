@@ -6,8 +6,7 @@ from wtforms.validators import NumberRange, Optional, Email, ValidationError
 
 from sandik.auth import db as auth_db
 from sandik.sandik import db, utils
-from sandik.sandik.exceptions import InvalidRuleVariable, InvalidRuleCharacter
-from sandik.utils import sandik_preferences
+from sandik.sandik.exceptions import InvalidRuleVariable, InvalidRuleCharacter, RuleOperatorCountException
 from sandik.utils.db_models import Sandik, SmsPackage, SandikRule
 from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator
 
@@ -336,10 +335,11 @@ class SendSmsForm(CustomFlaskForm):
 
 
 class SandikRuleFormulaValidator(object):
-    def __init__(self, message=None, variable_list=None):
+    def __init__(self, formula_type, message=None, variable_list=None):
         if variable_list is None:
             variable_list = []
         self.message = message or "Sandık formülü geçerli değil!"
+        self.formula_type = formula_type
         self.variable_list = variable_list
         self.comparison_operators = ["<", "<=", "==", ">=", ">"]
         self.math_signs = ["+", "-", "*", "/"]
@@ -347,7 +347,10 @@ class SandikRuleFormulaValidator(object):
     def __call__(self, form, field):
         try:
             utils.rule_formula_validator(formula_string=field.data, variables=self.variable_list,
-                                         operators=self.comparison_operators + self.math_signs)
+                                         operators=self.comparison_operators + self.math_signs,
+                                         formula_type=self.formula_type)
+        except RuleOperatorCountException as e:
+            raise ValidationError(str(e))
         except InvalidRuleVariable as variable_name:
             raise ValidationError(f"{self.message}: {variable_name} geçerli bir değişken değil")
         except InvalidRuleCharacter as character_index:
@@ -373,7 +376,8 @@ class SandikRuleForm(CustomFlaskForm):
     condition_formula = StringField(
         "Koşul formülü",
         validators=[
-            SandikRuleFormulaValidator(variable_list=SandikRule.FORMULA_VARIABLE.strings.keys()),
+            SandikRuleFormulaValidator(formula_type="condition",
+                                       variable_list=SandikRule.FORMULA_VARIABLE.strings.keys()),
         ],
         render_kw={"placeholder": "Koşul formülü"}
     )
@@ -382,7 +386,8 @@ class SandikRuleForm(CustomFlaskForm):
         "Değer formülü",
         validators=[
             input_required_validator("Değer formülü"),
-            SandikRuleFormulaValidator(variable_list=SandikRule.FORMULA_VARIABLE.strings.keys()),
+            SandikRuleFormulaValidator(formula_type="value",
+                                       variable_list=SandikRule.FORMULA_VARIABLE.strings.keys()),
         ],
         render_kw={"placeholder": "Değer formülü"}
     )

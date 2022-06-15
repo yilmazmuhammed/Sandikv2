@@ -49,7 +49,7 @@ def catch_exception(func, *args, **kwargs):
     try:
         return func(*args, **kwargs)
     except Exception as e:
-        flash(str(e), "danger")
+        # flash(str(e), "danger") # BUG: Bir soraki sayfada gösteriliyor
         return None
 
 

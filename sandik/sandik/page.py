@@ -9,7 +9,8 @@ from sandik.sandik import forms, db, utils
 from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelationshipCreationException, \
     MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, SandikAuthorityException, AddMemberException, \
     MembershipException, MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
-    ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException, NoValidRuleFound
+    ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException, NoValidRuleFound, \
+    RuleOperatorCountException
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, to_be_member_of_sandik_required, \
     trust_relationship_required, to_be_member_or_manager_of_sandik_required, sandik_type_required, sandik_rule_required
 from sandik.utils import LayoutPI, get_next_url, sandik_preferences
@@ -522,11 +523,13 @@ def add_sandik_rule_page(sandik_id):
     form = forms.SandikRuleForm()
 
     if form.validate_on_submit():
-        utils.add_sandik_rule_to_sandik(condition_formula=form.condition_formula.data,
-                                        value_formula=form.value_formula.data,
-                                        type=form.type.data, sandik=g.sandik, created_by=current_user)
-        return redirect(url_for("sandik_page_bp.add_sandik_rule_page", sandik_id=sandik_id))
-
+        try:
+            utils.add_sandik_rule_to_sandik(condition_formula=form.condition_formula.data,
+                                            value_formula=form.value_formula.data,
+                                            type=form.type.data, sandik=g.sandik, created_by=current_user)
+            return redirect(url_for("sandik_page_bp.add_sandik_rule_page", sandik_id=sandik_id))
+        except RuleOperatorCountException as e:
+            flash(str(e), "danger")
     return render_template("sandik/add_sandik_rule_page.html",
                            page_info=FormPI(title="Sandık kuralı ekle", form=form, active_dropdown='sandik-rules'))
 

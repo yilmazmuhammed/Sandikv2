@@ -7,7 +7,7 @@ from sandik.general import db as general_db
 from sandik.sandik import db
 from sandik.sandik.exceptions import MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
     ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException, InvalidSmsType, \
-    InvalidRuleVariable, InvalidRuleCharacter
+    InvalidRuleVariable, InvalidRuleCharacter, InvalidArgument, RuleOperatorCountException
 from sandik.sandik.exceptions import UpdateMemberException
 from sandik.transaction import utils as transaction_utils, db as transaction_db
 from sandik.utils import period as period_utils, sandik_preferences
@@ -279,10 +279,9 @@ def remove_share_from_member(share: Share, removed_by, refunded_money_transactio
     return refunded_money_transaction
 
 
-def rule_formula_validator(formula_string, variables, operators):
-    # TODO
-    # if formula_type is None:
-    #     raise InvalidArgument("type is None")
+def rule_formula_validator(formula_string, variables, operators, formula_type):
+    if formula_type is None or formula_type not in ["condition", "value"]:
+        raise InvalidArgument(f"type is {formula_type}")
 
     data = formula_string.replace(' ', '')
     operators = sorted(operators, reverse=True, key=lambda o: len(o))
@@ -306,19 +305,18 @@ def rule_formula_validator(formula_string, variables, operators):
                 break
         else:
             raise InvalidRuleCharacter(i)
-    # TODO
-    # if formula_type == "value" and operator_counts != 0:
-    #     raise RuleOperatorCountException(f"{formula_type} -> {operator_counts}")
-    # if formula_type == "condition" and operator_counts != 1:
-    #     raise RuleOperatorCountException(f"{formula_type} -> {operator_counts}")
+    if formula_type == "value" and operator_counts != 0:
+        raise RuleOperatorCountException(f"Değer formülünde karşılaştırma işareti bulunamaz")
+    if formula_type == "condition" and operator_counts > 1:
+        raise RuleOperatorCountException(f"Koşul formülünde en fazla 1 tane karşılaştırma işareti bulunmalıdır.")
 
 
 def add_sandik_rule_to_sandik(condition_formula, value_formula, type, sandik, **kwargs):
     try:
         rule_formula_validator(formula_string=condition_formula, variables=SandikRule.FORMULA_VARIABLE.strings.keys(),
-                               operators=["+", "-", "*", "/", "<", "<=", "==", ">=", ">"])
+                               operators=["+", "-", "*", "/", "<", "<=", "==", ">=", ">"], formula_type="condition")
         rule_formula_validator(formula_string=value_formula, variables=SandikRule.FORMULA_VARIABLE.strings.keys(),
-                               operators=["+", "-", "*", "/", "<", "<=", "==", ">=", ">"])
+                               operators=["+", "-", "*", "/", "<", "<=", "==", ">=", ">"], formula_type="value")
     except InvalidRuleVariable as e:
         raise InvalidRuleVariable(f"Sandık kuralı geçersiz değişken veya geçersiz karakter içeriyor: {e}")
 
