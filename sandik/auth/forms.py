@@ -149,4 +149,4 @@ class UpdatePasswordForm(CustomFlaskForm):
     submit = SubmitField(label="Kaydet")
 
     def __init__(self, form_title='Parola güncelleme formu', *args, **kwargs):
-        super().__init__(form_title=form_title, f_class="form-validation", *args, **kwargs)
+        super().__init__(form_title=form_title, *args, **kwargs)

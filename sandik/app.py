@@ -45,12 +45,12 @@ def register_blueprints(flask_app):
     return flask_app
 
 
-def catch_exception(func, *args, **kwargs):
+def catch_exception(func, default_value, *args, **kwargs):
     try:
         return func(*args, **kwargs)
     except Exception as e:
         # flash(str(e), "danger") # BUG: Bir soraki sayfada gösteriliyor
-        return None
+        return default_value
 
 
 def jinja2_integration(flask_app):

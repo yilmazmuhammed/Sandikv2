@@ -1,0 +1,3 @@
+{% macro get_members_of_sandik_as_js_list(sandik) -%}
+  [{% for member in sandik.members_set.order_by("lambda m: m.web_user_ref.name_surname") %}"{{member.web_user_ref.name_surname}}",{%endfor%}]
+{%- endmacro %}

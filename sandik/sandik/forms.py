@@ -237,7 +237,8 @@ class AddMemberForm(CustomFlaskForm):
 
     def __init__(self, sandik, form_title='Üye ekleme formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
-        self.web_user.choices += auth_db.web_users_form_choices(exclusions=sandik.members_set.web_user_ref)
+        self.web_user.choices += auth_db.web_users_form_choices(exclusions=sandik.members_set.web_user_ref,
+                                                                only_active_user=True)
         try:
             max_share = sandik_preferences.get_max_number_of_share(sandik=sandik)
             self.number_of_share.validators.append(

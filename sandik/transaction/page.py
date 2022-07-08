@@ -154,6 +154,7 @@ def money_transactions_of_member_for_management_page(sandik_id, member_id):
 @transaction_page_bp.route('s-sandik-islemleri')
 @sandik_authorization_required("read")
 def transactions_of_sandik_page(sandik_id):
+    g.type = "management"
     g.transactions = utils.get_transactions(whose=g.sandik)
     return render_template("transaction/sandik_transactions_page.html",
                            page_info=LayoutPI(title="Sandık işlemleri", active_dropdown="management-transactions"))
@@ -162,6 +163,7 @@ def transactions_of_sandik_page(sandik_id):
 @transaction_page_bp.route('u-sandik-islemleri')
 @to_be_member_of_sandik_required
 def transactions_of_member_page(sandik_id):
+    g.type = "member"
     g.transactions = utils.get_transactions(whose=g.member)
     return render_template("transaction/sandik_transactions_page.html",
                            page_info=LayoutPI(title="Sandık işlemlerim", active_dropdown="member-transactions"))
@@ -192,6 +194,7 @@ def payments_of_member_page(sandik_id):
 @transaction_page_bp.route('s-borclar')
 @sandik_authorization_required("read")
 def debts_of_sandik_page(sandik_id):
+    g.type = "management"
     g.unpaid_debts = utils.get_debts(whose=g.sandik, only_unpaid=True)
     g.debts = utils.get_debts(whose=g.sandik)
     return render_template("transaction/debts_page.html",
@@ -201,6 +204,7 @@ def debts_of_sandik_page(sandik_id):
 @transaction_page_bp.route('u-borclar')
 @to_be_member_of_sandik_required
 def debts_of_member_page(sandik_id):
+    g.type = "member"
     g.unpaid_debts = utils.get_debts(whose=g.member, only_unpaid=True)
     g.debts = utils.get_debts(whose=g.member)
     return render_template("transaction/debts_page.html",

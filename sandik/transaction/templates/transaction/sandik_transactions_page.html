@@ -1,10 +1,16 @@
 {% extends "utils/layout.html" %}
+{% import "transaction/parts/macros.html" as macros2 %}
 
 {% block js_block %}
 <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
 <script>
 jQuery(function($){
 	$('#sandik-transactions-table').footable({
+    components: {
+      {% if g.type == "management" %}
+        filtering: create_footable_basic_filter("name_surname", "Üye:", {{ macros2.get_members_of_sandik_as_js_list(g.sandik) }}, "Üye:"),
+      {% endif %}
+    },
     "toggleColumn": "first",
     "paging": {
       "enabled": true,

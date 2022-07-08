@@ -25,7 +25,6 @@
           { "name": "index", "title": "#"},
           { "name": "name_surname", "title": "Üye ismi" },
           { "name": "date_of_membership", "title": "Üyelik tarihi", "breakpoints": "xs sm md" },
-          { "name": "shares_count", "title": "Hisse sayısı", "breakpoints": "xs sm md", "classes": "text-center", },
           { "name": "is_active", "title": "Durum", "classes": "text-center", "breakpoints": "xs sm md lg" ,  },
         ],
         "rows": [
@@ -33,7 +32,6 @@
           {
             "index": `<span title='ID: {{ member.id }}'>{{ loop.index }}</span>`,
             "name_surname": `{{ member.web_user_ref.name_surname }}`,
-            "shares_count": `{{ member.shares_count() }}`,
             "is_active": `{{ "Aktif" if member.is_active else "Pasif" }}`,
             "date_of_membership": `{{ member.date_of_membership.strftime("%Y-%m-%d") }}`,
           },

@@ -70,9 +70,13 @@ def block_web_user(web_user_id, updated_by) -> WebUser:
     return web_user
 
 
-def web_users_form_choices(exclusions=None):
+def web_users_form_choices(exclusions=None, only_active_user=False):
     if exclusions is None:
         exclusions = []
-    choices = [(wu.id, f"{wu.name_surname} <{wu.email_address}>")
-               for wu in WebUser.select(lambda wu: wu not in exclusions).order_by(lambda wu: wu.name_surname.lower())]
+    choices = [
+        (wu.id, f"{wu.name_surname} <{wu.email_address}>")
+        for wu in WebUser.select(
+            lambda wu: wu not in exclusions and only_active_user <= wu.is_active
+        ).order_by(lambda wu: wu.name_surname.lower())
+    ]
     return choices
