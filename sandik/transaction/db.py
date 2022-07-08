@@ -251,6 +251,10 @@ def get_money_transaction(*args, **kwargs) -> MoneyTransaction:
     return MoneyTransaction.get(*args, **kwargs)
 
 
+def get_debt(*args, **kwargs) -> Debt:
+    return Debt.get(*args, **kwargs)
+
+
 def select_contributions(*args, **kwargs):
     return Contribution.select(*args, **kwargs)
 

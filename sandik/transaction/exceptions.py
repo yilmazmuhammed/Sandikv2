@@ -25,3 +25,11 @@ class MaximumDebtAmountExceeded(DebtException):
 
 class UndefinedRemoveOperation(TransactionException):
     pass
+
+
+class ThereIsNoDebt(TransactionException):
+    pass
+
+
+class MaximumAmountExceeded(TransactionException):
+    pass

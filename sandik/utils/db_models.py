@@ -726,6 +726,15 @@ class Debt(db.Entity):
                             f"MSG: Beklenmedik bir hata ile karşılaşıldı. Düzeltilmesi için "
                             f"lütfen site yöneticisi ile iletişime geçerek ERRCODE'u ve RA'yı söyleyiniz.")
 
+    def get_unpaid_installments(self):
+        return select(i for i in self.installments_set if not i.is_fully_paid)
+
+    def to_extended_dict(self, **kwargs):
+        ret = self.to_dict(**kwargs)
+        ret["paid_amount"] = self.get_paid_amount()
+        ret["unpaid_amount"] = self.get_unpaid_amount()
+        return ret
+
 
 class Installment(db.Entity):
     id = PrimaryKey(int, auto=True)

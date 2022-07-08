@@ -1,16 +1,21 @@
 from flask import Blueprint, jsonify, request
 
+from sandik.sandik import db as sandik_db
+from sandik.sandik.requirement import sandik_authorization_required
+
 transaction_api_bp = Blueprint('transaction_api_bp', __name__)
 
 
-@transaction_api_bp.route('/example')
-def example_api():
-    # # Example for http://127.0.0.1:5000/api/blueprint_template/example?arg0=55&arg1=asd&arg1=qwe
-    print("request.args:\t", request.args, "\n")
-    for i in request.args:
-        print("arg:\t\t", i)
-        print("get:\t\t", request.args.get(i))
-        print("getlist:\t", request.args.getlist(i))
-        print()
-    arg0 = request.args.get('arg0')
-    return jsonify(result=True, msg="Hello world", data=arg0)
+@transaction_api_bp.route('odenmemis-borclar')
+@sandik_authorization_required("read")
+def get_unpaid_debts_of_member_api(sandik_id):
+    if not request.args.get("member"):
+        return jsonify(result=False, msg="'member' parametresi ile member_id'nin gonderilmesi gerekmektedir.")
+
+    member = sandik_db.get_member(id=request.args.get("member"))
+    if not member:
+        return jsonify(result=False, msg="Üye bulunamadı")
+
+    debts = [debt.to_extended_dict() for debt in member.get_unpaid_debts()]
+    print(debts)
+    return jsonify(result=True, member_id=member.id, debts=debts)
