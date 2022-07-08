@@ -70,15 +70,16 @@ def borrow_from_untreated_amount(untreated_money_transaction, amount, money_tran
 
 
 # TODO ismi değişebilir, unpaid paymentları ödüyor
-def add_revenue_transactions(money_transaction, pay_future_payments, created_by):
+def add_revenue_transactions(money_transaction, pay_future_payments, created_by, payments=None):
     member = money_transaction.member_ref
     remaining_amount = money_transaction.get_undistributed_amount()
     if remaining_amount <= 0:
         return False
 
-    payments = get_payments(whose=member, is_fully_paid=False, is_due=True)
-    if pay_future_payments:
-        payments += get_payments(whose=member, is_fully_paid=False, is_due=False)
+    if payments is None:
+        payments = get_payments(whose=member, is_fully_paid=False, is_due=True)
+        if pay_future_payments:
+            payments += get_payments(whose=member, is_fully_paid=False, is_due=False)
 
     payments = sorted(payments, key=lambda t: t.term)
     for p in payments:
@@ -126,13 +127,14 @@ def add_expense_transactions(money_transaction, use_untreated_amount, created_by
     return True
 
 
-def add_money_transaction(member, created_by, use_untreated_amount, pay_future_payments, creation_type, **kwargs):
+def add_money_transaction(member, created_by, use_untreated_amount, pay_future_payments, creation_type, payments=None,
+                          **kwargs):
     money_transaction = db.create_money_transaction(member_ref=member, is_fully_distributed=False,
                                                     creation_type=creation_type, created_by=created_by, **kwargs)
     if money_transaction.type == MoneyTransaction.TYPE.REVENUE:
         # TODO add_revenue_transactions yerine pay_unpaid_payments_... fonksiyonu mu kullanılmalı?
         add_revenue_transactions(money_transaction=money_transaction, pay_future_payments=pay_future_payments,
-                                 created_by=created_by)
+                                 created_by=created_by, payments=payments)
 
     elif money_transaction.type == MoneyTransaction.TYPE.EXPENSE:
         # TODO Önce kendi parasından, güven bağı olan kişilerin parasından bu para borç olarak

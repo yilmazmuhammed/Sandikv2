@@ -64,6 +64,59 @@ class MoneyTransactionForm(CustomFlaskForm):
         self.member.choices += sandik_db.members_form_choices(sandik=sandik)
 
 
+class DebtPaymentForm(CustomFlaskForm):
+    member = SelectField(
+        label="Üye:",
+        validators=[
+            input_required_validator("Üye")
+        ],
+        choices=[("", "Üye seçiniz...")],
+        coerce=str,
+    )
+
+    date = DateField(
+        label="İşlem tarihi:",
+        validators=[
+            input_required_validator("İşlem tarihi"),
+        ],
+        default=datetime.today()
+    )
+
+    debt = SelectField(
+        label="Borç:",
+        validators=[
+            input_required_validator("Ödenecek borç")
+        ],
+        choices=[("", "Önce üyeyi seçiniz...")],
+        coerce=str,
+        validate_choice=False,
+    )
+
+    amount = DecimalField(
+        label="İşlem miktarı:",
+        validators=[
+            input_required_validator("İşlem miktarı"),
+            NumberRange(message="İşlem miktarı 0'dan büyük bir sayı olmalıdır", min=0.001),
+        ],
+        render_kw={"placeholder": "0.01"},
+    )
+
+    detail = TextAreaField(
+        label="Detay:",
+        validators=[
+            Optional(),
+            max_length_validator("Detay", 1000),
+        ],
+        render_kw={"placeholder": "Detay"}
+    )
+
+    submit = SubmitField(label="Kaydet")
+
+    def __init__(self, sandik, form_title='Borç ödeme', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
+        self.member.choices += sandik_db.members_form_choices(sandik=sandik)
+
+
 class ContributionForm(CustomFlaskForm):
     member = SelectField(
         label="Üye:",

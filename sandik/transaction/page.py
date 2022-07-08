@@ -6,9 +6,9 @@ from werkzeug.utils import redirect
 from sandik.sandik import db as sandik_db
 from sandik.sandik.exceptions import ThereIsNoMember, ThereIsNoShare, NoValidRuleFound
 from sandik.sandik.requirement import sandik_authorization_required, to_be_member_of_sandik_required
-from sandik.transaction import forms, utils
+from sandik.transaction import forms, utils, db
 from sandik.transaction.authorization import money_transaction_required, contribution_required
-from sandik.transaction.exceptions import MaximumDebtAmountExceeded
+from sandik.transaction.exceptions import MaximumDebtAmountExceeded, ThereIsNoDebt, MaximumAmountExceeded
 from sandik.utils import LayoutPI
 from sandik.utils.db_models import MoneyTransaction
 from sandik.utils.forms import FormPI, flask_form_to_dict
@@ -54,6 +54,52 @@ def add_money_transaction_by_manager_page(sandik_id):
     return render_template("transaction/add_money_transaction_by_manager_page.html",
                            page_info=FormPI(title="Para giriş/çıkışı ekle", form=form,
                                             active_dropdown="management-transactions"))
+
+
+@transaction_page_bp.route('borc-odemesi-ekle', methods=["GET", "POST"])
+@sandik_authorization_required("write")
+def add_money_transaction_for_debt_payment_by_manager_page(sandik_id):
+    form = forms.DebtPaymentForm(sandik=g.sandik, form_title="Borç ödemesi")
+
+    if form.validate_on_submit():
+        form_data = flask_form_to_dict(request_form=request.form, exclude=["member", "debt"])
+        try:
+            member = sandik_db.get_member(id=form.member.data)
+            if not member:
+                raise ThereIsNoMember("Üye açılan listeden seçilmelidir")
+
+            debt = db.get_debt(id=form.debt.data)
+            if not debt or debt.member_ref != member:
+                raise ThereIsNoDebt("Borç açılan listeden seçilmelidir")
+
+            remaining_unpaid_amount = debt.get_unpaid_amount()
+            if remaining_unpaid_amount < form.amount.data:
+                raise MaximumAmountExceeded(f"Kalan borç miktarından daha fazla ödeme yapılamaz. <br>"
+                                            f"Kalan borç miktarı: {remaining_unpaid_amount}")
+
+            money_transaction = utils.add_money_transaction(
+                type=MoneyTransaction.TYPE.REVENUE, payments=debt.get_unpaid_installments(),
+                use_untreated_amount=None, pay_future_payments=True,
+                member=member, creation_type=MoneyTransaction.CREATION_TYPE.BY_MANUEL,
+                created_by=current_user, **form_data
+            )
+            return redirect(url_for("transaction_page_bp.add_money_transaction_for_debt_payment_by_manager_page", sandik_id=sandik_id))
+        # MaximumDebtAmountExceeded, NoValidRuleFound olma ihtimali yok, bu kontrol çıkartılabilir
+        except (MaximumDebtAmountExceeded, NoValidRuleFound) as e:
+            # rollback()
+            flash(str(e), "danger")
+        except MaximumAmountExceeded as e:
+            # rollback()
+            flash(str(e), "danger")
+        except Exception as e:
+            raise e
+            rollback()
+            flash(str(e), "danger")
+
+    return render_template(
+        "transaction/add_money_transaction_for_debt_payment_by_manager_page.html",
+        page_info=FormPI(title="Borç ödemesi ekle", form=form, active_dropdown="management-transactions")
+    )
 
 
 @transaction_page_bp.route('aidat-ekle', methods=["GET", "POST"])

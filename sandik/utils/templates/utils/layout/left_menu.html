@@ -147,7 +147,12 @@
                       </li>
                       <li>
                         <a href="{{ url_for('transaction_page_bp.add_custom_contribution_by_manager_page', sandik_id=g.sandik.id) }}">
-                          <span>&emsp;Aidat ekle</span>
+                          <span>&emsp;Aidat oluştur</span>
+                        </a>
+                      </li>
+                      <li>
+                        <a href="{{ url_for('transaction_page_bp.add_money_transaction_for_debt_payment_by_manager_page', sandik_id=g.sandik.id) }}">
+                          <span>&emsp;Borç ödemesi ekle</span>
                         </a>
                       </li>
                     </ul>

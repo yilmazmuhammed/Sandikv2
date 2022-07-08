@@ -9,6 +9,7 @@ from sandik.auth.utils import setup_login_manager
 from sandik.general.page import general_page_bp
 from sandik.sandik.api import sandik_api_bp
 from sandik.sandik.page import sandik_page_bp
+from sandik.transaction.api import transaction_api_bp
 from sandik.transaction.page import transaction_page_bp
 from sandik.utils import CustomJSONEncoder, sandik_preferences
 from sandik.utils.db_models import MoneyTransaction, Installment, Contribution, SandikRule
@@ -42,6 +43,7 @@ def register_blueprints(flask_app):
     flask_app.register_blueprint(sandik_page_bp, url_prefix="/sandik/")
     flask_app.register_blueprint(sandik_api_bp, url_prefix="/api/sandik/")
     flask_app.register_blueprint(transaction_page_bp, url_prefix="/sandik/<int:sandik_id>/")
+    flask_app.register_blueprint(transaction_api_bp, url_prefix="/api/sandik/<int:sandik_id>/")
     return flask_app
 
 
