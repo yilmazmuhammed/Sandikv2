@@ -10,7 +10,8 @@ jQuery(function($){
     components: {
       filtering: create_footable_basic_filter("is_fully_paid", "Ödenme durumu:", ["Ödenmedi", "Ödendi"], "Ödendi"),
       {% if g.type == "management" %}
-        filtering: create_footable_basic_filter("name_surname", "Üye:", {{ macros2.get_members_of_sandik_as_js_list(g.sandik) }}, "Üye:"),
+        {# TODO 2 dropdown filtre aynı anda gözükmüyor #}
+        {# filtering: create_footable_basic_filter("name_surname", "Üye:", {{ macros2.get_members_of_sandik_as_js_list(g.sandik) }}, "Üye:"), #}
       {% endif %}
     },
     "toggleColumn": "first",
