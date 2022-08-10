@@ -36,7 +36,7 @@ def add_web_user(email_address, password, **kwargs) -> WebUser:
     return web_user
 
 
-def update_web_user(web_user, updated_by, email_address=None, **kwargs) -> WebUser:
+def update_web_user(web_user, updated_by, email_address=None, log_type=Log.TYPE.WEB_USER.UPDATE, **kwargs) -> WebUser:
     if email_address and get_web_user(email_address=email_address):
         raise EmailAlreadyExist('Bu e-posta adresiyle daha önce kaydolunmuş.')
 
@@ -44,10 +44,15 @@ def update_web_user(web_user, updated_by, email_address=None, **kwargs) -> WebUs
         kwargs["password_hash"] = hasher.hash(kwargs.pop("password"))
 
     updated_fields = get_updated_fields(new_values=kwargs, db_object=web_user)
-    Log(web_user_ref=updated_by, type=Log.TYPE.WEB_USER.UPDATE, logged_web_user_ref=web_user,
-        detail=str(updated_fields))
+    Log(web_user_ref=updated_by, type=log_type, logged_web_user_ref=web_user, detail=str(updated_fields))
     web_user.set(**kwargs)
     return web_user
+
+
+def password_reset(web_user, new_password):
+    return update_web_user(web_user=web_user, password=new_password,
+                           log_type=Log.TYPE.WEB_USER.PASSWORD_RESET,
+                           updated_by=get_or_create_bot_user(which="anonymous"))
 
 
 def select_web_users(*args, **kwargs):
