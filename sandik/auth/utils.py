@@ -7,7 +7,7 @@ from flask_login import LoginManager
 
 from sandik.auth import db
 from sandik.auth.exceptions import WebUserNotFound, AuthException
-from sandik.bot.email import EmailBot
+from sandik.bot.email_bot import EmailBot
 from sandik.general import db as general_db
 
 
