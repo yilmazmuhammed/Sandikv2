@@ -5,6 +5,9 @@ from email.mime.text import MIMEText
 from email.utils import formataddr
 from time import sleep
 
+from sandik.bot.exceptions import DisconnectServerException, ServerDisconnected, AuthenticationError, SenderRefused, \
+    RepetitionsAreOver
+
 
 class SenderEmail:
     def __init__(self, email_address: str, password: str, smtp_server: str = None, display_name: str = None):
@@ -41,7 +44,7 @@ class SenderEmail:
 
 
 class EmailBot:
-    def __init__(self, email_address, password, smtp_server, display_name):
+    def __init__(self, email_address, password, display_name, smtp_server=None):
         self.sender = SenderEmail(email_address=email_address, password=password,
                                   smtp_server=smtp_server, display_name=display_name)
         self.server = None
@@ -57,8 +60,7 @@ class EmailBot:
         try:
             self.server.quit()
         except Exception as e:
-            # TODO Sandikv2Exception olarak ayarla, log basılsın
-            print("SERVER KAPATILIRKEN HATA!:\n", type(e), e)
+            DisconnectServerException(str(e), create_log=True)
 
     def create_email_message(self, to_addresses: list, subject: str, message: str, message_type="html"):
         if isinstance(to_addresses, str):
@@ -81,21 +83,23 @@ class EmailBot:
             self.server.sendmail(self.sender.email_address, to_addresses, msg.as_string())
             return True
         except smtplib.SMTPServerDisconnected as e:
-            # TODO Sandikv2Exception olarak ayarla, log basılsın
-            print("EMAIL_GONDERIM_HATASI-02!:\n", type(e), e)
+            ServerDisconnected(str(e), create_log=True)
             self.connect_server()
         except smtplib.SMTPAuthenticationError as e:
-            # TODO Sandikv2Exception olarak ayarla, log basılsın
-            print("EMAIL_GONDERIM_HATASI-03!:\n", type(e), e)
-            return False
+            raise AuthenticationError(str(e), create_log=True)
         except smtplib.SMTPSenderRefused as e:
-            # TODO Sandikv2Exception olarak ayarla, log basılsın
-            print("EMAIL_GONDERIM_HATASI-01!:", to_addresses)
+            SenderRefused(str(e), create_log=True)
             sleep(60)
 
         if trials_remaining > 0:
-            # TODO Sandikv2Exception olarak ayarla, log basılsın
             return self.send_email(to_addresses=to_addresses, msg=msg, trials_remaining=trials_remaining - 1)
         else:
-            # TODO Sandikv2Exception olarak ayarla, log basılsın
-            raise e
+            raise RepetitionsAreOver("E-posta'yı tekrar göndermeyi deneme sayısı tükendi", create_log=True)
+
+
+if __name__ == '__main__':
+    email_bot = EmailBot(email_address="mail1@itu.edu.tr", password="password.", display_name="Görünen isim")
+    msg = email_bot.create_email_message(to_addresses=["mail2@hotmail.com"], subject="Konu",
+                                         message="<h1>sa</h1>", message_type="html")
+    email_bot.send_email(["mail2@hotmail.com"], msg=msg)
+    email_bot.disconnect_server()
