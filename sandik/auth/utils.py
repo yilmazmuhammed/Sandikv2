@@ -50,7 +50,7 @@ def send_renew_password_email(web_user):
             "minute": expiration_time.minute
         }
     }
-    token = jwt.encode(info, current_app.secret_key, algorithms=["HS256"])
+    token = jwt.encode(info, current_app.secret_key, algorithm="HS256")
 
     url = url_for("auth_page_bp.password_reset_page", token=token, _external=True)
     email_body = f"""
