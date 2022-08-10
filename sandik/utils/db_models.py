@@ -418,6 +418,7 @@ class Log(db.Entity):
             CONFIRM = first + 11
             BLOCK = first + 12
             REGISTER = first + 13
+            PASSWORD_RESET = first + 21
 
         class SANDIK:
             first, last = 200, 299

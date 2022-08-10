@@ -12,12 +12,30 @@ class AuthException(SandikException):
 
 
 class RegisterException(AuthException):
-    pass
+    ERRCODE = 101
+
+    def __init__(self, msg="", create_log=False, **kwargs):
+        super().__init__(msg=msg, create_log=create_log,
+                         errcode=kwargs.pop("ERRCODE", self.ERRCODE),
+                         errcode_thousand=kwargs.pop("errcode_thousand", self.ERRCODE_THOUSAND),
+                         **kwargs)
 
 
 class EmailAlreadyExist(RegisterException):
-    pass
+    ERRCODE = 102
+
+    def __init__(self, msg="", create_log=False, **kwargs):
+        super().__init__(msg=msg, create_log=create_log,
+                         errcode=kwargs.pop("ERRCODE", self.ERRCODE),
+                         errcode_thousand=kwargs.pop("errcode_thousand", self.ERRCODE_THOUSAND),
+                         **kwargs)
 
 
 class WebUserNotFound(AuthException):
-    pass
+    ERRCODE = 201
+
+    def __init__(self, msg="", create_log=False, **kwargs):
+        super().__init__(msg=msg, create_log=create_log,
+                         errcode=kwargs.pop("ERRCODE", self.ERRCODE),
+                         errcode_thousand=kwargs.pop("errcode_thousand", self.ERRCODE_THOUSAND),
+                         **kwargs)

@@ -1,5 +1,5 @@
 from wtforms import PasswordField, SubmitField, BooleanField, StringField, EmailField, TelField
-from wtforms.validators import Email, Optional
+from wtforms.validators import Email, Optional, EqualTo
 
 from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator, PhoneNumberValidator
 
@@ -36,7 +36,7 @@ class WebUserForm(CustomFlaskForm):
         "E-posta adresi:",
         validators=[
             input_required_validator("E-posta adresi"),
-            max_length_validator("E-posta adresi", 40),
+            max_length_validator("E-posta adresi", 254),
             Email("Geçerli bir e-posta adresi giriniz")
         ],
         render_kw={"placeholder": "Email address"}
@@ -64,6 +64,7 @@ class RegisterForm(WebUserForm):
         validators=[
             input_required_validator("Parola tekrarı"),
             max_length_validator("Parola tekrarı", 30),
+            EqualTo("password", message="Parolalar birbiriyşe eşleşmiyor."),
         ],
         render_kw={"placeholder": "Parola tekrarı"}
     )
@@ -142,6 +143,7 @@ class UpdatePasswordForm(CustomFlaskForm):
         validators=[
             input_required_validator("Yeni parola tekrarı"),
             max_length_validator("Yeni parola tekrarı", 30),
+            EqualTo("new_password", message="Parolalar birbiriyşe eşleşmiyor."),
         ],
         render_kw={"placeholder": "Yeni parola tekrarı"}
     )
@@ -149,4 +151,28 @@ class UpdatePasswordForm(CustomFlaskForm):
     submit = SubmitField(label="Kaydet")
 
     def __init__(self, form_title='Parola güncelleme formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
+
+
+class ForgottenPasswordForm(CustomFlaskForm):
+    email_address = EmailField(
+        "E-posta adresi:",
+        validators=[
+            input_required_validator("E-posta adresi"),
+            max_length_validator("E-posta adresi", 254),
+            Email("Geçerli bir e-posta adresi giriniz")
+        ],
+        render_kw={"placeholder": "Email address"}
+    )
+
+    submit = SubmitField(label="Gönder")
+
+    def __init__(self, form_title='Parola sıfırlama isteği formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
+
+
+class PasswordResetForm(UpdatePasswordForm):
+    old_password = None
+
+    def __init__(self, form_title='Parola sıfırlama formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)

@@ -2,7 +2,7 @@ from flask import Blueprint, flash, request, redirect, render_template, url_for,
 from flask_login import login_user, login_required, logout_user, current_user
 
 from sandik.auth import db, forms, utils
-from sandik.auth.exceptions import RegisterException, EmailAlreadyExist
+from sandik.auth.exceptions import RegisterException, EmailAlreadyExist, AuthException
 from sandik.auth.requirement import admin_required, web_user_required
 from sandik.auth.utils import Notification
 from sandik.utils import LayoutPI, get_next_url
@@ -138,3 +138,36 @@ def update_password_page():
     return render_template("utils/form_layout.html",
                            page_info=FormPI(title="Kullanıcı parolasını güncelle", form=form,
                                             active_dropdown="web-users"))
+
+
+@auth_page_bp.route("/parola-sifirla", methods=['GET', 'POST'])
+def forgotten_password_page():
+    form = forms.ForgottenPasswordForm()
+
+    if form.validate_on_submit():
+        web_user = db.get_web_user(email_address=form.email_address.data)
+        if web_user:
+            utils.send_renew_password_email(web_user=web_user)
+            flash("Parola sıfırlama bağlantısı e-posta adresinize gönderildi.", "success")
+            form = None
+        else:
+            flash("Kullanıcı bulunamadı.", "success")
+
+    return render_template("auth/register_page.html",
+                           page_info=FormPI(title="Parola sıfırlama isteği", form=form))
+
+
+@auth_page_bp.route("/parola-sifirla/<string:token>", methods=['GET', 'POST'])
+def password_reset_page(token):
+    form = forms.PasswordResetForm()
+
+    try:
+        web_user = utils.get_web_user_from_password_reset_token(token=token)
+        if form.validate_on_submit():
+            db.password_reset(web_user=web_user, new_password=form.new_password.data)
+            return redirect(url_for("auth_page_bp.login_page"))
+    except AuthException as e:
+        flash(f"{e}", "danger")
+        form = None
+
+    return render_template("auth/auth_forms.html", page_info=FormPI(title="Parola sıfırlama", form=form))
