@@ -25,3 +25,28 @@
   </label>
 {%- endmacro %}
 
+{% macro yes_no_modal(id='', title='', text='') -%}
+  <!-- Button trigger modal -->
+  <button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#{{ title }}">
+    Launch demo modal
+  </button>
+
+  <!-- Modal -->
+  <div class="modal fade" id="{{ id }}" tabindex="-1" role="dialog" aria-labelledby="{{ id }}-label">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title" id="myModalLabel">{{ title }}</h4>
+        </div>
+        <div class="modal-body">
+          {{ text }}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary">Evet</button>
+          <button type="button" class="btn btn-default" data-dismiss="modal">Hayır</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{%- endmacro %}
