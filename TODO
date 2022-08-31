@@ -1,26 +1,18 @@
 1- Sistemin işler hale getirilmesi
 
+TODO MAJOR      Bir üye silindikten sonra tekrar aynı kullanıcı üye olursa ...
+
+
+2- Kuralların tamamının işler hale getirilmesi
+TODO            piece_of_debt'te havuz (sandığın %10u) için de oluştur
+
+
+3- Kullanışlı arayüz sunmak
+
 TODO MAJOR      Üyeler sayfası, her üye için hisse hisse ne yaptı ne etti
 
 TODO MAJOR      Sandık özeti (sandık yönetimi) sayfası
                     - Her üye için bu ay ne kadar ödemesi lazım vs..
-
-TODO MAJOR      Bir üye silindikten sonra tekrar aynı kullanıcı üye olursa ...
-
-2- Kuralların tamamının işler hale getirilmesi
-TODO            piece_of_debt'te havuz (sandığın %10u) için de oluştur
-TODO            Borç alınırken önce kendi parasından borç alsın, sonra güven halkasından alsın
-
-3- Üyeler için kullanışlı arayüz sunmak
-TODO            Ödemeler sayfasında, bütün ödemeler tablosuna filtre ekle, varsayılan olarak sadece vadesi gelmemiş ve ödenmemiş ödemeler gösterilsin
-TODO            Borçlar sayfasında, bütün borçlar tablosuna filtre ekle, varsayılan olarak sadece ödemesi tamamlanmış borçlar gösterilsin
-
-TODO            Parola değiştirme sayfası
-TODO            Parolamı unuttum sayfası
-
-TODO            Banka hesabı günzelleme sayfası
-
-TODO            Geçmiş ödemeler ve ayın son x günü bu ayki ödemeler için popup yap
 
 TODO            Üyeler için profil sayfaları oluşturulacak
                     - Sandığa kim tavsiye etmiş
