@@ -807,7 +807,7 @@ class SubReceipt(db.Entity):
             if ref:
                 counter += 1
         if counter != 1:
-            rollback()
+            # rollback()
             print("ERRCODE: 0012, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
 
     def after_insert(self):
@@ -860,9 +860,12 @@ class PieceOfDebt(db.Entity):
     def before_insert(self):
         # TODO test et
         if self.member_ref.get_balance() < self.amount:
-            raise Exception("ERRCODE: 0018, "
-                            "MSG: Beklenmedik bir hata ile karşılaşıldı. "
-                            "Düzeltilmesi için lütfen site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+            err_msg = "ERRCODE: 0018, " \
+                      "MSG: Beklenmedik bir hata ile karşılaşıldı. " \
+                      "Düzeltilmesi için lütfen site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz."
+            print(err_msg)
+            # raise Exception(err_msg)
+            pass
 
 
 class Retracted(db.Entity):

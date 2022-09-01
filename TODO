@@ -1,6 +1,7 @@
 1- Sistemin işler hale getirilmesi
 
-TODO MAJOR      Bir üye silindikten sonra tekrar aynı kullanıcı üye olursa ...
+TODO    MAJOR   Bir üye silindikten sonra tekrar aynı kullanıcı üye olursa ...
+
 
 2- Kuralların tamamının işler hale getirilmesi
 TODO            piece_of_debt'te havuz (sandığın %10u) için de oluştur
@@ -27,11 +28,14 @@ TODO    MAJOR   Alert mesaj kutusu oluştur
 
 TODO    MINOR   catch_exception fonksiyonunda exception oluşursa flash mesajı gönder ve html'de bunu göster
 
+
 4- Banka entegrasyonu
+
 
 5- Veritabanı iyileştirmeleri
 TODO    MINOR   Database'den is_fully_paid sütunu kaldırılacak
 TODO    MINOR   Database'den is_fully_distributed sütunu kaldırılacak
+
 
 TASARIMLAR:
 - ...

@@ -300,6 +300,33 @@
                   </li>
                 </ul>
               </li>
+              <li id="backup-dropdown">
+                <a href="#" class="auto">
+                  <span class="pull-right text-muted">
+                    <i class="fa fa-fw fa-angle-right text"></i>
+                    <i class="fa fa-fw fa-angle-down text-active"></i>
+                  </span>
+                  <i class="fa-solid fa-users"></i>
+                  <span>Site yedeği</span>
+                </a>
+                <ul class="nav nav-sub dk">
+                  <li class="nav-sub-header">
+                    <a href="#">
+                      <span>Site yedeği</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{{ url_for('backup_page_bp.download_backup_page') }}">
+                      <span>Site yedeğini indir</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{{ url_for('backup_page_bp.restore_backup_page') }}">
+                      <span>Site yedeğini yükle</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
               <li id="logs-dropdown">
                 <a href="{{ url_for('general_page_bp.logs_page') }}">
                   <i class="fa-solid fa-book"></i>
