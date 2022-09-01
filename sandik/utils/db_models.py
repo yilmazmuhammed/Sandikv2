@@ -714,7 +714,7 @@ class Debt(db.Entity):
         # TODO ilgili borç tamamen ödenmediyse PieceOfDebt'leri güncelle
         paid_amount = self.get_paid_amount()
         undistributed_paid_amount = paid_amount
-        for piece in self.piece_of_debts_set:
+        for piece in self.piece_of_debts_set.order_by(lambda p: p.amount):
             piece_lot = math.ceil(paid_amount * (piece.amount / self.amount))
 
             temp_paid_amount = piece_lot if piece_lot <= undistributed_paid_amount else undistributed_paid_amount

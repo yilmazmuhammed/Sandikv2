@@ -67,7 +67,9 @@ def restore_table(table, rows):
 
 
 def reset_database(database_tables):
-    for table in database_tables:
+    tables = database_tables[:]
+    tables.reverse()
+    for table in tables:
         table.select().delete()
     flush()
 
