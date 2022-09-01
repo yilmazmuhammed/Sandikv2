@@ -149,7 +149,6 @@ class Member(db.Entity):
     contribution_amount = Required(Decimal)
     detail = Optional(str)
     is_active = Required(bool, default=True)
-    balance = Required(Decimal, default=0)
     logs_set = Set('Log')
     money_transactions_set = Set(MoneyTransaction)
     requested_trust_relationships_set = Set('TrustRelationship', reverse='requester_member_ref')
@@ -815,7 +814,6 @@ class SubReceipt(db.Entity):
         # TODO test et
         if self.contribution_ref:
             self.contribution_ref.recalculate_is_fully_paid()
-            self.contribution_ref.share_ref.member_ref.balance += self.amount
 
         if self.installment_ref:
             self.installment_ref.recalculate_is_fully_paid()
@@ -829,7 +827,6 @@ class SubReceipt(db.Entity):
         #     contribution = self.contribution_ref
         #     self.contribution_ref = None
         #     contribution.recalculate_is_fully_paid()
-        #     contribution.share_ref.member_ref.balance -= self.amount
         #
         # if self.installment_ref:
         #     installment = self.installment_ref
@@ -866,19 +863,6 @@ class PieceOfDebt(db.Entity):
             raise Exception("ERRCODE: 0018, "
                             "MSG: Beklenmedik bir hata ile karşılaşıldı. "
                             "Düzeltilmesi için lütfen site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
-
-    def after_insert(self):
-        # TODO test et
-        self.member_ref.balance -= self.amount
-
-    def set(self, **kwargs):
-        if kwargs.get("paid_amount"):
-            # TODO test et
-            new_balance = self.member_ref.balance + (kwargs.get("paid_amount") - self.paid_amount)
-            self.member_ref.set(balance=new_balance)
-
-        # TODO test et
-        super().set(**kwargs)
 
 
 class Retracted(db.Entity):

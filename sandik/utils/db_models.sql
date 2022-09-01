@@ -86,8 +86,7 @@ CREATE TABLE "member" (
   "date_of_membership" DATE NOT NULL,
   "contribution_amount" DECIMAL(12, 2) NOT NULL,
   "detail" TEXT NOT NULL,
-  "is_active" BOOLEAN NOT NULL,
-  "balance" DECIMAL(12, 2) NOT NULL
+  "is_active" BOOLEAN NOT NULL
 );
 
 CREATE INDEX "idx_member__sandik_ref" ON "member" ("sandik_ref");
@@ -379,9 +378,9 @@ CREATE TABLE "installment" (
 
 CREATE INDEX "idx_installment__debt_ref" ON "installment" ("debt_ref");
 
-ALTER TABLE "subreceipt" ADD CONSTRAINT "fk_subreceipt__installment_ref" FOREIGN KEY ("installment_ref") REFERENCES "installment" ("id") ON DELETE SET NULL;
-
 ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_installment_ref" FOREIGN KEY ("logged_installment_ref") REFERENCES "installment" ("id") ON DELETE SET NULL;
+
+ALTER TABLE "subreceipt" ADD CONSTRAINT "fk_subreceipt__installment_ref" FOREIGN KEY ("installment_ref") REFERENCES "installment" ("id") ON DELETE SET NULL;
 
 CREATE TABLE "debt" (
   "id" SERIAL PRIMARY KEY,
@@ -401,8 +400,8 @@ ALTER TABLE "debt" ADD CONSTRAINT "fk_debt__share_ref" FOREIGN KEY ("share_ref")
 
 ALTER TABLE "debt" ADD CONSTRAINT "fk_debt__sub_receipt_ref" FOREIGN KEY ("sub_receipt_ref") REFERENCES "subreceipt" ("id");
 
-ALTER TABLE "installment" ADD CONSTRAINT "fk_installment__debt_ref" FOREIGN KEY ("debt_ref") REFERENCES "debt" ("id") ON DELETE CASCADE;
-
 ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_debt_ref" FOREIGN KEY ("logged_debt_ref") REFERENCES "debt" ("id") ON DELETE SET NULL;
 
-ALTER TABLE "pieceofdebt" ADD CONSTRAINT "fk_pieceofdebt__debt_ref" FOREIGN KEY ("debt_ref") REFERENCES "debt" ("id") ON DELETE CASCADE
+ALTER TABLE "pieceofdebt" ADD CONSTRAINT "fk_pieceofdebt__debt_ref" FOREIGN KEY ("debt_ref") REFERENCES "debt" ("id") ON DELETE CASCADE;
+
+ALTER TABLE "installment" ADD CONSTRAINT "fk_installment__debt_ref" FOREIGN KEY ("debt_ref") REFERENCES "debt" ("id") ON DELETE CASCADE
