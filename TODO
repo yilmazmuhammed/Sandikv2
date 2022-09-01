@@ -1,7 +1,9 @@
 1- Sistemin işler hale getirilmesi
 
 TODO MAJOR      Bir üye silindikten sonra tekrar aynı kullanıcı üye olursa ...
-
+TODO MINOR      Database'den member.balance sütunu kaldırılacak
+TODO MINOR      Database'den is_fully_paid sütunu kaldırılacak
+TODO MINOR      Database'den is_fully_distributed sütunu kaldırılacak
 
 2- Kuralların tamamının işler hale getirilmesi
 TODO            piece_of_debt'te havuz (sandığın %10u) için de oluştur
