@@ -28,7 +28,7 @@ class MoneyTransaction(db.Entity):
     id = PrimaryKey(int, auto=True)
     date = Required(date, default=lambda: date.today())
     amount = Required(Decimal)
-    detail = Optional(str)
+    detail = Optional(str, 1000)
     type = Required(int)
     is_fully_distributed = Required(bool, default=False)  # MoneyTransaction amount ile SubReceipts amountları toplamı eşit ise True
     creation_type = Required(int)
@@ -147,7 +147,7 @@ class Member(db.Entity):
     sandik_ref = Required('Sandik')
     date_of_membership = Required(date, default=lambda: date.today())
     contribution_amount = Required(Decimal)
-    detail = Optional(str)
+    detail = Optional(str, 1000)
     is_active = Required(bool, default=True)
     logs_set = Set('Log')
     money_transactions_set = Set(MoneyTransaction)
@@ -371,7 +371,7 @@ class Log(db.Entity):
     time = Required(datetime, default=lambda: datetime.now())
     type = Required(int)
     special_type = Optional(str)
-    detail = Optional(str)
+    detail = Optional(str, 1000)
     logged_bank_account_ref = Optional('BankAccount')
     logged_retracted_ref = Optional('Retracted')
     logged_contribution_ref = Optional('Contribution')
@@ -509,7 +509,7 @@ class Sandik(db.Entity):
     is_active = Required(bool, default=True)
     date_of_opening = Required(date, default=lambda: date.today())
     applicant_web_users_set = Set(WebUser)
-    detail = Optional(str)
+    detail = Optional(str, 1000)
     logs_set = Set(Log)
     bank_accounts_set = Set('BankAccount')
     members_set = Set(Member)
@@ -1020,10 +1020,17 @@ class SandikRule(db.Entity):
         }
 
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_PROVIDER = os.getenv("DATABASE_PROVIDER")
 
-if DATABASE_URL:
+if DATABASE_PROVIDER == "postgres":
+    DATABASE_URL = os.getenv("DATABASE_URL")
     db.bind(provider="postgres", dsn=DATABASE_URL)
+elif DATABASE_PROVIDER == "mysql":
+    DATABASE_HOST = os.getenv("DATABASE_HOST")
+    DATABASE_USER = os.getenv("DATABASE_USER")
+    DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
+    DATABASE_DB = os.getenv("DATABASE_DB")
+    db.bind(provider=DATABASE_PROVIDER, host=DATABASE_HOST, user=DATABASE_USER, passwd=DATABASE_PASSWORD, db=DATABASE_DB)
 else:
     db.bind(provider="sqlite", filename='database.sqlite', create_db=True)
 
