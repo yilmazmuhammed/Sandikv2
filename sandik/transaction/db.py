@@ -212,7 +212,6 @@ def delete_sub_receipt(sub_receipt, removed_by):
     money_transaction.recalculate_is_fully_distributed()
     if contribution:
         contribution.recalculate_is_fully_paid()
-        contribution.share_ref.member_ref.balance -= amount
     if installment:
         installment.recalculate_is_fully_paid()
         installment.debt_ref.update_pieces_of_debt()

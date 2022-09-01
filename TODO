@@ -1,7 +1,6 @@
 1- Sistemin işler hale getirilmesi
 
 TODO MAJOR      Bir üye silindikten sonra tekrar aynı kullanıcı üye olursa ...
-TODO MINOR      Database'den member.balance sütunu kaldırılacak
 TODO MINOR      Database'den is_fully_paid sütunu kaldırılacak
 TODO MINOR      Database'den is_fully_distributed sütunu kaldırılacak
 
@@ -33,7 +32,6 @@ TODO    MINOR   catch_exception fonksiyonunda exception oluşursa flash mesajı 
 4- Banka entegrasyonu
 
 5- Performans iyileştirmeleri
-TODO            member.balance özelliğini kaldır, get_balance() daha sağlıklı
 
 TASARIMLAR:
 - ...

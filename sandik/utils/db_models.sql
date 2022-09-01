@@ -86,8 +86,7 @@ CREATE TABLE "member" (
   "date_of_membership" DATE NOT NULL,
   "contribution_amount" DECIMAL(12, 2) NOT NULL,
   "detail" TEXT NOT NULL,
-  "is_active" BOOLEAN NOT NULL,
-  "balance" DECIMAL(12, 2) NOT NULL
+  "is_active" BOOLEAN NOT NULL
 );
 
 CREATE INDEX "idx_member__sandik_ref" ON "member" ("sandik_ref");
