@@ -16,8 +16,8 @@ def get_web_user(password=None, web_user=None, **kwargs) -> WebUser:
 def get_or_create_bot_user(which):
     bot_user = WebUser.get(email_address=f'{which}@sandik.com')
     if not bot_user:
-        bot_user = WebUser(email_address=f'{which}@sandik.com', password_hash=hasher.hash(f'{which}pw'),
-                           name=which, surname=which)
+        bot_user = create_web_user(email_address=f'{which}@sandik.com', password_hash=hasher.hash(f'{which}pw'),
+                                   name=which, surname=which)
         flush()
     return bot_user
 
@@ -30,9 +30,14 @@ def add_web_user(email_address, password, **kwargs) -> WebUser:
     if get_web_user(email_address=email_address):
         raise EmailAlreadyExist('Bu e-posta adresiyle daha önce kaydolunmuş.')
 
-    web_user = WebUser(email_address=email_address, password_hash=hasher.hash(password), **kwargs)
-    Log(web_user_ref=get_or_create_bot_user(which="anonymous"), type=Log.TYPE.WEB_USER.REGISTER,
-        logged_web_user_ref=web_user)
+    return create_web_user(created_by=get_or_create_bot_user(which="anonymous"), log_type=Log.TYPE.WEB_USER.REGISTER,
+                           email_address=email_address, password_hash=hasher.hash(password), **kwargs)
+
+
+def create_web_user(created_by=None, log_type=Log.TYPE.CREATE, **kwargs) -> WebUser:
+    web_user = WebUser(**kwargs)
+    if created_by is not None:
+        Log(web_user_ref=created_by, type=log_type, logged_web_user_ref=web_user)
     return web_user
 
 

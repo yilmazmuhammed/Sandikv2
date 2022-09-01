@@ -29,7 +29,7 @@ def register_page():
                 form_data = flask_form_to_dict(request_form=request.form, exclude=['password_verification'])
                 registered_web_user = db.add_web_user(is_active_=True, **form_data)
                 Notification.WebUserAuth.send_register_web_user_notification(registered_web_user=registered_web_user)
-                flash("Account created.", 'success')
+                flash("Hesap oluşturuldu.", 'success')
                 return redirect(url_for("auth_page_bp.login_page"))
             except RegisterException as ex:
                 flash(u"%s" % ex, 'danger')
