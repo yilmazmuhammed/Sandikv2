@@ -52,17 +52,8 @@ def restore_table(table, rows):
                     row[column] = column_attr.py_type[row[column]]
             else:
                 pass
+
         print(table, row)
-
-        if table.__name__ == 'WebUser':
-            user = table.get(email_address=row["email_address"])
-            if user and user.is_admin():
-                print("before user.id:", user.id)
-                user.id = row["id"]
-                print("after user.id:", user.id)
-                print("admin detected")
-                continue
-
         table(**row)
 
 

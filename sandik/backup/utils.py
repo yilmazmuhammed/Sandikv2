@@ -17,6 +17,7 @@ def create_or_update_admin_users(admin_users_data):
             auth_db.update_web_user(user, updated_by=auth_db.get_or_create_bot_user("backup_manager"),
                                     password_hash=user_data["password_hash"])
         else:
+            user_data.pop("id")
             auth_db.create_web_user(**user_data, created_by=auth_db.get_or_create_bot_user("backup_manager"))
 
 
