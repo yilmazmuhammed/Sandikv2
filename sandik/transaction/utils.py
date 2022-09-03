@@ -162,7 +162,8 @@ def create_due_contributions_for_share(share, created_by, created_from="", perio
                 db.create_contribution(share=share, period=period, created_by=created_by, log_detail=created_from)
                 print(f"Create contribution for share: '{share}', period: '{period}'")
             else:
-                print(f"Contribution already exist for share: '{share}', period: '{period}'")
+                # print(f"Contribution already exist for share: '{share}', period: '{period}'")
+                pass
         except Exception as e:
             print("Exception in create_due_contributions_for_share:", str(type(e)), " -> ", str(e))
             Log(web_user_ref=created_by, type=Log.TYPE.LOG_LEVEL.ERROR,
