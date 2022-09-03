@@ -1,8 +1,17 @@
 # from apscheduler.schedulers.blocking import BlockingScheduler
+import os
+import sys
+
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+parent = os.path.dirname(parent)
+sys.path.append(parent)
+
 from pony.orm import db_session
 
 from sandik.auth import db as auth_db
 from sandik.transaction import utils as transaction_utils
+
 
 # scheduler = BlockingScheduler()
 
