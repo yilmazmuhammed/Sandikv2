@@ -8,7 +8,7 @@ current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 root = os.path.dirname(parent)
 
-sys.path.append(parent)
+sys.path.append(root)
 
 project_folder = os.path.expanduser(root)  # adjust as appropriate
 load_dotenv(os.path.join(project_folder, '.env'))
