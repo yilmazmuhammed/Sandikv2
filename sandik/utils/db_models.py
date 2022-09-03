@@ -572,7 +572,15 @@ class Sandik(db.Entity):
         return select(mt for mt in MoneyTransaction if mt.member_ref.sandik_ref == self)
 
     def total_of_undistributed_amount(self):
-        return select(member.total_of_undistributed_amount() for member in self.get_active_members()).sum()
+        # çalışmıyor
+        # return select(member.total_of_undistributed_amount() for member in self.get_active_members()).sum()
+        # çalışıyor ama güzel bir çözüm değil
+        # return sum([member.total_of_undistributed_amount() for member in self.get_active_members()])
+        return select(
+            mt.get_undistributed_amount() for mt in MoneyTransaction if
+            mt.member_ref.sandik_ref == self and mt.member_ref.is_active and
+            mt.type == MoneyTransaction.TYPE.REVENUE and mt.is_fully_distributed is False
+        ).sum()
 
 
 class TrustRelationship(db.Entity):
@@ -1030,7 +1038,8 @@ elif DATABASE_PROVIDER == "mysql":
     DATABASE_USER = os.getenv("DATABASE_USER")
     DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
     DATABASE_DB = os.getenv("DATABASE_DB")
-    db.bind(provider=DATABASE_PROVIDER, host=DATABASE_HOST, user=DATABASE_USER, passwd=DATABASE_PASSWORD, db=DATABASE_DB)
+    db.bind(provider=DATABASE_PROVIDER,
+            host=DATABASE_HOST, user=DATABASE_USER, passwd=DATABASE_PASSWORD, db=DATABASE_DB)
 else:
     db.bind(provider="sqlite", filename='database.sqlite', create_db=True)
 
