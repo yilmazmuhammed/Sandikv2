@@ -2,10 +2,16 @@
 import os
 import sys
 
+from dotenv import load_dotenv
+
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
-parent = os.path.dirname(parent)
+root = os.path.dirname(parent)
+
 sys.path.append(parent)
+
+project_folder = os.path.expanduser(root)  # adjust as appropriate
+load_dotenv(os.path.join(project_folder, '.env'))
 
 from pony.orm import db_session
 
