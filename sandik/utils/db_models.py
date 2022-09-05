@@ -158,8 +158,15 @@ class Member(db.Entity):
     composite_key(sandik_ref, web_user_ref)
 
     def get_balance(self):
-        contributions_amount = select(sr.amount for sr in SubReceipt
-                                      if sr.money_transaction_ref.member_ref == self and sr.contribution_ref).sum()
+        revenue_contributions_amount = select(
+            sr.amount for sr in SubReceipt if sr.money_transaction_ref.member_ref == self
+            and sr.contribution_ref and sr.money_transaction_ref.type == MoneyTransaction.TYPE.REVENUE
+        ).sum()
+        expense_contributions_amount = select(
+            sr.amount for sr in SubReceipt if sr.money_transaction_ref.member_ref == self
+            and sr.contribution_ref and sr.money_transaction_ref.type == MoneyTransaction.TYPE.EXPENSE
+        ).sum()
+        contributions_amount = revenue_contributions_amount - expense_contributions_amount
         undistributed_amount = self.total_of_undistributed_amount()
         unpaid_amount_of_loaned = select(
             pod.get_unpaid_amount() for pod in self.piece_of_debts_set if pod.debt_ref).sum()
@@ -253,7 +260,6 @@ class Member(db.Entity):
     def total_balance_from_accepted_trust_links(self):
         amount = 0
         amount += self.get_balance()
-        print("member.total_balance_from_accepted_trust_links .... member.get_balance():", amount)
         for link in self.accepted_trust_links():
             amount += link.other_member(whose=self).get_balance()
         return amount
@@ -551,8 +557,7 @@ class Sandik(db.Entity):
                       sr.installment_ref and sr.money_transaction_ref.member_ref.sandik_ref == self).sum()
 
     def sum_of_contributions(self):
-        return select(sr.amount for sr in SubReceipt if
-                      sr.contribution_ref and sr.money_transaction_ref.member_ref.sandik_ref == self).sum()
+        return select(member.sum_of_paid_contributions() for member in self.get_active_members()).sum()
 
     def sum_of_debts(self):
         return select(sr.amount for sr in SubReceipt if
