@@ -53,6 +53,7 @@ class MoneyTransaction(db.Entity):
         BY_MANUEL = 0
         BY_BANK_TRANSACTION = 1
         BY_AUTO = 2
+        BY_SANDIKV1_DATA = 3
 
     def distributed_amount(self):
         return select(sr.amount for sr in self.sub_receipts_set).sum()
