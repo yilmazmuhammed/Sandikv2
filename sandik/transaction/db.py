@@ -166,7 +166,9 @@ def create_debt(amount, share, money_transaction, created_by, start_period=None,
     )
 
     create_installments_of_debt(debt=debt, created_by=created_by)
-    create_piece_of_debts(debt=debt, created_by=created_by)
+    if sandik.is_type_with_trust_relationship():
+        create_piece_of_debts(debt=debt, created_by=created_by)
+
     return debt
 
 
@@ -214,7 +216,8 @@ def delete_sub_receipt(sub_receipt, removed_by):
         contribution.recalculate_is_fully_paid()
     if installment:
         installment.recalculate_is_fully_paid()
-        installment.debt_ref.update_pieces_of_debt()
+        if money_transaction.member_ref.sandik_ref.is_type_with_trust_relationship():
+            installment.debt_ref.update_pieces_of_debt()
 
 
 def delete_money_transaction(money_transaction, removed_by):

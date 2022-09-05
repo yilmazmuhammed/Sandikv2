@@ -109,14 +109,20 @@ class Share(db.Entity):
         return select(d.get_unpaid_amount() for d in Debt if d.share_ref == self).sum()
 
     def max_amount_can_borrow(self, use_untreated_amount=False):
-        amount = self.member_ref.total_balance_from_accepted_trust_links()
-
         from sandik.utils import sandik_preferences
         remaining_debt_amount = sandik_preferences.remaining_debt_balance(sandik=self.member_ref.sandik_ref, whose=self)
-        amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
 
         if use_untreated_amount:
-            amount += self.member_ref.total_of_undistributed_amount()
+            remaining_debt_amount += self.member_ref.total_of_undistributed_amount()
+
+        if self.sandik_ref.is_type_classic():
+            amount = self.sandik_ref.get_final_status()
+        elif self.sandik_ref.is_type_with_trust_relationship():
+            amount = self.member_ref.total_balance_from_accepted_trust_links()
+        else:
+            raise Exception("Bilinmeyen sandık tipi")
+
+        amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
 
         return amount
 
@@ -265,14 +271,20 @@ class Member(db.Entity):
         return amount
 
     def max_amount_can_borrow(self, use_untreated_amount=False):
-        amount = self.total_balance_from_accepted_trust_links()
-
         from sandik.utils import sandik_preferences
         remaining_debt_amount = sandik_preferences.remaining_debt_balance(sandik=self.sandik_ref, whose=self)
-        amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
 
         if use_untreated_amount:
-            amount += self.total_of_undistributed_amount()
+            remaining_debt_amount += self.total_of_undistributed_amount()
+
+        if self.sandik_ref.is_type_classic():
+            amount = self.sandik_ref.get_final_status()
+        elif self.sandik_ref.is_type_with_trust_relationship():
+            amount = self.total_balance_from_accepted_trust_links()
+        else:
+            raise Exception("Bilinmeyen sandık tipi")
+
+        amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
 
         return amount
 
@@ -830,7 +842,8 @@ class SubReceipt(db.Entity):
 
         if self.installment_ref:
             self.installment_ref.recalculate_is_fully_paid()
-            self.installment_ref.debt_ref.update_pieces_of_debt()
+            if self.money_transaction_ref.member_ref.sandik_ref.is_type_with_trust_relationship():
+                self.installment_ref.debt_ref.update_pieces_of_debt()
 
         # TODO test et: 4 işlem tipi için de dene
         self.money_transaction_ref.recalculate_is_fully_distributed()
@@ -845,7 +858,8 @@ class SubReceipt(db.Entity):
         #     installment = self.installment_ref
         #     self.installment_ref = None
         #     installment.recalculate_is_fully_paid()
-        #     installment.debt_ref.update_pieces_of_debt()
+        #     if self.money_transaction_ref.member_ref.sandik_ref.is_type_with_trust_relationship():
+        #         installment.debt_ref.update_pieces_of_debt()
         pass
 
 

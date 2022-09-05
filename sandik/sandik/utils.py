@@ -194,12 +194,23 @@ def get_member_summary_page(member):
         whose=member, is_fully_paid=False, periods=[period_utils.next_period()]
     )
     my_latest_money_transactions = transaction_utils.get_latest_money_transactions(whose=member, periods_count=2)
-    trusted_links = {
-        "total_paid_contributions": transaction_db.total_paid_contributions_of_trusted_links(member=member),
-        "total_loaned_amount": transaction_db.total_loaned_amount_of_trusted_links(member=member),
-        "total_balance": transaction_db.total_balance_of_trusted_links(member=member),
-        "total_paid_installments": transaction_db.total_paid_installments_of_trusted_links(member=member)
-    }
+    if member.sandik_ref.is_type_classic():
+        trusted_links = {
+            "total_paid_contributions": member.sandik_ref.sum_of_contributions(),
+            "total_loaned_amount": member.sandik_ref.sum_of_debts(),
+            "total_balance": member.sandik_ref.get_final_status(),
+            "total_paid_installments": member.sandik_ref.sum_of_paid_installments()
+        }
+    elif member.sandik_ref.is_type_with_trust_relationship():
+        trusted_links = {
+            "total_paid_contributions": transaction_db.total_paid_contributions_of_trusted_links(member=member),
+            "total_loaned_amount": transaction_db.total_loaned_amount_of_trusted_links(member=member),
+            "total_balance": transaction_db.total_balance_of_trusted_links(member=member),
+            "total_paid_installments": transaction_db.total_paid_installments_of_trusted_links(member=member)
+        }
+    else:
+        raise Exception("Bilinmeyen sandık tipi")
+
     return {
         "sum_of_unpaid_and_due_payments": sum_of_unpaid_and_due_payments,
         "sum_of_payments": sum_of_payments,
