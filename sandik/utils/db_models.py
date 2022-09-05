@@ -555,8 +555,10 @@ class Sandik(db.Entity):
     def get_active_members(self):
         return self.members_set.filter(lambda m: m.is_active)
 
-    def shares_count(self):
-        return count(self.members_set.shares_set)
+    def shares_count(self, all_shares=False, is_active=True):
+        if all_shares:
+            return select(s for s in Share if s.member_ref.sandik_ref == self).count()
+        return select(s for s in Share if s.is_active == is_active and s.member_ref.sandik_ref == self).count()
 
     def transactions_count(self):
         contribution_count = select(c for c in Contribution if c.share_ref.member_ref.sandik_ref == self).count()
