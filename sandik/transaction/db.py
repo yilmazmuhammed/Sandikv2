@@ -257,6 +257,10 @@ def get_debt(*args, **kwargs) -> Debt:
     return Debt.get(*args, **kwargs)
 
 
+def get_sub_receipt(*args, **kwargs) -> SubReceipt:
+    return SubReceipt.get(*args, **kwargs)
+
+
 def select_contributions(*args, **kwargs):
     return Contribution.select(*args, **kwargs)
 
@@ -271,6 +275,10 @@ def select_money_transactions(*args, **kwargs):
 
 def select_debts(*args, **kwargs):
     return Debt.select(*args, **kwargs)
+
+
+def select_sub_receipts(*args, **kwargs):
+    return SubReceipt.select(*args, **kwargs)
 
 
 def get_paid_contributions(whose):

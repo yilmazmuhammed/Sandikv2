@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from pony.orm import flush
+
 from sandik.auth import db as auth_db
 from sandik.backup import db
 from sandik.sandik import utils as sandik_utils, db as sandik_db
@@ -139,6 +141,7 @@ def create_sandik_from_sandikv1_data(data, created_by):
         share = shares[payment["share_id"]]
         amount = payment["amount"]
         payment_created_by = web_users[payment["created_by"]]
+        flush()
         installments = money_transactions_of_debts[
             payment["debt_id"]].sub_receipts_set.select().get().debt_ref.installments_set
         transaction_utils.add_money_transaction(

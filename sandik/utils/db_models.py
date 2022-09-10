@@ -544,7 +544,6 @@ class Sandik(db.Entity):
         strings = {CLASSIC: "Klasik sistem", WITH_TRUST_RELATIONSHIP: "Güven bağlı sistem"}
 
     def is_type_with_trust_relationship(self):
-        print("is_type_with_trust_relationship:", self.type == self.TYPE.WITH_TRUST_RELATIONSHIP)
         return self.type == self.TYPE.WITH_TRUST_RELATIONSHIP
 
     def is_type_classic(self):

@@ -1,5 +1,6 @@
 from flask import Blueprint, json, flash, render_template
 from flask_login import current_user, login_user
+from pony.orm import rollback
 
 from sandik.auth import db as auth_db
 from sandik.auth.requirement import admin_required
@@ -48,6 +49,7 @@ def create_sandik_from_sandikv1_data_page():
             utils.create_sandik_from_sandikv1_data(data=backup_data, created_by=current_user)
         except Exception as e:
             flash(str(e), "danger")
+            rollback()
             raise e
 
     return render_template(
