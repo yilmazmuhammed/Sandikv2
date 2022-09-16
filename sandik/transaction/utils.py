@@ -45,7 +45,8 @@ def borrow_debt(amount, money_transaction, created_by, number_of_installment=Non
 
     if not optimal_share:
         shares_with_max_amount_can_borrow = [(share, share.max_amount_can_borrow()) for share in member.shares_set]
-        sorted_shares_by_max_amount_can_borrow = sorted(shares_with_max_amount_can_borrow, key=lambda x: x[1], reverse=True)
+        sorted_shares_by_max_amount_can_borrow = sorted(shares_with_max_amount_can_borrow, key=lambda x: x[1],
+                                                        reverse=True)
 
         for share, macb in sorted_shares_by_max_amount_can_borrow:
             if not optimal_share and remaining_amount > macb:
@@ -150,7 +151,7 @@ def add_money_transaction(member, created_by, use_untreated_amount, pay_future_p
     return money_transaction
 
 
-def create_due_contributions_for_share(share, created_by, created_from="", periods=None):
+def create_due_contributions_for_share(share: Share, created_by, created_from="", periods=None):
     print(f"START: Creating contributions for '{share}'...")
 
     if not isinstance(periods, list):
@@ -177,9 +178,9 @@ def create_due_contributions_for_share(share, created_by, created_from="", perio
     print(f"FINISH: Creating contributions for '{share}'...")
 
 
-def create_due_contributions_for_member(member, created_by, created_from=""):
+def create_due_contributions_for_member(member: Member, created_by, created_from=""):
     print(f"START: Creating contributions for '{member}'...")
-    for share in member.shares_set:
+    for share in member.get_active_shares():
         create_due_contributions_for_share(share=share, created_by=created_by, created_from=created_from)
 
     pay_unpaid_payments_from_untreated_amount_for_member(member=member, pay_future_payments=False,
@@ -196,7 +197,7 @@ def create_due_contributions_for_sandik(sandik, created_by, created_from=""):
 
 def create_due_contributions_for_all_sandiks(created_by, created_from=""):
     print(f"START: Creating contributions for 'all sandiks'...")
-    for sandik in Sandik.select():
+    for sandik in Sandik.select(lambda s: s.is_active):
         create_due_contributions_for_sandik(sandik=sandik, created_by=created_by, created_from=created_from)
     print(f"FINISH: Creating contributions for 'all sandiks'...")
 
