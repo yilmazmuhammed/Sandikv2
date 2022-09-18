@@ -220,9 +220,27 @@ jQuery(function($){
         Vadesi gelmiş ve ödenmemiş ödemeler
         <span class="pull-right">
           {% if g.type == "member" %}
-            {{ macros.button(url=url_for("transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_page", sandik_id=g.sandik.id), icon='fa fa-repeat', type='default', size='sm', title='Yenile') }}
+            <div class="dropdown" style="display: initial;">
+              <button class="btn btn-sm btn-default dropdown-toggle" type="button" id="pay-unpaid-payments-buttons2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                <i class="fa fa-repeat" aria-hidden="true"></i>
+                <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu" aria-labelledby="pay-unpaid-payments-buttons2">
+                <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_page', sandik_id=g.sandik.id) }}">Vadesi gelmiş ödemeleri öde</a></li>
+                <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_page', sandik_id=g.sandik.id, pay_future_payments='1') }}">Vadesi gelmemiş ödemeleri öde</a></li>
+              </ul>
+            </div>
           {% elif g.type == "management" %}
-            {{ macros.button(url=url_for("transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_sandik_page", sandik_id=g.sandik.id), icon='fa fa-repeat', type='default', size='sm', title='Yenile') }}
+            <div class="dropdown" style="display: initial;">
+              <button class="btn btn-sm btn-default dropdown-toggle" type="button" id="pay-unpaid-payments-buttons" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                <i class="fa fa-repeat" aria-hidden="true"></i>
+                <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu" aria-labelledby="pay-unpaid-payments-buttons">
+                <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_sandik_page', sandik_id=g.sandik.id) }}">Vadesi gelmiş ödemeleri öde</a></li>
+                <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_sandik_page', sandik_id=g.sandik.id, pay_future_payments='1') }}">Vadesi gelmemiş ödemeleri öde</a></li>
+              </ul>
+            </div>
           {% endif %}
         </span>
       </div>

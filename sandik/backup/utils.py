@@ -170,7 +170,7 @@ def create_sandik_from_sandikv1_data(data, created_by):
             detail=other["detail"]
         )
 
-    # Hissesi olmayan üyeler silnir
+    # Hissesi olmayan üyeler silinir
     for member in sandik.members_set:
         print(member.web_user_ref.name_surname, member.get_active_shares().count())
         if member.get_active_shares().count() == 0:

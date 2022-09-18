@@ -737,8 +737,7 @@ class Debt(db.Entity):
         return self.amount - self.get_paid_amount()
 
     def update_pieces_of_debt(self):
-        # TODO ilgili borç tamamen ödendiyse PieceOfDebt'leri sil
-        # TODO ilgili borç tamamen ödenmediyse PieceOfDebt'leri güncelle
+        # TODO ilgili borç tamamen ödendiyse PieceOfDebt'leri sil ?=> Peki sandığa katkım nasıl hesaplanacak
         paid_amount = self.get_paid_amount()
         undistributed_paid_amount = paid_amount
         for piece in self.piece_of_debts_set.order_by(lambda p: p.amount):
@@ -1059,8 +1058,7 @@ elif DATABASE_PROVIDER == "mysql":
     DATABASE_USER = os.getenv("DATABASE_USER")
     DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
     DATABASE_DB = os.getenv("DATABASE_DB")
-    db.bind(provider=DATABASE_PROVIDER,
-            host=DATABASE_HOST, user=DATABASE_USER, passwd=DATABASE_PASSWORD, db=DATABASE_DB)
+    db.bind(provider="mysql", host=DATABASE_HOST, user=DATABASE_USER, passwd=DATABASE_PASSWORD, db=DATABASE_DB)
 else:
     db.bind(provider="sqlite", filename='database.sqlite', create_db=True)
 
