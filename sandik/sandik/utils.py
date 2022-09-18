@@ -229,10 +229,11 @@ def remove_member_from_sandik(member: Member, removed_by):
     if member.get_unpaid_debts().count() > 0:
         raise ThereIsUnpaidDebtOfMemberException("Silinmek istenen üyenin ödenmemiş borcu var.", create_log=True)
 
-    if member.get_unpaid_amount_of_loaned() > 0:
-        # TODO Sandık kurallarının güncellenmesi gerekli
-        raise ThereIsUnpaidAmountOfLoanedException("Üyenin verdiği borçlardan ödenmesi tamamlanmamış olan borç var",
-                                                   create_log=True)
+    if member.sandik_ref.is_type_with_trust_relationship():
+        if member.get_unpaid_amount_of_loaned() > 0:
+            # TODO Sandık kurallarının güncellenmesi gerekli
+            raise ThereIsUnpaidAmountOfLoanedException("Üyenin verdiği borçlardan ödenmesi tamamlanmamış olan borç var",
+                                                       create_log=True)
 
     total_amount_to_be_refunded = member.sum_of_paid_contributions() + member.total_of_undistributed_amount()
     refunded_money_transaction = transaction_db.create_money_transaction(
