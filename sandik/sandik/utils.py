@@ -14,14 +14,16 @@ from sandik.utils import period as period_utils, sandik_preferences
 from sandik.utils.db_models import Member, Share, MoneyTransaction, TrustRelationship, SmsPackage, Sandik, SandikRule
 
 
-def add_share_to_member(member, added_by, **kwargs):
-    max_share_count = sandik_preferences.get_max_number_of_share(sandik=member.sandik_ref)
-    if member.shares_set.select(lambda s: s.is_active).count() >= max_share_count:
-        raise MaxShareCountExceed(f"Bir üyenin en fazla {max_share_count} adet hissesi olabilir.")
+def add_share_to_member(member, added_by, create_contributions=True, force=False, **kwargs):
+    if not force:
+        max_share_count = sandik_preferences.get_max_number_of_share(sandik=member.sandik_ref)
+        if member.shares_set.select(lambda s: s.is_active).count() >= max_share_count:
+            raise MaxShareCountExceed(f"Bir üyenin en fazla {max_share_count} adet hissesi olabilir.")
 
     order = db.get_last_share_order(member) + 1
     share = db.create_share(member=member, created_by=added_by, share_order_of_member=order, **kwargs)
-    transaction_utils.create_due_contributions_for_member(member=member, created_by=added_by)
+    if create_contributions:
+        transaction_utils.create_due_contributions_for_member(member=member, created_by=added_by)
     return share
 
 
@@ -194,12 +196,23 @@ def get_member_summary_page(member):
         whose=member, is_fully_paid=False, periods=[period_utils.next_period()]
     )
     my_latest_money_transactions = transaction_utils.get_latest_money_transactions(whose=member, periods_count=2)
-    trusted_links = {
-        "total_paid_contributions": transaction_db.total_paid_contributions_of_trusted_links(member=member),
-        "total_loaned_amount": transaction_db.total_loaned_amount_of_trusted_links(member=member),
-        "total_balance": transaction_db.total_balance_of_trusted_links(member=member),
-        "total_paid_installments": transaction_db.total_paid_installments_of_trusted_links(member=member)
-    }
+    if member.sandik_ref.is_type_classic():
+        trusted_links = {
+            "total_paid_contributions": member.sandik_ref.sum_of_contributions(),
+            "total_loaned_amount": member.sandik_ref.sum_of_debts(),
+            "total_balance": member.sandik_ref.get_final_status(),
+            "total_paid_installments": member.sandik_ref.sum_of_paid_installments()
+        }
+    elif member.sandik_ref.is_type_with_trust_relationship():
+        trusted_links = {
+            "total_paid_contributions": transaction_db.total_paid_contributions_of_trusted_links(member=member),
+            "total_loaned_amount": transaction_db.total_loaned_amount_of_trusted_links(member=member),
+            "total_balance": transaction_db.total_balance_of_trusted_links(member=member),
+            "total_paid_installments": transaction_db.total_paid_installments_of_trusted_links(member=member)
+        }
+    else:
+        raise Exception("Bilinmeyen sandık tipi")
+
     return {
         "sum_of_unpaid_and_due_payments": sum_of_unpaid_and_due_payments,
         "sum_of_payments": sum_of_payments,
@@ -216,10 +229,11 @@ def remove_member_from_sandik(member: Member, removed_by):
     if member.get_unpaid_debts().count() > 0:
         raise ThereIsUnpaidDebtOfMemberException("Silinmek istenen üyenin ödenmemiş borcu var.", create_log=True)
 
-    if member.get_unpaid_amount_of_loaned() > 0:
-        # TODO Sandık kurallarının güncellenmesi gerekli
-        raise ThereIsUnpaidAmountOfLoanedException("Üyenin verdiği borçlardan ödenmesi tamamlanmamış olan borç var",
-                                                   create_log=True)
+    if member.sandik_ref.is_type_with_trust_relationship():
+        if member.get_unpaid_amount_of_loaned() > 0:
+            # TODO Sandık kurallarının güncellenmesi gerekli
+            raise ThereIsUnpaidAmountOfLoanedException("Üyenin verdiği borçlardan ödenmesi tamamlanmamış olan borç var",
+                                                       create_log=True)
 
     total_amount_to_be_refunded = member.sum_of_paid_contributions() + member.total_of_undistributed_amount()
     refunded_money_transaction = transaction_db.create_money_transaction(
@@ -250,7 +264,7 @@ def remove_member_from_sandik(member: Member, removed_by):
     return refunded_money_transaction
 
 
-def remove_share_from_member(share: Share, removed_by, refunded_money_transaction=None):
+def remove_share_from_member(share: Share, removed_by, refunded_money_transaction=None, removed_date=None):
     if not share.is_active:
         raise NotActiveShareException("Silinmek istenen hisse zaten aktif hisse değil.", create_log=True)
 
@@ -259,14 +273,14 @@ def remove_share_from_member(share: Share, removed_by, refunded_money_transactio
 
     refunded_amount = share.sum_of_paid_contributions()
     refunded_contribution = transaction_db.create_contribution(
-        share=share, period="9999-01", amount=-refunded_amount, created_by=removed_by
+        share=share, period="9999-01", amount=-refunded_amount, created_by=removed_by,
     )
 
     if not refunded_money_transaction:
         refunded_money_transaction = transaction_db.create_money_transaction(
             member_ref=share.member_ref, amount=refunded_amount, type=MoneyTransaction.TYPE.EXPENSE,
             detail="Hisse kapatılması", creation_type=MoneyTransaction.CREATION_TYPE.BY_AUTO,
-            is_fully_distributed=False, created_by=removed_by
+            is_fully_distributed=False, created_by=removed_by, date=removed_date
         )
 
     transaction_db.create_sub_receipt(

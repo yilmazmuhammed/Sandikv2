@@ -12,3 +12,5 @@ venv/
 docs/build/
 
 *.sqlite
+
+.env

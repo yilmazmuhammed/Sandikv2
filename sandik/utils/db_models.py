@@ -53,6 +53,7 @@ class MoneyTransaction(db.Entity):
         BY_MANUEL = 0
         BY_BANK_TRANSACTION = 1
         BY_AUTO = 2
+        BY_SANDIKV1_DATA = 3
 
     def distributed_amount(self):
         return select(sr.amount for sr in self.sub_receipts_set).sum()
@@ -109,14 +110,20 @@ class Share(db.Entity):
         return select(d.get_unpaid_amount() for d in Debt if d.share_ref == self).sum()
 
     def max_amount_can_borrow(self, use_untreated_amount=False):
-        amount = self.member_ref.total_balance_from_accepted_trust_links()
-
         from sandik.utils import sandik_preferences
         remaining_debt_amount = sandik_preferences.remaining_debt_balance(sandik=self.member_ref.sandik_ref, whose=self)
-        amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
 
         if use_untreated_amount:
-            amount += self.member_ref.total_of_undistributed_amount()
+            remaining_debt_amount += self.member_ref.total_of_undistributed_amount()
+
+        if self.sandik_ref.is_type_classic():
+            amount = self.sandik_ref.get_final_status()
+        elif self.sandik_ref.is_type_with_trust_relationship():
+            amount = self.member_ref.total_balance_from_accepted_trust_links()
+        else:
+            raise Exception("Bilinmeyen sandık tipi")
+
+        amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
 
         return amount
 
@@ -265,14 +272,20 @@ class Member(db.Entity):
         return amount
 
     def max_amount_can_borrow(self, use_untreated_amount=False):
-        amount = self.total_balance_from_accepted_trust_links()
-
         from sandik.utils import sandik_preferences
         remaining_debt_amount = sandik_preferences.remaining_debt_balance(sandik=self.sandik_ref, whose=self)
-        amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
 
         if use_untreated_amount:
-            amount += self.total_of_undistributed_amount()
+            remaining_debt_amount += self.total_of_undistributed_amount()
+
+        if self.sandik_ref.is_type_classic():
+            amount = self.sandik_ref.get_final_status()
+        elif self.sandik_ref.is_type_with_trust_relationship():
+            amount = self.total_balance_from_accepted_trust_links()
+        else:
+            raise Exception("Bilinmeyen sandık tipi")
+
+        amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
 
         return amount
 
@@ -531,7 +544,6 @@ class Sandik(db.Entity):
         strings = {CLASSIC: "Klasik sistem", WITH_TRUST_RELATIONSHIP: "Güven bağlı sistem"}
 
     def is_type_with_trust_relationship(self):
-        print("is_type_with_trust_relationship:", self.type == self.TYPE.WITH_TRUST_RELATIONSHIP)
         return self.type == self.TYPE.WITH_TRUST_RELATIONSHIP
 
     def is_type_classic(self):
@@ -543,8 +555,10 @@ class Sandik(db.Entity):
     def get_active_members(self):
         return self.members_set.filter(lambda m: m.is_active)
 
-    def shares_count(self):
-        return count(self.members_set.shares_set)
+    def shares_count(self, all_shares=False, is_active=True):
+        if all_shares:
+            return select(s for s in Share if s.member_ref.sandik_ref == self).count()
+        return select(s for s in Share if s.is_active == is_active and s.member_ref.sandik_ref == self).count()
 
     def transactions_count(self):
         contribution_count = select(c for c in Contribution if c.share_ref.member_ref.sandik_ref == self).count()
@@ -830,7 +844,8 @@ class SubReceipt(db.Entity):
 
         if self.installment_ref:
             self.installment_ref.recalculate_is_fully_paid()
-            self.installment_ref.debt_ref.update_pieces_of_debt()
+            if self.money_transaction_ref.member_ref.sandik_ref.is_type_with_trust_relationship():
+                self.installment_ref.debt_ref.update_pieces_of_debt()
 
         # TODO test et: 4 işlem tipi için de dene
         self.money_transaction_ref.recalculate_is_fully_distributed()
@@ -845,7 +860,8 @@ class SubReceipt(db.Entity):
         #     installment = self.installment_ref
         #     self.installment_ref = None
         #     installment.recalculate_is_fully_paid()
-        #     installment.debt_ref.update_pieces_of_debt()
+        #     if self.money_transaction_ref.member_ref.sandik_ref.is_type_with_trust_relationship():
+        #         installment.debt_ref.update_pieces_of_debt()
         pass
 
 
