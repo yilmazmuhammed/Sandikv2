@@ -70,7 +70,7 @@ def create_sandik_from_sandikv1_data(data, created_by):
             new_web_user = auth_db.create_web_user(email_address=web_user["email_address"],
                                                    password_hash=hasher.hash(f'{web_user["username"]}pw'),
                                                    name=web_user["name"], surname=web_user["surname"],
-                                                   created_by=created_by)
+                                                   is_active=True, created_by=created_by)
         web_users[web_user["username"]] = new_web_user
 
     # Sandık üyelerini oluştur
@@ -177,62 +177,3 @@ def create_sandik_from_sandikv1_data(data, created_by):
             sandik_utils.remove_member_from_sandik(member=member, removed_by=created_by)
 
     return None
-
-
-data = {
-    "sandik": {
-        "name": "",
-        "contribution_amount": int,
-        "detail": "",
-        "date_of_opening": "%Y-%m-%d",
-    },
-    "web_users": [{
-        "email_address": "",
-        "username": "",
-        "name": "",
-        "surname": ""
-    }],
-    "members": [{
-        "id": int,
-        "username": "",
-        "date_of_membership": "%Y-%m-%d",
-        "contribution_amount": int,
-        "detail": ""
-    }],
-    "shares": [{
-        "id": int,
-        "member_id": int,
-        "date_of_membership": "%Y-%m-%d",
-    }],
-    "contributions": [{
-        "share_id": int,
-        "amount": int,
-        "period": "",
-        "created_by": int,
-        "date": "%Y-%m-%d",
-        "detail": "",
-    }],
-    "debts": [{
-        "id": int,
-        "share_id": int,
-        "amount": int,
-        "created_by": int,
-        "date": "%Y-%m-%d",
-        "detail": "",
-    }],
-    "payments": [{
-        "share_id": int,
-        "amount": "",
-        "created_by": "",
-        "date": "",
-        "detail": "",
-        "debt_id": int
-    }],
-    "others": [{
-        "share_id": int,
-        "amount": "",
-        "created_by": "",
-        "date": "",
-        "detail": "",
-    }],
-}
