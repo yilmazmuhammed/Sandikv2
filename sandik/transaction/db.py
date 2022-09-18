@@ -103,7 +103,7 @@ def create_piece_of_debts(debt, created_by):
 
     member = debt.share_ref.member_ref
     trusted_links = member.accepted_trust_links()
-    # TODO performans için get_balance bir defa çağrılarak bir lsitede tutulabilir
+    # TODO performans için get_balance bir defa çağrılarak bir listede tutulabilir
     sorted_trusted_links = sorted(trusted_links, key=lambda tl: tl.other_member(whose=member).get_balance())
 
     remaining_amount = debt_amount
