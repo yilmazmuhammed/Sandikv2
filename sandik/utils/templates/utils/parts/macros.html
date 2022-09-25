@@ -25,7 +25,6 @@
   </label>
 {%- endmacro %}
 
-{# TODO sayfalandırmada ... ile gösterilen butona tıklandığında önceki veya sonraki sayfalar visible yapılmalı #}
 {% macro pagination(page_num, page_count, visible_count=5) -%}
   <ul class="pagination">
     <li class="footable-page-nav" data-page="first">
@@ -34,16 +33,16 @@
     <li class="footable-page-nav" data-page="prev">
       <a class="footable-page-link" href="{{ set_parameters_of_url(request.url, {'page':page_num - 1}) }}">‹</a>
     </li>
-    <li class="footable-page-nav" data-page="prev-limit">
-      <a class="footable-page-link" href="#">...</a>
+    <li id="page-prev-limit" class="footable-page" data-page="prev-limit">
+      <a class="footable-page-link" onclick="show_pages(first_visible_page-5)">...</a>
     </li>
     {% for i in range(page_count) %}
-    <li class="footable-page {% if page_num - visible_count/2 <= i + 1 and i + 1 <= page_num + visible_count - visible_count/2  %} visible {% endif %}" data-page="{{ i + 1 }}">
+    <li id="page-{{i+1}}" class="footable-page" data-page="{{ i + 1 }}">
       <a class="footable-page-link" href="{{ set_parameters_of_url(request.url, {'page':i + 1}) }}">{{ i + 1 }}</a>
     </li>
     {% endfor %}
-    <li class="footable-page-nav" data-page="next-limit">
-      <a class="footable-page-link" href="#">...</a>
+    <li id="page-next-limit" class="footable-page" data-page="next-limit">
+      <a class="footable-page-link" onclick="show_pages(first_visible_page+5)">...</a>
     </li>
     <li class="footable-page-nav" data-page="next">
       <a class="footable-page-link" href="{{ set_parameters_of_url(request.url, {'page':page_num + 1}) }}">›</a>
@@ -54,4 +53,40 @@
   </ul>
 
   <p class="font-bold">Sayfa: {{ page_num }} / {{ page_count }}</p>
+
+  <script>
+    let first_visible_page = parseInt({{ page_num }} - {{ visible_count / 2 }}) + 1;
+    function show_pages(first_page){
+      first_visible_page = first_page;
+
+      if(first_visible_page < 1){
+        first_visible_page = 1;
+      }
+      else if (first_visible_page > {{ page_count - visible_count + 1 }}){
+        first_visible_page = {{ page_count - visible_count + 1  }};
+      }
+
+      document.getElementById('page-prev-limit').classList.remove('visible');
+      document.getElementById('page-next-limit').classList.remove('visible');
+      for(var i = 1; i <= {{ page_count }}; i++){
+        document.getElementById('page-' + String(i)).classList.remove('visible');
+      }
+
+      for(var i = first_visible_page; i < first_visible_page + {{ visible_count }}; i++){
+        document.getElementById('page-' + String(i)).classList.add('visible');
+      }
+
+      console.log(first_visible_page, 1 + {{ visible_count / 2 }})
+      console.log(first_visible_page, {{ page_count }} - {{ visible_count / 2 }})
+      if(first_visible_page > 1 ){
+        console.log("first")
+        document.getElementById('page-prev-limit').classList.add('visible');
+      }
+      if(first_visible_page < {{ page_count }} - {{ visible_count }}){
+        console.log("second")
+        document.getElementById('page-next-limit').classList.add('visible');
+      }
+    }
+    show_pages(first_visible_page);
+  </script>
 {%- endmacro %}
