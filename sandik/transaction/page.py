@@ -1,3 +1,5 @@
+import math
+
 from flask import Blueprint, request, render_template, g, flash, url_for, abort
 from flask_login import current_user
 from pony.orm import desc, rollback
@@ -13,6 +15,7 @@ from sandik.utils import LayoutPI
 from sandik.utils.db_models import MoneyTransaction
 from sandik.utils.forms import FormPI, flask_form_to_dict
 from sandik.utils.period import NotValidPeriod
+from sandik.utils.requirement import paging_must_be_verified
 
 transaction_page_bp = Blueprint(
     'transaction_page_bp', __name__,
@@ -83,7 +86,8 @@ def add_money_transaction_for_debt_payment_by_manager_page(sandik_id):
                 member=member, creation_type=MoneyTransaction.CREATION_TYPE.BY_MANUEL,
                 created_by=current_user, **form_data
             )
-            return redirect(url_for("transaction_page_bp.add_money_transaction_for_debt_payment_by_manager_page", sandik_id=sandik_id))
+            return redirect(url_for("transaction_page_bp.add_money_transaction_for_debt_payment_by_manager_page",
+                                    sandik_id=sandik_id))
         # MaximumDebtAmountExceeded, NoValidRuleFound olma ihtimali yok, bu kontrol çıkartılabilir
         except (MaximumDebtAmountExceeded, NoValidRuleFound) as e:
             # rollback()
@@ -161,9 +165,16 @@ def create_due_contributions_for_all_members_page(sandik_id):
 
 @transaction_page_bp.route('s-para-giris-cikislari')
 @sandik_authorization_required("read")
+@paging_must_be_verified(default_page_num=1, default_page_size=50)
 def money_transactions_of_sandik_page(sandik_id):
     g.type = "management"
-    g.money_transactions = g.sandik.get_money_transactions().order_by(lambda mt: (desc(mt.date), desc(mt.id)))
+
+    money_transactions = utils.get_latest_money_transactions(whose=g.sandik)
+    g.total_count = money_transactions.count()
+    g.page_count = math.ceil(g.total_count / g.page_size)
+    g.first_index = g.total_count - (g.page_num - 1) * g.page_size
+    g.money_transactions = db.paging_to_query(money_transactions, page_num=g.page_num, page_size=g.page_size)
+
     return render_template("transaction/money_transactions_page.html",
                            page_info=LayoutPI(title="Para giriş/çıkış işlemleri",
                                               active_dropdown="management-transactions"))
@@ -171,9 +182,16 @@ def money_transactions_of_sandik_page(sandik_id):
 
 @transaction_page_bp.route('u-para-giris-cikislari')
 @to_be_member_of_sandik_required
+@paging_must_be_verified(default_page_num=1, default_page_size=50)
 def money_transactions_of_member_page(sandik_id):
     g.type = "member"
-    g.money_transactions = g.member.money_transactions_set.order_by(lambda mt: (desc(mt.date), desc(mt.id)))
+
+    money_transactions = utils.get_latest_money_transactions(whose=g.member)
+    g.total_count = money_transactions.count()
+    g.page_count = math.ceil(g.total_count / g.page_size)
+    g.first_index = g.total_count - (g.page_num - 1) * g.page_size
+    g.money_transactions = db.paging_to_query(money_transactions, page_num=g.page_num, page_size=g.page_size)
+
     return render_template(
         "transaction/money_transactions_page.html",
         page_info=LayoutPI(title="Para giriş/çıkış işlemlerim", active_dropdown="member-transactions")
@@ -182,15 +200,21 @@ def money_transactions_of_member_page(sandik_id):
 
 @transaction_page_bp.route('uye-<int:member_id>/para-giris-cikislari')
 @sandik_authorization_required("read")
+@paging_must_be_verified(default_page_num=1, default_page_size=50)
 def money_transactions_of_member_for_management_page(sandik_id, member_id):
     g.member = sandik_db.get_member(id=member_id, sandik_ref=g.sandik)
     if not g.member:
         abort(404)
 
     g.type = "management"
-    page_title = f"Para giriş/çıkış işlemleri: {g.member.web_user_ref.name_surname}"
 
-    g.money_transactions = g.member.money_transactions_set.order_by(lambda mt: (desc(mt.date), desc(mt.id)))
+    money_transactions = utils.get_latest_money_transactions(whose=g.member)
+    g.total_count = money_transactions.count()
+    g.page_count = math.ceil(g.total_count / g.page_size)
+    g.first_index = g.total_count - (g.page_num - 1) * g.page_size
+    g.money_transactions = db.paging_to_query(money_transactions, page_num=g.page_num, page_size=g.page_size)
+
+    page_title = f"Para giriş/çıkış işlemleri: {g.member.web_user_ref.name_surname}"
     return render_template(
         "transaction/money_transactions_page.html",
         page_info=LayoutPI(title=page_title, active_dropdown="management-transactions")

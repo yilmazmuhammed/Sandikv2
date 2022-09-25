@@ -382,3 +382,7 @@ def total_loaned_amount_of_trusted_links(member):
 
 def total_balance_of_trusted_links(member):
     return member.total_balance_from_accepted_trust_links()
+
+
+def paging_to_query(query, page_num=0, page_size=50):
+    return query.page(pagenum=page_num, pagesize=page_size)

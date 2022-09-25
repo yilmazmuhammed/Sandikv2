@@ -43,6 +43,10 @@ class MoneyTransaction(db.Entity):
 
         strings = {REVENUE: "Para girişi", EXPENSE: "Para çıkışı"}
 
+    @property
+    def sandik_ref(self):
+        return self.member_ref.sandik_ref
+
     def is_type_revenue(self):
         return self.type == MoneyTransaction.TYPE.REVENUE
 

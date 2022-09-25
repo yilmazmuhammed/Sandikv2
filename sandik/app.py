@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, flash
+from flask import Flask
 from flask_jsglue import JSGlue
 from pony.flask import Pony
 
@@ -13,7 +13,7 @@ from sandik.sandik.api import sandik_api_bp
 from sandik.sandik.page import sandik_page_bp
 from sandik.transaction.api import transaction_api_bp
 from sandik.transaction.page import transaction_page_bp
-from sandik.utils import CustomJSONEncoder, sandik_preferences
+from sandik.utils import CustomJSONEncoder, sandik_preferences, set_parameters_of_url
 from sandik.utils.db_models import MoneyTransaction, Installment, Contribution, SandikRule
 
 
@@ -67,6 +67,7 @@ def jinja2_integration(flask_app):
     flask_app.jinja_env.globals.update(sandik_preferences=sandik_preferences)
     flask_app.jinja_env.globals.update(SandikRule=SandikRule)
     flask_app.jinja_env.globals.update(catch_exception=catch_exception)
+    flask_app.jinja_env.globals.update(set_parameters_of_url=set_parameters_of_url)
 
 
 def create_app() -> Flask:

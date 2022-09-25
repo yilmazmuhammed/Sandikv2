@@ -25,3 +25,33 @@
   </label>
 {%- endmacro %}
 
+{# TODO sayfalandırmada ... ile gösterilen butona tıklandığında önceki veya sonraki sayfalar visible yapılmalı #}
+{% macro pagination(page_num, page_count, visible_count=5) -%}
+  <ul class="pagination">
+    <li class="footable-page-nav" data-page="first">
+      <a class="footable-page-link" href="{{ set_parameters_of_url(request.url, {'page': 1}) }}">«</a>
+    </li>
+    <li class="footable-page-nav" data-page="prev">
+      <a class="footable-page-link" href="{{ set_parameters_of_url(request.url, {'page':page_num - 1}) }}">‹</a>
+    </li>
+    <li class="footable-page-nav" data-page="prev-limit">
+      <a class="footable-page-link" href="#">...</a>
+    </li>
+    {% for i in range(page_count) %}
+    <li class="footable-page {% if page_num - visible_count/2 <= i + 1 and i + 1 <= page_num + visible_count - visible_count/2  %} visible {% endif %}" data-page="{{ i + 1 }}">
+      <a class="footable-page-link" href="{{ set_parameters_of_url(request.url, {'page':i + 1}) }}">{{ i + 1 }}</a>
+    </li>
+    {% endfor %}
+    <li class="footable-page-nav" data-page="next-limit">
+      <a class="footable-page-link" href="#">...</a>
+    </li>
+    <li class="footable-page-nav" data-page="next">
+      <a class="footable-page-link" href="{{ set_parameters_of_url(request.url, {'page':page_num + 1}) }}">›</a>
+    </li>
+    <li class="footable-page-nav" data-page="last">
+      <a class="footable-page-link" href="{{ set_parameters_of_url(request.url, {'page':page_count}) }}">»</a>
+    </li>
+  </ul>
+
+  <p class="font-bold">Sayfa: {{ page_num }} / {{ page_count }}</p>
+{%- endmacro %}

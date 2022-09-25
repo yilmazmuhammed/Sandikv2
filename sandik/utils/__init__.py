@@ -42,6 +42,25 @@ def add_parameters_to_url(url, parameters):
     return url
 
 
+def set_parameters_of_url(url, parameters: dict):
+    url_args = []
+    if "?" in url:
+        args_part = url[url.find("?") + 1:]
+        url = url[:url.find("?")]
+        url_args = [a.split("=") for a in args_part.split("&")]
+    url += "?"
+
+    for key, value in url_args:
+        if key not in parameters.keys():
+            url += f"{key}={value}&"
+
+    for key, value in parameters.items():
+        url += f"{key}={value}&"
+
+    url = url[:-1]
+    return url
+
+
 def get_next_url(args, parameters=None, default_url=""):
     if parameters is None:
         parameters = {}
@@ -54,4 +73,3 @@ def get_next_url(args, parameters=None, default_url=""):
 def tz_to_tr(coming_time, tz="utc"):
     if tz.lower() == "utc":
         return coming_time + timedelta(hours=3)
-
