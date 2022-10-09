@@ -33,5 +33,5 @@ def get_shares_of_member_api(sandik_id):
     if not member:
         return jsonify(result=False, msg="Üye bulunamadı")
 
-    shares = [share.to_dict() for share in member.shares_set.order_by(lambda s: s.share_order_of_member)]
+    shares = [share.to_dict() for share in member.get_active_shares().order_by(lambda s: s.share_order_of_member)]
     return jsonify(result=True, member_id=member.id, shares=shares)

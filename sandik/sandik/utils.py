@@ -17,7 +17,7 @@ from sandik.utils.db_models import Member, Share, MoneyTransaction, TrustRelatio
 def add_share_to_member(member, added_by, create_contributions=True, force=False, **kwargs):
     if not force:
         max_share_count = sandik_preferences.get_max_number_of_share(sandik=member.sandik_ref)
-        if member.shares_set.select(lambda s: s.is_active).count() >= max_share_count:
+        if member.get_active_shares().count() >= max_share_count:
             raise MaxShareCountExceed(f"Bir üyenin en fazla {max_share_count} adet hissesi olabilir.")
 
     order = db.get_last_share_order(member) + 1
@@ -77,8 +77,9 @@ def add_member_to_sandik(sandik, web_user, date_of_membership, contribution_amou
 def update_member_of_sandik(member, updated_by, date_of_membership=None, **kwargs):
     if date_of_membership and date_of_membership != member.date_of_membership:
         if date_of_membership < member.date_of_membership:
-            for share in member.shares_set.filter(date_of_opening=member.date_of_membership):
-                db.update_share(share=share, updated_by=updated_by, date_of_opening=date_of_membership)
+            for share in member.get_active_shares().filter(date_of_opening=member.date_of_membership):
+                if share.date_of_opening == member.date_of_membership:
+                    db.update_share(share=share, updated_by=updated_by, date_of_opening=date_of_membership)
             transaction_utils.create_due_contributions_for_member(member=member, created_by=updated_by)
         else:
             # TODO ödenmemiş aidatları sil
@@ -200,8 +201,8 @@ def get_member_summary_page(member):
         trusted_links = {
             "total_paid_contributions": member.sandik_ref.sum_of_contributions(),
             "total_loaned_amount": member.sandik_ref.sum_of_debts(),
+            "total_paid_installments": member.sandik_ref.sum_of_paid_installments(),
             "total_balance": member.sandik_ref.get_final_status(),
-            "total_paid_installments": member.sandik_ref.sum_of_paid_installments()
         }
     elif member.sandik_ref.is_type_with_trust_relationship():
         trusted_links = {

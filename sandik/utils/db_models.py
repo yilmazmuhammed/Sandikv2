@@ -589,11 +589,12 @@ class Sandik(db.Entity):
                       sr.debt_ref and sr.money_transaction_ref.member_ref.sandik_ref == self).sum()
 
     def get_final_status(self):
-        revenue = select(mt.amount for mt in MoneyTransaction if
-                         mt.member_ref.sandik_ref == self and mt.type == MoneyTransaction.TYPE.REVENUE).sum()
-        expense = select(mt.amount for mt in MoneyTransaction if
-                         mt.member_ref.sandik_ref == self and mt.type == MoneyTransaction.TYPE.EXPENSE).sum()
-        return revenue - expense
+        c = self.sum_of_contributions()
+        d = self.sum_of_debts()
+        i = self.sum_of_paid_installments()
+        u = self.total_of_undistributed_amount()
+        result = c - d + i + u
+        return result
 
     def has_application(self):
         return self.applicant_web_users_set.count() > 0

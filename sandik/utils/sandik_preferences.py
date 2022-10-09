@@ -31,6 +31,8 @@ def get_start_period(sandik, debt_date):
 
 def remaining_debt_balance(sandik, whose):
     if isinstance(whose, Share):
+        if not whose.is_active:
+            return 0
         no_rule_msg = f"Hissenin alabileceği borç miktarını tespit etmek için geçerli kural bulunamadı." \
                       f"<br>Lütfen önce açılabilecek en fazla hisse sayısı için sandık kuralı ekleyiniz." \
                       f"<br>Üye: {whose.name_surname} <br>Hisse: {whose.id}" \
@@ -42,7 +44,7 @@ def remaining_debt_balance(sandik, whose):
         unpaid_installments_amount = whose.total_amount_unpaid_installments()
         return max_debt_balance - unpaid_installments_amount
     elif isinstance(whose, Member):
-        return sum(remaining_debt_balance(sandik=sandik, whose=share) for share in whose.shares_set)
+        return sum(remaining_debt_balance(sandik=sandik, whose=share) for share in whose.get_active_shares())
     else:
         raise Exception("whose 'Share' yada 'Member' olmalıdır")
 

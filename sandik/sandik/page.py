@@ -325,7 +325,7 @@ def add_share_to_member_page(sandik_id, member_id):
     danger_msg = None
     try:
         max_share_count = sandik_preferences.get_max_number_of_share(sandik=member.sandik_ref)
-        if member.shares_set.select(lambda s: s.is_active).count() >= max_share_count:
+        if member.get_active_shares().count() >= max_share_count:
             danger_msg = f"Bir üyenin en fazla {max_share_count} adet hissesi olabilir."
     except NoValidRuleFound as e:
         danger_msg = str(e)
