@@ -841,8 +841,10 @@ class SubReceipt(db.Entity):
             if ref:
                 counter += 1
         if counter != 1:
-            # rollback()
-            print("ERRCODE: 0012, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+            rollback()
+            err_msg = "ERRCODE: 0012, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz."
+            print(err_msg)
+            raise Exception(err_msg)
 
     def after_insert(self):
         # TODO test et
@@ -856,20 +858,6 @@ class SubReceipt(db.Entity):
 
         # TODO test et: 4 işlem tipi için de dene
         self.money_transaction_ref.recalculate_is_fully_distributed()
-
-    def before_delete(self):
-        # if self.contribution_ref:
-        #     contribution = self.contribution_ref
-        #     self.contribution_ref = None
-        #     contribution.recalculate_is_fully_paid()
-        #
-        # if self.installment_ref:
-        #     installment = self.installment_ref
-        #     self.installment_ref = None
-        #     installment.recalculate_is_fully_paid()
-        #     if self.money_transaction_ref.member_ref.sandik_ref.is_type_with_trust_relationship():
-        #         installment.debt_ref.update_pieces_of_debt()
-        pass
 
 
 class Notification(db.Entity):
@@ -900,7 +888,7 @@ class PieceOfDebt(db.Entity):
                       "MSG: Beklenmedik bir hata ile karşılaşıldı. " \
                       "Düzeltilmesi için lütfen site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz."
             print(err_msg)
-            # raise Exception(err_msg)
+            raise Exception(err_msg)
             pass
 
 
