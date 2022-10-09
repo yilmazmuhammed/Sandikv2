@@ -382,5 +382,3 @@ def total_loaned_amount_of_trusted_links(member):
 
 def total_balance_of_trusted_links(member):
     return member.total_balance_from_accepted_trust_links()
-
-
