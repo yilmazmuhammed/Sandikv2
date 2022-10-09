@@ -1,5 +1,5 @@
 {% extends "utils/layout.html" %}
-{% import "utils/parts/macros.html" as macros%}
+{% import "utils/parts/macros.html" as macros %}
 
 {% block js_block %}
   <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
@@ -12,7 +12,7 @@
         },
         "paging": {
           "enabled": true,
-          "size": 50,
+          "size": {{ g.page_size }},
         },
         "columns": [
           { "name": "id", "title": "ID"},
@@ -65,6 +65,9 @@
       </div>
       <div class="table table-responsive">
         <table class="table" id="logs-table"></table>
+      </div>
+      <div class="panel-footer text-center">
+        {{ macros.pagination(page_num=g.page_num, page_count=g.page_count) }}
       </div>
     </div>
   </div>

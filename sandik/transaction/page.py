@@ -12,7 +12,7 @@ from sandik.transaction import forms, utils, db
 from sandik.transaction.authorization import money_transaction_required, contribution_required
 from sandik.transaction.exceptions import MaximumDebtAmountExceeded, ThereIsNoDebt, MaximumAmountExceeded
 from sandik.utils import LayoutPI
-from sandik.utils.db_models import MoneyTransaction
+from sandik.utils.db_models import MoneyTransaction, get_paging_variables
 from sandik.utils.forms import FormPI, flask_form_to_dict
 from sandik.utils.period import NotValidPeriod
 from sandik.utils.requirement import paging_must_be_verified
@@ -169,11 +169,9 @@ def create_due_contributions_for_all_members_page(sandik_id):
 def money_transactions_of_sandik_page(sandik_id):
     g.type = "management"
 
-    money_transactions = utils.get_latest_money_transactions(whose=g.sandik)
-    g.total_count = money_transactions.count()
-    g.page_count = math.ceil(g.total_count / g.page_size)
-    g.first_index = g.total_count - (g.page_num - 1) * g.page_size
-    g.money_transactions = db.paging_to_query(money_transactions, page_num=g.page_num, page_size=g.page_size)
+    g.total_count, g.page_count, g.first_index, g.money_transactions = get_paging_variables(
+        entities_query=utils.get_latest_money_transactions(whose=g.sandik), page_size=g.page_size, page_num=g.page_num
+    )
 
     return render_template("transaction/money_transactions_page.html",
                            page_info=LayoutPI(title="Para giriş/çıkış işlemleri",
@@ -186,11 +184,9 @@ def money_transactions_of_sandik_page(sandik_id):
 def money_transactions_of_member_page(sandik_id):
     g.type = "member"
 
-    money_transactions = utils.get_latest_money_transactions(whose=g.member)
-    g.total_count = money_transactions.count()
-    g.page_count = math.ceil(g.total_count / g.page_size)
-    g.first_index = g.total_count - (g.page_num - 1) * g.page_size
-    g.money_transactions = db.paging_to_query(money_transactions, page_num=g.page_num, page_size=g.page_size)
+    g.total_count, g.page_count, g.first_index, g.money_transactions = get_paging_variables(
+        entities_query=utils.get_latest_money_transactions(whose=g.member), page_size=g.page_size, page_num=g.page_num
+    )
 
     return render_template(
         "transaction/money_transactions_page.html",
@@ -208,11 +204,9 @@ def money_transactions_of_member_for_management_page(sandik_id, member_id):
 
     g.type = "management"
 
-    money_transactions = utils.get_latest_money_transactions(whose=g.member)
-    g.total_count = money_transactions.count()
-    g.page_count = math.ceil(g.total_count / g.page_size)
-    g.first_index = g.total_count - (g.page_num - 1) * g.page_size
-    g.money_transactions = db.paging_to_query(money_transactions, page_num=g.page_num, page_size=g.page_size)
+    g.total_count, g.page_count, g.first_index, g.money_transactions = get_paging_variables(
+        entities_query=utils.get_latest_money_transactions(whose=g.member), page_size=g.page_size, page_num=g.page_num
+    )
 
     page_title = f"Para giriş/çıkış işlemleri: {g.member.web_user_ref.name_surname}"
     return render_template(
@@ -223,24 +217,35 @@ def money_transactions_of_member_for_management_page(sandik_id, member_id):
 
 @transaction_page_bp.route('s-sandik-islemleri')
 @sandik_authorization_required("read")
+@paging_must_be_verified(default_page_num=1, default_page_size=50)
 def transactions_of_sandik_page(sandik_id):
     g.type = "management"
-    g.transactions = utils.get_transactions(whose=g.sandik)
+
+    g.total_count, g.page_count, g.first_index, g.transactions = get_paging_variables(
+        entities_query=utils.get_transactions(whose=g.sandik), page_size=g.page_size, page_num=g.page_num
+    )
+
     return render_template("transaction/sandik_transactions_page.html",
                            page_info=LayoutPI(title="Sandık işlemleri", active_dropdown="management-transactions"))
 
 
 @transaction_page_bp.route('u-sandik-islemleri')
 @to_be_member_of_sandik_required
+@paging_must_be_verified(default_page_num=1, default_page_size=50)
 def transactions_of_member_page(sandik_id):
     g.type = "member"
-    g.transactions = utils.get_transactions(whose=g.member)
+
+    g.total_count, g.page_count, g.first_index, g.transactions = get_paging_variables(
+        entities_query=utils.get_transactions(whose=g.member), page_size=g.page_size, page_num=g.page_num
+    )
+
     return render_template("transaction/sandik_transactions_page.html",
                            page_info=LayoutPI(title="Sandık işlemlerim", active_dropdown="member-transactions"))
 
 
 @transaction_page_bp.route('s-odemeler')
 @sandik_authorization_required("read")
+# TODO tablolara göre ayrı ayrı paging yapılacak
 def payments_of_sandik_page(sandik_id):
     g.type = "management"
     g.payments = utils.get_payments(whose=g.sandik)
@@ -252,6 +257,7 @@ def payments_of_sandik_page(sandik_id):
 
 @transaction_page_bp.route('u-odemeler')
 @to_be_member_of_sandik_required
+# TODO tablolara göre ayrı ayrı paging yapılacak
 def payments_of_member_page(sandik_id):
     g.type = "member"
     g.payments = utils.get_payments(whose=g.member)
@@ -263,6 +269,7 @@ def payments_of_member_page(sandik_id):
 
 @transaction_page_bp.route('s-borclar')
 @sandik_authorization_required("read")
+# TODO tablolara göre ayrı ayrı paging yapılacak
 def debts_of_sandik_page(sandik_id):
     g.type = "management"
     g.unpaid_debts = utils.get_debts(whose=g.sandik, only_unpaid=True)
@@ -273,6 +280,7 @@ def debts_of_sandik_page(sandik_id):
 
 @transaction_page_bp.route('u-borclar')
 @to_be_member_of_sandik_required
+# TODO tablolara göre ayrı ayrı paging yapılacak
 def debts_of_member_page(sandik_id):
     g.type = "member"
     g.unpaid_debts = utils.get_debts(whose=g.member, only_unpaid=True)

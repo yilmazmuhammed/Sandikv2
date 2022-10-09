@@ -591,9 +591,6 @@ class Sandik(db.Entity):
     def has_application(self):
         return self.applicant_web_users_set.count() > 0
 
-    def get_money_transactions(self):
-        return select(mt for mt in MoneyTransaction if mt.member_ref.sandik_ref == self)
-
     def total_of_undistributed_amount(self):
         # çalışmıyor
         # return select(member.total_of_undistributed_amount() for member in self.get_active_members()).sum()
@@ -1078,6 +1075,18 @@ def get_updated_fields(new_values, db_object):
         if key in old_values.keys() and value != old_values[key]:
             ret[key] = {"new": value, "old": old_values[key]}
     return ret
+
+
+def paging_to_query(query, page_num=0, page_size=50):
+    return query.page(pagenum=page_num, pagesize=page_size)
+
+
+def get_paging_variables(entities_query, page_size, page_num):
+    total_count = entities_query.count()
+    page_count = math.ceil(total_count / page_size)
+    first_index = total_count - (page_num - 1) * page_size
+    transactions = paging_to_query(entities_query, page_num=page_num, page_size=page_size)
+    return total_count, page_count, first_index, transactions
 
 
 if __name__ == '__main__':

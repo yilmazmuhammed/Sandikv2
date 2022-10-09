@@ -9,7 +9,9 @@ from sandik.general.requirement import notification_required
 from sandik.sandik import db as sandik_db
 from sandik.sandik.exceptions import ThereIsNoSandik, ThereIsNotAuthorizedOfSandik
 from sandik.utils import LayoutPI, get_next_url
+from sandik.utils.db_models import get_paging_variables
 from sandik.utils.forms import flask_form_to_dict, FormPI
+from sandik.utils.requirement import paging_must_be_verified
 
 general_page_bp = Blueprint(
     'general_page_bp', __name__,
@@ -140,6 +142,11 @@ def notifications_page():
 
 @general_page_bp.route("/seyir-defteri")
 @admin_required
+@paging_must_be_verified(default_page_num=1, default_page_size=50)
 def logs_page():
-    g.logs = db.select_logs().order_by(lambda l: desc(l.time))
+
+    g.total_count, g.page_count, g.first_index, g.logs = get_paging_variables(
+        entities_query=db.select_logs().order_by(lambda l: desc(l.time)), page_size=g.page_size, page_num=g.page_num
+    )
+
     return render_template("general/logs_page.html", page_info=LayoutPI(title="Bildirimler", active_dropdown="logs"))
