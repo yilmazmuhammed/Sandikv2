@@ -93,7 +93,7 @@
           {% endif %}
         ],
         "rows": [
-        {% for share in g.member.shares_set.order_by("lambda s: s.share_order_of_member") %}
+        {% for share in g.member.get_active_shares().order_by("lambda s: s.share_order_of_member") %}
           {
             "order": `<span title='ID: {{ share.id }}'>{{ share.share_order_of_member }}</span>`,
             "total_contribution": `{{ share.sum_of_paid_contributions() }}`,
@@ -316,7 +316,7 @@
                 </tr>
               </thead>
               <tbody>
-              {% for share in g.member.shares_set.order_by('lambda s: s.share_order_of_member') %}
+              {% for share in g.member.get_active_shares().order_by('lambda s: s.share_order_of_member') %}
               {% set max_debt_amount=catch_exception(sandik_preferences.remaining_debt_balance, default_value="---", sandik=share.sandik_ref, whose=share)  %}
                 <tr class="row text-center">
                   <td>Hisse {{ share.share_order_of_member }}</td>
