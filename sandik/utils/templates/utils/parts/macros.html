@@ -37,7 +37,7 @@
       <a class="footable-page-link" onclick="show_pages(first_visible_page-5)">...</a>
     </li>
     {% for i in range(page_count) %}
-    <li id="page-{{i+1}}" class="footable-page" data-page="{{ i + 1 }}">
+    <li id="page-{{ i + 1 }}" class="footable-page" data-page="{{ i + 1 }}">
       <a class="footable-page-link" href="{{ set_parameters_of_url(request.url, {'page':i + 1}) }}">{{ i + 1 }}</a>
     </li>
     {% endfor %}

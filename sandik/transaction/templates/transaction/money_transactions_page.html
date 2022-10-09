@@ -6,11 +6,6 @@
 <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
 <script>
 jQuery(function($){
-  let size = 50;
-  let args = getUrlVars();
-  if("size" in args){
-    size = args["size"];
-  }
   $('#money-transactions-table').footable({
     components: {
       {% if g.type == "management" %}
@@ -20,7 +15,7 @@ jQuery(function($){
     "toggleColumn": "first",
     "paging": {
       "enabled": true,
-      "size": size
+      "size": {{ g.page_size }}
     },
     "filtering": {
       "enabled": true,

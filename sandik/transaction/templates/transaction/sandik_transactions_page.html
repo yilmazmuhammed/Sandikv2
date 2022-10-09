@@ -37,7 +37,7 @@ jQuery(function($){
 		"rows": [
     {% for t in g.transactions %}
       {
-        "id": `<span title='ID: {{ t.id_prefix }}-{{ t.transaction.id }}'>{{ loop.revindex }}</span>`,
+        "id": `<span title='ID: {{ t.id_prefix }}-{{ t.transaction.id }}'>{{ g.first_index - loop.index }}</span>`,
         "term": "{{ t.term }}",
         "name_surname": "{{ t.transaction.member_ref.web_user_ref.name_surname }}",
         "transaction_type": `{{ t.transaction_type }}`,
