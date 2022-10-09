@@ -888,7 +888,7 @@ class PieceOfDebt(db.Entity):
                       "MSG: Beklenmedik bir hata ile karşılaşıldı. " \
                       "Düzeltilmesi için lütfen site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz."
             print(err_msg)
-            raise Exception(err_msg)
+            # raise Exception(err_msg)
             pass
 
 
