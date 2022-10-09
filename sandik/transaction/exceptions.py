@@ -27,6 +27,10 @@ class UndefinedRemoveOperation(TransactionException):
     pass
 
 
+class InvalidRemoveOperation(TransactionException):
+    pass
+
+
 class ThereIsNoDebt(TransactionException):
     pass
 
