@@ -369,20 +369,63 @@ def remove_sub_receipt_from_installment(sub_receipt, removed_by):
     return db.delete_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
 
 
-def remove_sub_receipt(sub_receipt, removed_by):
+def remove_revenue_sub_receipt(sub_receipt, removed_by):
     if sub_receipt.contribution_ref:
         remove_sub_receipt_from_contribution(sub_receipt=sub_receipt, removed_by=removed_by)
     elif sub_receipt.installment_ref:
         remove_sub_receipt_from_installment(sub_receipt=sub_receipt, removed_by=removed_by)
     else:
-        raise UndefinedRemoveOperation("Tanımlanmamış sub receipt silme işlemi")
+        raise UndefinedRemoveOperation("Tanımlanmamış gelir alt makbuzu silme işlemi")
+
+
+def remove_debt(debt, removed_by):
+    for installment in debt.installments_set:
+        remove_installment(installment=installment, removed_by=removed_by)
+
+    for pod in debt.piece_of_debts_set:
+        db.delete_piece_of_debt(piece_of_debt=pod, removed_by=removed_by)
+
+    sub_receipt_id = debt.sub_receipt_ref.id
+    db.delete_debt(debt=debt, removed_by=removed_by)
+    db.delete_sub_receipt(sub_receipt=db.get_sub_receipt(id=sub_receipt_id), removed_by=removed_by)
+
+
+def remove_installment(installment, removed_by):
+    for sub_receipt in installment.sub_receipts_set:
+        remove_sub_receipt_from_installment(sub_receipt=sub_receipt, removed_by=removed_by)
+    db.delete_installment(installment=installment, removed_by=removed_by)
+
+
+def remove_retracted(retracted, removed_by):
+    db.delete_retracted_and_sub_receipts(retracted=retracted, removed_by=removed_by)
+
+
+def remove_expense_sub_receipt(sub_receipt, removed_by):
+    if sub_receipt.debt_ref:
+        if sub_receipt.debt_ref.get_paid_amount() > 0:
+            raise UndefinedRemoveOperation("Borca ait ödeme yapılmış. Ödeme yapılan borçlar silinemez. "
+                                           "Silinmesi gerekiyorsa site yöneticisine başvurunuz.")
+        remove_debt(debt=sub_receipt.debt_ref, removed_by=removed_by)
+    elif sub_receipt.expense_retracted_ref:
+        remove_retracted(retracted=sub_receipt.expense_retracted_ref, removed_by=removed_by)
+    else:
+        raise UndefinedRemoveOperation("Tanımlanmamış gider alt makbuzu silme işlemi")
 
 
 def remove_money_transaction(money_transaction, removed_by):
     member = money_transaction.member_ref
     flush()  # TODO acaba neden bunu koymuşum??
+
+    if money_transaction.is_type_revenue():
+        remove_func = remove_revenue_sub_receipt
+    elif money_transaction.is_type_expense():
+        remove_func = remove_expense_sub_receipt
+    else:
+        raise UndefinedRemoveOperation("Tanımlanmamış para işlemi silme işlemi")
+
     for sub_receipt in money_transaction.sub_receipts_set:
-        remove_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
+        remove_func(sub_receipt=sub_receipt, removed_by=removed_by)
+
     db.delete_money_transaction(money_transaction=money_transaction, removed_by=removed_by)
 
     # Bir para işlemi silinince ödenmiş olan bazı ödemeler, ödenmemiş durumuna geçebilir.
@@ -393,5 +436,5 @@ def remove_money_transaction(money_transaction, removed_by):
 
 def remove_contribution(contribution, removed_by):
     for sub_receipt in contribution.sub_receipts_set:
-        remove_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
+        remove_revenue_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
     db.delete_contribution(contribution=contribution, removed_by=removed_by)

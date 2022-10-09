@@ -2,6 +2,7 @@ from math import ceil
 
 from pony.orm import select, flush
 
+from sandik.transaction.exceptions import InvalidRemoveOperation
 from sandik.utils import period as period_utils, sandik_preferences
 from sandik.utils.db_models import Contribution, Share, Member, Installment, MoneyTransaction, Log, SubReceipt, Debt, \
     PieceOfDebt, Retracted, Sandik
@@ -182,20 +183,27 @@ def create_retracted(amount, untreated_money_transaction, money_transaction, cre
                                                    created_by=created_by),
         revenue_sub_receipt_ref=create_sub_receipt(money_transaction=untreated_money_transaction, amount=amount,
                                                    is_auto=True, created_by=created_by),
-        logs_set=Log(web_user_ref=created_by, type=Log.TYPE.DEBT.CREATE, **logged_ref_items)
+        logs_set=Log(web_user_ref=created_by, type=Log.TYPE.RETRACTED.CREATE, **logged_ref_items)
     )
 
 
 def delete_sub_receipt(sub_receipt, removed_by):
+    if sub_receipt.debt_ref is not None:
+        raise InvalidRemoveOperation("Borca ait bir sub receipt, borç silinmeden silinemez!")
+    if sub_receipt.expense_retracted_ref is not None or sub_receipt.revenue_retracted_ref is not None:
+        raise InvalidRemoveOperation("Retracted'a ait bir sub receipt, retracted silinmeden silinemez!")
+
     logged_ref_items = {
         "logged_money_transaction_ref": sub_receipt.money_transaction_ref,
         "logged_share_ref": sub_receipt.share_ref,
-        "logged_member_ref": sub_receipt.share_ref.member_ref,
-        "logged_sandik_ref": sub_receipt.share_ref.member_ref.sandik_ref,
+        "logged_member_ref": sub_receipt.money_transaction_ref.member_ref,
+        "logged_sandik_ref": sub_receipt.money_transaction_ref.member_ref.sandik_ref,
         "logged_contribution_ref": sub_receipt.contribution_ref,
         "logged_installment_ref": sub_receipt.installment_ref,
+        "logged_retracted_ref": sub_receipt.revenue_retracted_ref or sub_receipt.expense_retracted_ref,
         "logged_debt_ref": sub_receipt.debt_ref,
     }
+
     sub_receipt_logs = sub_receipt.logs_set
     sub_receipt_id = sub_receipt.id
     contribution = sub_receipt.contribution_ref
@@ -221,6 +229,9 @@ def delete_sub_receipt(sub_receipt, removed_by):
 
 
 def delete_money_transaction(money_transaction, removed_by):
+    if money_transaction.sub_receipts_set.count() > 0:
+        raise InvalidRemoveOperation("Alt işlemleri silinmemiş bir para işlemi silinemez!")
+
     logged_ref_items = {
         "logged_member_ref": money_transaction.member_ref,
         "logged_sandik_ref": money_transaction.member_ref.sandik_ref,
@@ -233,6 +244,9 @@ def delete_money_transaction(money_transaction, removed_by):
 
 
 def delete_contribution(contribution, removed_by):
+    if contribution.sub_receipts_set.count() > 0:
+        raise InvalidRemoveOperation("Alt işlemleri silinmemiş bir aidat silinemez!")
+
     logged_ref_items = {
         "logged_share_ref": contribution.share_ref,
         "logged_member_ref": contribution.share_ref.member_ref,
@@ -243,6 +257,73 @@ def delete_contribution(contribution, removed_by):
     for log in contribution.logs_set:
         log.detail += f", deleted_contribution_id: {contribution.id}"
     contribution.delete()
+
+
+def delete_retracted_and_sub_receipts(retracted, removed_by):
+    expense_sub_receipt_id = revenue_sub_receipt_id = None
+    if retracted.expense_sub_receipt_ref:
+        expense_sub_receipt_id = retracted.expense_sub_receipt_ref.id
+
+    if retracted.revenue_sub_receipt_ref:
+        revenue_sub_receipt_id = retracted.revenue_sub_receipt_ref.id
+
+    logged_ref_items = {
+        "logged_member_ref": retracted.expense_sub_receipt_ref.member_ref,
+        "logged_sandik_ref": retracted.expense_sub_receipt_ref.member_ref.sandik_ref,
+    }
+    Log(web_user_ref=removed_by, type=Log.TYPE.RETRACTED.DELETE, detail=str(retracted.to_dict()),
+        **logged_ref_items)
+    for log in retracted.logs_set:
+        log.detail += f", deleted_retracted_id: {retracted.id}"
+    retracted.delete()
+
+    if expense_sub_receipt_id:
+        delete_sub_receipt(sub_receipt=get_sub_receipt(id=expense_sub_receipt_id), removed_by=removed_by)
+    if revenue_sub_receipt_id:
+        delete_sub_receipt(sub_receipt=get_sub_receipt(id=revenue_sub_receipt_id), removed_by=removed_by)
+
+
+def delete_piece_of_debt(piece_of_debt, removed_by):
+    """ DİKKAT: Bu fonksiyon ile borç parçası silindiğinde, diğer borç parçalarının miktarları düzenlenmez"""
+
+    logged_ref_items = {
+        "logged_debt_ref": piece_of_debt.debt_ref,
+    }
+    Log(web_user_ref=removed_by, type=Log.TYPE.PIECE_OF_DEBT.DELETE, detail=str(piece_of_debt.to_dict()),
+        **logged_ref_items)
+    for log in piece_of_debt.logs_set:
+        log.detail += f", deleted_piece_of_debt_id: {piece_of_debt.id}"
+    piece_of_debt.delete()
+
+
+def delete_debt(debt, removed_by):
+    logged_ref_items = {
+        "logged_money_transaction_ref": debt.sub_receipt_ref.money_transaction_ref,
+        "logged_member_ref": debt.member_ref,
+        "logged_sandik_ref": debt.sandik_ref,
+        "logged_share_ref": debt.share_ref,
+    }
+    Log(web_user_ref=removed_by, type=Log.TYPE.DEBT.DELETE, detail=str(debt.to_dict()),
+        **logged_ref_items)
+    for log in debt.logs_set:
+        log.detail += f", deleted_debt_id: {debt.id}"
+    debt.delete()
+
+
+def delete_installment(installment, removed_by):
+    """ DİKKAT: Bu fonksiyon ile taksit silindiğinde, kalan taksitlerin miktarları düzenlenmez"""
+
+    logged_ref_items = {
+        "logged_debt_ref": installment.debt_ref,
+        "logged_share_ref": installment.debt_ref.share_ref,
+        "logged_member_ref": installment.debt_ref.member_ref,
+        "logged_sandik_ref": installment.debt_ref.sandik_ref,
+    }
+    Log(web_user_ref=removed_by, type=Log.TYPE.INSTALLMENT.DELETE, detail=str(installment.to_dict()),
+        **logged_ref_items)
+    for log in installment.logs_set:
+        log.detail += f", deleted_installment_id: {installment.id}"
+    installment.delete()
 
 
 def get_contribution(*args, **kwargs) -> Contribution:

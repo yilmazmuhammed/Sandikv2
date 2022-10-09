@@ -417,7 +417,6 @@ class Log(db.Entity):
         CREATE = 1
         UPDATE = 2
         DELETE = 3
-        CONFIRM = 4
         OTHER = 5
 
         @classmethod
@@ -471,14 +470,17 @@ class Log(db.Entity):
         class DEBT:
             first, last = 600, 699
             CREATE = first + 1
+            DELETE = first + 3
 
         class INSTALLMENT:
             first, last = 700, 799
             CREATE = first + 1
+            DELETE = first + 3
 
         class PIECE_OF_DEBT:
             first, last = 800, 899
             CREATE = first + 1
+            DELETE = first + 3
 
         class CONTRIBUTION:
             first, last = 900, 999
@@ -516,6 +518,11 @@ class Log(db.Entity):
             first, last = 1500, 1599
             CREATE = first + 1
             UPDATE = first + 2
+
+        class RETRACTED:
+            first, last = 1600, 1699
+            CREATE = first + 1
+            DELETE = first + 3
 
         class LOG_LEVEL:
             first, last = 10000, 10099
@@ -834,8 +841,10 @@ class SubReceipt(db.Entity):
             if ref:
                 counter += 1
         if counter != 1:
-            # rollback()
-            print("ERRCODE: 0012, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+            rollback()
+            err_msg = "ERRCODE: 0012, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz."
+            print(err_msg)
+            raise Exception(err_msg)
 
     def after_insert(self):
         # TODO test et
@@ -849,20 +858,6 @@ class SubReceipt(db.Entity):
 
         # TODO test et: 4 işlem tipi için de dene
         self.money_transaction_ref.recalculate_is_fully_distributed()
-
-    def before_delete(self):
-        # if self.contribution_ref:
-        #     contribution = self.contribution_ref
-        #     self.contribution_ref = None
-        #     contribution.recalculate_is_fully_paid()
-        #
-        # if self.installment_ref:
-        #     installment = self.installment_ref
-        #     self.installment_ref = None
-        #     installment.recalculate_is_fully_paid()
-        #     if self.money_transaction_ref.member_ref.sandik_ref.is_type_with_trust_relationship():
-        #         installment.debt_ref.update_pieces_of_debt()
-        pass
 
 
 class Notification(db.Entity):
@@ -893,7 +888,7 @@ class PieceOfDebt(db.Entity):
                       "MSG: Beklenmedik bir hata ile karşılaşıldı. " \
                       "Düzeltilmesi için lütfen site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz."
             print(err_msg)
-            # raise Exception(err_msg)
+            raise Exception(err_msg)
             pass
 
 
