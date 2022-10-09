@@ -15,7 +15,7 @@ jQuery(function($){
     "toggleColumn": "first",
     "paging": {
       "enabled": true,
-      "size": 50
+      "size": {{ g.page_size }}
     },
     "filtering": {
       "enabled": true,
@@ -43,7 +43,7 @@ jQuery(function($){
     "rows": [
     {% for mt in g.money_transactions %}
       {
-        "id": "<span title='ID: {{ mt.id }}'>{{ loop.revindex }}</span>",
+        "id": "<span title='ID: {{ mt.id }}'>{{ g.first_index - loop.index }}</span>",
         "date": "{{ mt.date.strftime("%Y-%m-%d") }}",
         "amount": "{{ mt.amount }} ₺",
         "name_surname": `{% if g.type == "management"%}<a href="{{ url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=g.sandik.id, member_id=mt.member_ref.id) }}" title="Üye özeti için tıklayınız..." class="font-bold text-primary">{{ mt.member_ref.web_user_ref.name_surname }}</a>{% else %}{{ mt.member_ref.web_user_ref.name_surname }}{% endif %}`,
@@ -125,6 +125,9 @@ jQuery(function($){
       </div>
       <div class="table table-responsive">
         <table class="table table-striped" id="money-transactions-table"></table>
+      </div>
+      <div class="panel-footer text-center">
+        {{ macros.pagination(page_num=g.page_num, page_count=g.page_count) }}
       </div>
     </div>
   </div>
