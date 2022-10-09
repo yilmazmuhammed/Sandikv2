@@ -1,5 +1,3 @@
-import math
-
 from flask import Blueprint, request, render_template, g, flash, url_for, abort
 from flask_login import current_user
 from pony.orm import desc, rollback
