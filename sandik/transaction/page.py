@@ -218,10 +218,7 @@ def money_transactions_of_member_for_management_page(sandik_id, member_id):
 @paging_must_be_verified(default_page_num=1, default_page_size=50)
 def transactions_of_sandik_page(sandik_id):
     g.type = "management"
-
-    g.total_count, g.page_count, g.first_index, g.transactions = get_paging_variables(
-        entities_query=utils.get_transactions(whose=g.sandik), page_size=g.page_size, page_num=g.page_num
-    )
+    g.transactions = utils.get_transactions(whose=g.sandik)
 
     return render_template("transaction/sandik_transactions_page.html",
                            page_info=LayoutPI(title="Sandık işlemleri", active_dropdown="management-transactions"))

@@ -14,7 +14,7 @@ jQuery(function($){
     "toggleColumn": "first",
     "paging": {
       "enabled": true,
-      "size": {{ g.page_size }}
+      "size": 50
     },
     "filtering": {
       "enabled": true,
@@ -37,7 +37,7 @@ jQuery(function($){
 		"rows": [
     {% for t in g.transactions %}
       {
-        "id": `<span title='ID: {{ t.id_prefix }}-{{ t.transaction.id }}'>{{ g.first_index - loop.index }}</span>`,
+        "id": `<span title='ID: {{ t.id_prefix }}-{{ t.transaction.id }}'>{{ loop.revindex }}</span>`,
         "term": "{{ t.term }}",
         "name_surname": "{{ t.transaction.member_ref.web_user_ref.name_surname }}",
         "transaction_type": `{{ t.transaction_type }}`,
@@ -75,9 +75,6 @@ jQuery(function($){
       </div>
       <div class="table table-responsive">
         <table class="table" id="sandik-transactions-table"></table>
-      </div>
-      <div class="panel-footer text-center">
-        {{ macros.pagination(page_num=g.page_num, page_count=g.page_count) }}
       </div>
     </div>
   </div>
