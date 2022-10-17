@@ -8,7 +8,7 @@ from sandik.utils.db_models import Share, Member, SandikRule
 
 
 def base_sandik_rule_function(sandik, rule_type, no_rule_msg, result_cast=None, **kwargs):
-    for rule in sandik.sandik_rules_set.select(lambda r: r.type == rule_type):
+    for rule in sandik.sandik_rules_set.select(lambda r: r.type == rule_type).order_by(lambda r: r.order):
         if rule.evaluate_condition_formula(**kwargs):
             if result_cast:
                 return result_cast(rule.evaluate_value_formula(**kwargs))
