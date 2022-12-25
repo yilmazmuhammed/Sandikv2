@@ -256,7 +256,7 @@ def get_sandik_rules_groups_by_category(sandik):
     return sandik_rules
 
 
-def update_sandik_rule(sandik_rule, updated_by, **kwargs) -> SandikRule:
+def update_sandik_rule(sandik_rule: SandikRule, updated_by, **kwargs) -> SandikRule:
     updated_fields = get_updated_fields(new_values=kwargs, db_object=sandik_rule)
     Log(web_user_ref=updated_by, type=Log.TYPE.SANDIK_RULE.UPDATE, logged_sandik_rule_ref=sandik_rule,
         detail=str(updated_fields))

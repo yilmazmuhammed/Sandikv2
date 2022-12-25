@@ -149,4 +149,4 @@ def logs_page():
         entities_query=db.select_logs().order_by(lambda l: desc(l.time)), page_size=g.page_size, page_num=g.page_num
     )
 
-    return render_template("general/logs_page.html", page_info=LayoutPI(title="Bildirimler", active_dropdown="logs"))
+    return render_template("general/logs_page.html", page_info=LayoutPI(title="Seyir defteri", active_dropdown="logs"))

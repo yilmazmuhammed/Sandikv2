@@ -16,7 +16,7 @@ class RegisterException(AuthException):
 
     def __init__(self, msg="", create_log=False, **kwargs):
         super().__init__(msg=msg, create_log=create_log,
-                         errcode=kwargs.pop("ERRCODE", self.ERRCODE),
+                         errcode=kwargs.pop("errcode", self.ERRCODE),
                          errcode_thousand=kwargs.pop("errcode_thousand", self.ERRCODE_THOUSAND),
                          **kwargs)
 
@@ -26,7 +26,7 @@ class EmailAlreadyExist(RegisterException):
 
     def __init__(self, msg="", create_log=False, **kwargs):
         super().__init__(msg=msg, create_log=create_log,
-                         errcode=kwargs.pop("ERRCODE", self.ERRCODE),
+                         errcode=kwargs.pop("errcode", self.ERRCODE),
                          errcode_thousand=kwargs.pop("errcode_thousand", self.ERRCODE_THOUSAND),
                          **kwargs)
 
@@ -36,6 +36,6 @@ class WebUserNotFound(AuthException):
 
     def __init__(self, msg="", create_log=False, **kwargs):
         super().__init__(msg=msg, create_log=create_log,
-                         errcode=kwargs.pop("ERRCODE", self.ERRCODE),
+                         errcode=kwargs.pop("errcode", self.ERRCODE),
                          errcode_thousand=kwargs.pop("errcode_thousand", self.ERRCODE_THOUSAND),
                          **kwargs)

@@ -7,7 +7,8 @@ from sandik.general import db as general_db
 from sandik.sandik import db
 from sandik.sandik.exceptions import MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
     ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException, InvalidSmsType, \
-    InvalidRuleVariable, InvalidRuleCharacter, InvalidArgument, RuleOperatorCountException
+    InvalidRuleVariable, InvalidRuleCharacter, InvalidArgument, RuleOperatorCountException, ThereIsNoMember, \
+    ThereIsNoShare
 from sandik.sandik.exceptions import UpdateMemberException
 from sandik.transaction import utils as transaction_utils, db as transaction_db
 from sandik.utils import period as period_utils, sandik_preferences
@@ -341,3 +342,19 @@ def add_sandik_rule_to_sandik(condition_formula, value_formula, type, sandik, **
     order = db.get_last_rule_order(sandik=sandik, type=type) + 1
     return db.create_sandik_rule(condition_formula=condition_formula, value_formula=value_formula, type=type,
                                  order=order, sandik=sandik, **kwargs)
+
+def validate_whose_of_sandik(sandik, share_id:int=None, member_id:int=None):
+    member = share = None
+    share_kwargs = {}
+    if member_id is not None:
+        member = db.get_member(id=member_id, sandik_ref=sandik)
+        if not member:
+            raise ThereIsNoMember("Üye açılan listeden seçilmelidir.")
+        share_kwargs["member_ref"] = member
+
+    if share_id is not None:
+        share = db.get_share(id=share_id, **share_kwargs)
+        if not share or share.sandik_ref != sandik:
+            raise ThereIsNoShare("Hisse, üye seçildikten sonra gelen listeden seçilmelidir.")
+
+    return member, share

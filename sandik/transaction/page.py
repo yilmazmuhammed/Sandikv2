@@ -5,12 +5,13 @@ from flask_login import current_user
 from pony.orm import desc, rollback
 from werkzeug.utils import redirect
 
-from sandik.sandik import db as sandik_db
+from sandik.sandik import db as sandik_db, utils as sandik_utils
 from sandik.sandik.exceptions import ThereIsNoMember, ThereIsNoShare, NoValidRuleFound
 from sandik.sandik.requirement import sandik_authorization_required, to_be_member_of_sandik_required
 from sandik.transaction import forms, utils, db
 from sandik.transaction.authorization import money_transaction_required, contribution_required
-from sandik.transaction.exceptions import MaximumDebtAmountExceeded, ThereIsNoDebt, MaximumAmountExceeded
+from sandik.transaction.exceptions import MaximumDebtAmountExceeded, ThereIsNoDebt, MaximumAmountExceeded, \
+    MaximumInstallmentExceeded, InvalidStartingTerm
 from sandik.utils import LayoutPI
 from sandik.utils.db_models import MoneyTransaction, get_paging_variables
 from sandik.utils.forms import FormPI, flask_form_to_dict
@@ -32,14 +33,13 @@ def add_money_transaction_by_manager_page(sandik_id):
         form_data = flask_form_to_dict(request_form=request.form, exclude=["member"],
                                        boolean_fields=["use_untreated_amount", "pay_future_payments"])
         try:
-            member = sandik_db.get_member(id=form.member.data)
-            if not member:
-                raise ThereIsNoMember("Üye açılan listeden seçilmelidir")
+            member, _ = sandik_utils.validate_whose_of_sandik(sandik=g.sandik, member_id=form.member.data)
 
             if int(form.type.data) == MoneyTransaction.TYPE.EXPENSE:
-                max_amount = member.max_amount_can_borrow(use_untreated_amount=form_data["use_untreated_amount"])
-                if form.amount.data > max_amount:
-                    raise MaximumDebtAmountExceeded(f"Üye bu miktarı alamaz. En fazla {max_amount}₺ alabilir.")
+                 utils.validate_money_transaction_for_expense(
+                    mt_type=int(form.type.data), use_untreated_amount=form_data["use_untreated_amount"],
+                    amount=form.amount.data, whose=member
+                )
 
             money_transaction = utils.add_money_transaction(
                 member=member, creation_type=MoneyTransaction.CREATION_TYPE.BY_MANUEL,
@@ -101,6 +101,8 @@ def add_money_transaction_for_debt_payment_by_manager_page(sandik_id):
             raise e
             rollback()
             flash(str(e), "danger")
+    elif not form.is_submitted():
+        form.date.data = datetime.today()
 
     return render_template(
         "transaction/add_money_transaction_for_debt_payment_by_manager_page.html",
@@ -115,14 +117,7 @@ def add_custom_contribution_by_manager_page(sandik_id):
 
     if form.validate_on_submit():
         try:
-            member = sandik_db.get_member(id=form.member.data)
-            if not member:
-                raise ThereIsNoMember("Üye açılan listeden seçilmelidir.")
-
-            share = sandik_db.get_share(id=form.share.data, member_ref=member)
-            if not share:
-                raise ThereIsNoShare("Hisse, üye seçildikten sonra gelen listeden seçilmelidir.")
-
+            _, share = sandik_utils.validate_whose_of_sandik(sandik=g.sandik, member_id=form.member.data, share_id=form.share.data)
             utils.add_custom_contribution(amount=form.amount.data, period=form.period.data, share=share,
                                           created_by=current_user)
             return redirect(url_for("transaction_page_bp.add_custom_contribution_by_manager_page", sandik_id=sandik_id))
@@ -130,6 +125,47 @@ def add_custom_contribution_by_manager_page(sandik_id):
             flash(str(e), "danger")
         except NotValidPeriod as e:
             flash(str(e), "danger")
+
+    return render_template("transaction/add_custom_contribution_by_manager_page.html",
+                           page_info=FormPI(title="Manuel aidat ekle", form=form,
+                                            active_dropdown="management-transactions"))
+
+@transaction_page_bp.route('borc-ekle', methods=["GET", "POST"])
+@sandik_authorization_required("write")
+def add_custom_debt_by_manager_page(sandik_id):
+    form = forms.DebtForm(sandik=g.sandik)
+
+    if form.validate_on_submit():
+        try:
+            member, share = sandik_utils.validate_whose_of_sandik(sandik=g.sandik, member_id=form.member.data,
+                                                                  share_id=form.share.data)
+            use_untreated_amount = False
+
+            utils.validate_money_transaction_for_expense(
+                mt_type=MoneyTransaction.TYPE.EXPENSE, use_untreated_amount=use_untreated_amount,
+                amount=form.amount.data, whose=share, number_of_installment=form.number_of_installment.data,
+                start_period=form.start_period.data, mt_date=form.date.data
+            )
+
+            debt_mt = utils.add_money_transaction(
+                member=member, amount=form.amount.data, created_by=current_user,
+                date=form.date.data,
+                type=MoneyTransaction.TYPE.EXPENSE, use_untreated_amount=use_untreated_amount,
+                pay_future_payments=None, creation_type=MoneyTransaction.CREATION_TYPE.BY_CUSTOM_DEBT,
+                detail=form.detail.data, share=form.share.data,
+                number_of_installment=form.number_of_installment.data or None,
+                start_period=form.start_period.data or None
+            )
+            return redirect(url_for("transaction_page_bp.add_custom_debt_by_manager_page", sandik_id=sandik_id))
+        except (ThereIsNoMember, ThereIsNoShare, MaximumDebtAmountExceeded, NoValidRuleFound, InvalidStartingTerm,
+                MaximumInstallmentExceeded) as e:
+            flash(str(e), "danger")
+        except Exception as e:
+            raise e
+            rollback()
+            flash(str(e), "danger")
+    elif not form.is_submitted():
+        form.date.data = datetime.today()
 
     return render_template("transaction/add_custom_contribution_by_manager_page.html",
                            page_info=FormPI(title="Manuel aidat ekle", form=form,

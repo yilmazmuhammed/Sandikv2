@@ -1,8 +1,7 @@
 import inspect
 import math
 import os
-from datetime import date
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 import cexprtk
@@ -58,6 +57,7 @@ class MoneyTransaction(db.Entity):
         BY_BANK_TRANSACTION = 1
         BY_AUTO = 2
         BY_SANDIKV1_DATA = 3
+        BY_CUSTOM_DEBT = 4
 
     def distributed_amount(self):
         return select(sr.amount for sr in self.sub_receipts_set).sum()
@@ -1012,6 +1012,7 @@ class SandikRule(db.Entity):
 
         functions = {
             "TEMPLATE": lambda whose=None, amount=None: print(),
+            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_MEMBER: lambda whose=None, amount=None: whose.total_amount_of_paid_contribution(),
             TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_SHARE: lambda whose=None, amount=None: whose.total_amount_of_paid_contribution(),
             AMOUNT_OF_DEBT: lambda whose=None, amount=None: amount,
         }

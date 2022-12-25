@@ -56,6 +56,7 @@
 
   <script>
     let first_visible_page = parseInt({{ page_num }} - {{ visible_count / 2 }}) + 1;
+    let iter = null;
     function show_pages(first_page){
       first_visible_page = first_page;
 
@@ -68,12 +69,18 @@
 
       document.getElementById('page-prev-limit').classList.remove('visible');
       document.getElementById('page-next-limit').classList.remove('visible');
-      for(var i = 1; i <= {{ page_count }}; i++){
-        document.getElementById('page-' + String(i)).classList.remove('visible');
+      for(let i = 1; i <= {{ page_count }}; i++){
+        iter = document.getElementById('page-' + String(i))
+        if (iter != null){
+          iter.classList.remove('visible');
+        }
       }
 
-      for(var i = first_visible_page; i < first_visible_page + {{ visible_count }}; i++){
-        document.getElementById('page-' + String(i)).classList.add('visible');
+      for(let i = first_visible_page; i < first_visible_page + {{ visible_count }}; i++){
+        iter = document.getElementById('page-' + String(i));
+        if (iter != null){
+          iter.classList.add('visible');
+        }
       }
 
       console.log(first_visible_page, 1 + {{ visible_count / 2 }})
