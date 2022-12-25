@@ -203,7 +203,7 @@ class DebtForm(CustomFlaskForm):
     number_of_installment = IntegerField(
         label="Taksit sayısı:",
         validators=[
-            input_required_validator("Taksit sayısı"),
+            Optional(),
             min_number_validator(field="Taksit sayısı",min=1),
         ],
         render_kw={"placeholder": "5"},

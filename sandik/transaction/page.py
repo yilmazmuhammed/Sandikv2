@@ -152,7 +152,8 @@ def add_custom_debt_by_manager_page(sandik_id):
                 date=form.date.data,
                 type=MoneyTransaction.TYPE.EXPENSE, use_untreated_amount=use_untreated_amount,
                 pay_future_payments=None, creation_type=MoneyTransaction.CREATION_TYPE.BY_CUSTOM_DEBT,
-                detail=form.detail.data, number_of_installment=form.number_of_installment.data, share=form.share.data,
+                detail=form.detail.data, share=form.share.data,
+                number_of_installment=form.number_of_installment.data or None,
                 start_period=form.start_period.data or None
             )
             return redirect(url_for("transaction_page_bp.add_custom_debt_by_manager_page", sandik_id=sandik_id))
