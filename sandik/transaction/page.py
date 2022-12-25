@@ -101,6 +101,8 @@ def add_money_transaction_for_debt_payment_by_manager_page(sandik_id):
             raise e
             rollback()
             flash(str(e), "danger")
+    elif not form.is_submitted():
+        form.date.data = datetime.today()
 
     return render_template(
         "transaction/add_money_transaction_for_debt_payment_by_manager_page.html",

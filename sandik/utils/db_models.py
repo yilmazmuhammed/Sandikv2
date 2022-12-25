@@ -1012,6 +1012,7 @@ class SandikRule(db.Entity):
 
         functions = {
             "TEMPLATE": lambda whose=None, amount=None: print(),
+            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_MEMBER: lambda whose=None, amount=None: whose.total_amount_of_paid_contribution(),
             TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_SHARE: lambda whose=None, amount=None: whose.total_amount_of_paid_contribution(),
             AMOUNT_OF_DEBT: lambda whose=None, amount=None: amount,
         }
