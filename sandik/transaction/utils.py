@@ -1,8 +1,12 @@
+from datetime import date
+
 from pony.orm import desc, flush  # ponyorm order_by icin lambda string'inde 'desc' fonksiyonukullaniliyor
 
 from sandik.transaction import db
-from sandik.transaction.exceptions import UndefinedRemoveOperation
-from sandik.utils import period as period_utils
+from sandik.transaction.exceptions import UndefinedRemoveOperation, MaximumDebtAmountExceeded, \
+    UndefinedMoneyTransactionValidation, InvalidMoneyTransactionValidation, MaximumInstallmentExceeded, \
+    InvalidStartingTerm
+from sandik.utils import period as period_utils, sandik_preferences
 from sandik.utils.db_models import Share, Member, MoneyTransaction, Contribution, Installment, Sandik, Debt, Log, \
     WebUser
 from sandik.utils.exceptions import InvalidWhoseType
@@ -37,7 +41,7 @@ def pay_installment(installment, amount, money_transaction, created_by):
                                  is_auto=True, created_by=created_by)
 
 
-def borrow_debt(amount, money_transaction, created_by, number_of_installment=None, share=None):
+def borrow_debt(amount, money_transaction, created_by, number_of_installment=None, share=None, start_period=None):
     member = money_transaction.member_ref
 
     optimal_share = share
@@ -53,7 +57,7 @@ def borrow_debt(amount, money_transaction, created_by, number_of_installment=Non
                 # Alınacak borcun bir hisseden alınması yetmiyorsa,
                 # bu miktar en çok borç alabilen hisseden başlanarak hisselere paylaştırılır.
                 db.create_debt(amount=macb, money_transaction=money_transaction, created_by=created_by, share=share,
-                               number_of_installment=number_of_installment)
+                               number_of_installment=number_of_installment, start_period=start_period)
                 remaining_amount -= macb
             elif macb >= remaining_amount:
                 # Hangi hisseden borç alınacağı belirlenirken,
@@ -64,7 +68,7 @@ def borrow_debt(amount, money_transaction, created_by, number_of_installment=Non
 
     if optimal_share:
         db.create_debt(amount=remaining_amount, money_transaction=money_transaction, share=optimal_share,
-                       created_by=created_by, number_of_installment=number_of_installment)
+                       created_by=created_by, number_of_installment=number_of_installment, start_period=start_period)
         remaining_amount -= remaining_amount
 
     if remaining_amount != 0:
@@ -117,7 +121,7 @@ def add_revenue_transactions(money_transaction, pay_future_payments, created_by,
 
 
 def add_expense_transactions(money_transaction, use_untreated_amount, created_by,
-                             number_of_installment=None, share=None):
+                             number_of_installment=None, share=None, start_period=None):
     member = money_transaction.member_ref
     remaining_amount = money_transaction.amount
 
@@ -135,13 +139,13 @@ def add_expense_transactions(money_transaction, use_untreated_amount, created_by
 
     if remaining_amount > 0:
         borrow_debt(amount=remaining_amount, money_transaction=money_transaction, created_by=created_by,
-                    number_of_installment=number_of_installment, share=share)
+                    number_of_installment=number_of_installment, share=share, start_period=start_period)
 
     return True
 
 
 def add_money_transaction(member, created_by, use_untreated_amount, pay_future_payments, creation_type, payments=None,
-                          number_of_installment=None, share=None, dont_treate=False, **kwargs):
+                          number_of_installment=None, share=None, dont_treate=False, start_period=None, **kwargs):
     money_transaction = db.create_money_transaction(member_ref=member, is_fully_distributed=False,
                                                     creation_type=creation_type, created_by=created_by, **kwargs)
     if money_transaction.type == MoneyTransaction.TYPE.REVENUE and not dont_treate:
@@ -153,7 +157,8 @@ def add_money_transaction(member, created_by, use_untreated_amount, pay_future_p
         # TODO Önce kendi parasından, güven bağı olan kişilerin parasından bu para borç olarak
         #  alınabiliyor mu diye kontrol et.
         add_expense_transactions(money_transaction=money_transaction, use_untreated_amount=use_untreated_amount,
-                                 created_by=created_by, number_of_installment=number_of_installment, share=share)
+                                 created_by=created_by, number_of_installment=number_of_installment, share=share,
+                                 start_period=start_period)
     return money_transaction
 
 
@@ -444,3 +449,35 @@ def remove_contribution(contribution, removed_by):
     for sub_receipt in contribution.sub_receipts_set:
         remove_revenue_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
     db.delete_contribution(contribution=contribution, removed_by=removed_by)
+
+def validate_money_transaction_for_expense(mt_type:int, use_untreated_amount:bool, whose, amount=None,
+                                           number_of_installment:int=None, start_period:str=None, mt_date:date=None):
+    if not isinstance(whose, Member) and not isinstance(whose, Share):
+        raise InvalidMoneyTransactionValidation("'whose' alanı Share yada Member olmalıdır.")
+    if bool(start_period) and not bool(mt_date):
+        raise InvalidMoneyTransactionValidation("'starting_term' alanının doğrulanması için 'mt_date' alanının da "
+                                                "doldurulması gerekmektedir.")
+
+    if mt_type == MoneyTransaction.TYPE.EXPENSE:
+        if amount:
+            max_amount = whose.max_amount_can_borrow(use_untreated_amount=use_untreated_amount)
+            if amount > max_amount:
+                raise MaximumDebtAmountExceeded(
+                    f"{'Üye' if isinstance(whose, Member) else 'Share'} bu miktarı alamaz. En fazla {max_amount}₺ alabilir."
+                )
+
+        if number_of_installment:
+            max_noi = sandik_preferences.max_number_of_installment(sandik=whose.sandik_ref, amount=amount)
+            if number_of_installment > max_noi:
+                raise MaximumInstallmentExceeded(f"{amount} için en fazla {max_noi} taksit yapılabilir.")
+
+        if start_period:
+            a = period_utils.date_to_period(mt_date)
+            b = period_utils.period_to_date(start_period)
+            c = period_utils.period_to_date(a)
+            if b <= c:
+                raise InvalidStartingTerm("Ödeme başlangıcı, borç tarihinden bir sonraki aydan önce başlayamaz.")
+    else:
+        raise UndefinedMoneyTransactionValidation(f"Para çıkışı dışında doğrulama işlemi tanımlanmamıştır.")
+
+    return None

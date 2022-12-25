@@ -198,4 +198,4 @@ def min_length_validator(field, min: int):
 
 
 def min_number_validator(field, min: int):
-    return NumberRange(min=min, message="%s cannot be smaller than %s" % (field.capitalize(), min))
+    return NumberRange(min=min, message="%s, en az %s olmalıdır." % (field.capitalize(), min))

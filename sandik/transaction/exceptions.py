@@ -23,6 +23,14 @@ class MaximumDebtAmountExceeded(DebtException):
     pass
 
 
+class MaximumInstallmentExceeded(DebtException):
+    pass
+
+
+class InvalidStartingTerm(DebtException):
+    pass
+
+
 class UndefinedRemoveOperation(TransactionException):
     pass
 
@@ -36,4 +44,12 @@ class ThereIsNoDebt(TransactionException):
 
 
 class MaximumAmountExceeded(TransactionException):
+    pass
+
+
+class UndefinedMoneyTransactionValidation(TransactionException):
+    pass
+
+
+class InvalidMoneyTransactionValidation(TransactionException):
     pass
