@@ -41,7 +41,7 @@ def pay_installment(installment, amount, money_transaction, created_by):
                                  is_auto=True, created_by=created_by)
 
 
-def calculate_debts_detail(amount, member, share=None):
+def get_debt_distribution(amount, member, share=None):
     optimal_share = share
     remaining_amount = amount
     debts = []

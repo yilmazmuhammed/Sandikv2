@@ -25,9 +25,9 @@ def get_unpaid_debts_of_member_api(sandik_id):
 
 
 @transaction_api_bp.route('borc-detaylarini-hesapla/uye-<int:member_id>')
-@sandik_authorization_required("read")
+@sandik_authorization_required("read", allow_member=True)
 @member_required
-def calculate_debts_detail_api(sandik_id, member_id):
+def get_debt_distribution_api(sandik_id, member_id):
     amount = request.args.get("amount")
     if not amount:
         return jsonify(result=False, msg="'amount' parametresi ile borç alınacak miktarın girilmesi gerekmektedir.")
@@ -41,7 +41,7 @@ def calculate_debts_detail_api(sandik_id, member_id):
             amount=amount, whose=g.member
         )
         share = request.args.get("share", None)
-        debts = utils.calculate_debts_detail(amount=amount, member=g.member, share=share)
+        debts = utils.get_debt_distribution(amount=amount, member=g.member, share=share)
         return jsonify(result=True, share=share, amount=amount, debts=debts)
     except (MaximumDebtAmountExceeded, NoValidRuleFound) as e:
         return jsonify(result=False, msg=str(e))

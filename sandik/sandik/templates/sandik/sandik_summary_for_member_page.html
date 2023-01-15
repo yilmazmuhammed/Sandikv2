@@ -188,14 +188,10 @@
       }
 
       jQuery.ajax({
-        url: Flask.url_for("transaction_api_bp.calculate_debts_detail_api", {sandik_id: {{ g.sandik.id }}, member_id: {{ g.member.id }}, amount: amount}),
+        url: Flask.url_for("transaction_api_bp.get_debt_distribution_api", {sandik_id: {{ g.sandik.id }}, member_id: {{ g.member.id }}, amount: amount}),
         error: function (xhr, ajaxOptions, thrownError) {
-          console.log(xhr);
-          console.log(ajaxOptions);
-          console.log( thrownError);
-          detailed_debts_table.html(`Bir hatayla karşılaşıldı. Lütfen site yöneticisine haber veriniz ve daha sonra tekrar deneyiniz.`);
+          detailed_debts_table.html(xhr.responseText);
           detailed_debts_table.show();
-          alert("")
         },
         success: function (data) {
           console.log(data);

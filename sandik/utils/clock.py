@@ -10,8 +10,10 @@ root = os.path.dirname(parent)
 
 sys.path.append(root)
 
-project_folder = os.path.expanduser(root)  # adjust as appropriate
-load_dotenv(os.path.join(project_folder, '.env'))
+if os.getenv("FLASK_DEBUG"):
+    load_dotenv(os.path.join(os.path.dirname(__file__), '.env_debug'))
+else:
+    load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 from pony.orm import db_session
 
