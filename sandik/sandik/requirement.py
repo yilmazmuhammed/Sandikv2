@@ -116,3 +116,17 @@ def sandik_rule_required(func):
         return func(sandik_rule_id=sandik_rule_id, *args, **kwargs)
 
     return decorated_view
+
+
+def member_required(func):
+    @wraps(func)
+    @sandik_required
+    def decorated_view(member_id, *args, **kwargs):
+        member = db.get_member(id=member_id, sandik_ref=g.sandik)
+        if not member:
+            abort(404, "Sandık üyesi bulunamadı")
+
+        g.member = member
+        return func(member_id=member_id, *args, **kwargs)
+
+    return decorated_view

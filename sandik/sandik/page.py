@@ -12,7 +12,8 @@ from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelatio
     ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException, NoValidRuleFound, \
     RuleOperatorCountException
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, to_be_member_of_sandik_required, \
-    trust_relationship_required, to_be_member_or_manager_of_sandik_required, sandik_type_required, sandik_rule_required
+    trust_relationship_required, to_be_member_or_manager_of_sandik_required, sandik_type_required, sandik_rule_required, \
+    member_required
 from sandik.utils import LayoutPI, get_next_url, sandik_preferences
 from sandik.utils.db_models import Sandik
 
@@ -225,11 +226,8 @@ def add_member_to_sandik_page(sandik_id):
 
 @sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/guncelle", methods=["GET", "POST"])
 @sandik_authorization_required(permission="write")
+@member_required
 def update_member_of_sandik_page(sandik_id, member_id):
-    member = db.get_member(id=member_id, sandik_ref=g.sandik)
-    if not member:
-        abort(404, "Üye bulunamadı")
-
     form = forms.EditMemberForm()
 
     if form.validate_on_submit():
@@ -239,13 +237,13 @@ def update_member_of_sandik_page(sandik_id, member_id):
                 "date_of_membership": form.date_of_membership.data,
                 "contribution_amount": form.contribution_amount.data
             }
-            if form.email_address.data != member.web_user_ref.email_address:
+            if form.email_address.data != g.member.web_user_ref.email_address:
                 web_user = auth_db.get_web_user(email_address=form.email_address.data)
                 if not web_user:
                     raise WebUserNotFound("Site kullanıcısı bulunamadı.")
                 updated_values["web_user_ref"] = web_user
 
-            utils.update_member_of_sandik(member=member, updated_by=current_user, **updated_values)
+            utils.update_member_of_sandik(member=g.member, updated_by=current_user, **updated_values)
 
             return redirect(url_for("sandik_page_bp.member_summary_for_management_page",
                                     sandik_id=sandik_id, member_id=member_id))
@@ -253,7 +251,7 @@ def update_member_of_sandik_page(sandik_id, member_id):
             flash(str(e), "danger")
 
     if not form.is_submitted():
-        form.fill_values_with_member(member=member)
+        form.fill_values_with_member(member=g.member)
 
     return render_template("utils/form_layout.html",
                            page_info=FormPI(title="Sandığa üye ekle", form=form, active_dropdown='members'))
@@ -297,17 +295,13 @@ def membership_applications_to_sandik_page(sandik_id):
 
 @sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/ozet")
 @sandik_authorization_required(permission="read")
+@member_required
 def member_summary_for_management_page(sandik_id, member_id):
-    member = db.get_member(id=member_id, sandik_ref=g.sandik)
-    if not member:
-        abort(404, "Üye bulunamadı")
-
-    g.member = member
     g.summary_data = utils.get_member_summary_page(member=g.member)
     g.type = "management"
 
     g.accepted_trust_links = sorted(g.member.accepted_trust_links(),
-                                    key=lambda tr: tr.other_member(whose=member).web_user_ref.name_surname)
+                                    key=lambda tr: tr.other_member(whose=g.member).web_user_ref.name_surname)
 
     page_title = f"Üye özeti: {g.member.web_user_ref.name_surname}"
     return render_template("sandik/sandik_summary_for_member_page.html",
@@ -316,16 +310,13 @@ def member_summary_for_management_page(sandik_id, member_id):
 
 @sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/hisse-ekle", methods=["GET", "POST"])
 @sandik_authorization_required(permission="write")
+@member_required
 def add_share_to_member_page(sandik_id, member_id):
-    member = db.get_member(id=member_id, sandik_ref=g.sandik)
-    if not member:
-        abort(404, "Üye bulunamadı")
-
     # Üyenin hisse sayısı açılabilecek hisse sayısından küçük mü diye kontrol ediliyor
     danger_msg = None
     try:
-        max_share_count = sandik_preferences.get_max_number_of_share(sandik=member.sandik_ref)
-        if member.get_active_shares().count() >= max_share_count:
+        max_share_count = sandik_preferences.get_max_number_of_share(sandik=g.member.sandik_ref)
+        if g.member.get_active_shares().count() >= max_share_count:
             danger_msg = f"Bir üyenin en fazla {max_share_count} adet hissesi olabilir."
     except NoValidRuleFound as e:
         danger_msg = str(e)
@@ -336,14 +327,14 @@ def add_share_to_member_page(sandik_id, member_id):
                                                         sandik_id=sandik_id, member_id=member_id))
 
     form = forms.AddShareForm()
-    form.share_order_of_member.data = db.get_last_share_order(member) + 1
+    form.share_order_of_member.data = db.get_last_share_order(g.member) + 1
 
     if form.validate_on_submit():
         try:
-            utils.add_share_to_member(member=member, date_of_opening=form.date_of_opening.data,
+            utils.add_share_to_member(member=g.member, date_of_opening=form.date_of_opening.data,
                                       added_by=current_user)
             utils.Notification.MembershipApplication.send_adding_share_notification(sandik=g.sandik,
-                                                                                    web_user=member.web_user_ref)
+                                                                                    web_user=g.member.web_user_ref)
 
             return redirect(
                 url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=sandik_id, member_id=member_id)
@@ -357,13 +348,10 @@ def add_share_to_member_page(sandik_id, member_id):
 
 @sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/sil")
 @sandik_authorization_required(permission="write")
+@member_required
 def remove_member_from_sandik_page(sandik_id, member_id):
-    member = db.get_member(id=member_id, sandik_ref=g.sandik)
-    if not member:
-        abort(404, "Üye bulunamadı")
-
     try:
-        utils.remove_member_from_sandik(member=member, removed_by=current_user)
+        utils.remove_member_from_sandik(member=g.member, removed_by=current_user)
     except (NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, ThereIsUnpaidAmountOfLoanedException,
             NotActiveShareException, ThereIsUnpaidDebtOfShareException) as e:
         flash(str(e), "danger")
@@ -373,12 +361,9 @@ def remove_member_from_sandik_page(sandik_id, member_id):
 
 @sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/hisse-<int:share_id>/sil")
 @sandik_authorization_required(permission="write")
+@member_required
 def remove_share_from_member_page(sandik_id, member_id, share_id):
-    member = db.get_member(id=member_id, sandik_ref=g.sandik)
-    if not member:
-        abort(404, "Üye bulunamadı")
-
-    share = db.get_share(id=share_id, member_ref=member)
+    share = db.get_share(id=share_id, member_ref=g.member)
     if not share:
         abort(404, "Hisse bulunamadı")
 

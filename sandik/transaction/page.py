@@ -7,7 +7,7 @@ from werkzeug.utils import redirect
 
 from sandik.sandik import db as sandik_db, utils as sandik_utils
 from sandik.sandik.exceptions import ThereIsNoMember, ThereIsNoShare, NoValidRuleFound
-from sandik.sandik.requirement import sandik_authorization_required, to_be_member_of_sandik_required
+from sandik.sandik.requirement import sandik_authorization_required, to_be_member_of_sandik_required, member_required
 from sandik.transaction import forms, utils, db
 from sandik.transaction.authorization import money_transaction_required, contribution_required
 from sandik.transaction.exceptions import MaximumDebtAmountExceeded, ThereIsNoDebt, MaximumAmountExceeded, \
@@ -235,11 +235,8 @@ def money_transactions_of_member_page(sandik_id):
 @transaction_page_bp.route('uye-<int:member_id>/para-giris-cikislari')
 @sandik_authorization_required("read")
 @paging_must_be_verified(default_page_num=1, default_page_size=50)
+@member_required
 def money_transactions_of_member_for_management_page(sandik_id, member_id):
-    g.member = sandik_db.get_member(id=member_id, sandik_ref=g.sandik)
-    if not g.member:
-        abort(404)
-
     g.type = "management"
 
     g.total_count, g.page_count, g.first_index, g.money_transactions = get_paging_variables(
@@ -349,16 +346,13 @@ def pay_unpaid_payments_from_untreated_amount_of_sandik_page(sandik_id):
 
 @transaction_page_bp.route("uye-<int:member_id>/odemeleri-yenile")
 @sandik_authorization_required("write")
+@member_required
 def pay_unpaid_payments_from_untreated_amount_of_member_for_management_page(sandik_id, member_id):
-    member = sandik_db.get_member(id=member_id, sandik_ref=g.sandik)
-    if not member:
-        abort(404)
-
     pay_future_payments = False
     if request.args.get("pay_future_payments") == "1":
         pay_future_payments = True
 
-    utils.pay_unpaid_payments_from_untreated_amount_for_member(member=member, pay_future_payments=pay_future_payments,
+    utils.pay_unpaid_payments_from_untreated_amount_for_member(member=g.member, pay_future_payments=pay_future_payments,
                                                                created_by=current_user)
     return redirect(request.referrer or url_for("sandik_page_bp.member_summary_for_management_page",
                                                 sandik_id=sandik_id, member_id=member_id))

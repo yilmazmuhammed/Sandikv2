@@ -41,14 +41,65 @@ def pay_installment(installment, amount, money_transaction, created_by):
                                  is_auto=True, created_by=created_by)
 
 
+def calculate_debts_detail(amount, member, share=None):
+    optimal_share = share
+    remaining_amount = amount
+    debts = []
+    if not optimal_share:
+        shares_with_max_amount_can_borrow = [(share, share.max_amount_can_borrow()) for share in
+                                             member.get_active_shares()]
+        sorted_shares_by_max_amount_can_borrow = sorted(shares_with_max_amount_can_borrow, key=lambda x: x[1],
+                                                        reverse=True)
+
+        for _share, macb in sorted_shares_by_max_amount_can_borrow:
+            if not optimal_share and remaining_amount > macb:
+                # Alınacak borcun bir hisseden alınması yetmiyorsa,
+                # bu miktar en çok borç alabilen hisseden başlanarak hisselere paylaştırılır.
+                debts.append({
+                    "amount": macb,
+                    "share_id": _share.id,
+                    "share_order_of_member": _share.share_order_of_member,
+                    "number_of_installment": sandik_preferences.max_number_of_installment(
+                        sandik=member.sandik_ref, amount=amount
+                    ),
+                })
+                remaining_amount -= macb
+            elif macb >= remaining_amount:
+                # Hangi hisseden borç alınacağı belirlenirken,
+                # borç alabileceği miktar borç miktarından büyük ve en yakın olan hisse tercih edilir.
+                optimal_share = _share
+            else:
+                break
+
+    if optimal_share:
+        debts.append({
+            "amount": remaining_amount,
+            "share_id": optimal_share.id,
+            "share_order_of_member": optimal_share.share_order_of_member,
+            "number_of_installment": sandik_preferences.max_number_of_installment(
+                sandik=member.sandik_ref, amount=remaining_amount
+            ),
+        })
+        remaining_amount -= remaining_amount
+
+    if remaining_amount != 0:
+        raise Exception(f"ERRCODE: 0020, RA: {remaining_amount}, MSG: Beklenmedik bir hata ile karşılaşıldı. "
+                        f"Düzeltilmesi için lütfen site yöneticisi ile iletişime geçerek "
+                        f"ERRCODE'u ve RA'yı söyleyiniz.")
+
+    return debts
+
+
 def borrow_debt(amount, money_transaction, created_by, number_of_installment=None, share=None, start_period=None):
+    # TODO borç bilgilerini calculate_debts_details() fonksiyonundan al
     member = money_transaction.member_ref
 
     optimal_share = share
     remaining_amount = amount
 
     if not optimal_share:
-        shares_with_max_amount_can_borrow = [(share, share.max_amount_can_borrow()) for share in member.get_active_shares()]
+        shares_with_max_amount_can_borrow = [(share, share.max_amount_can_borrow()) for share in
+                                             member.get_active_shares()]
         sorted_shares_by_max_amount_can_borrow = sorted(shares_with_max_amount_can_borrow, key=lambda x: x[1],
                                                         reverse=True)
 
@@ -450,8 +501,10 @@ def remove_contribution(contribution, removed_by):
         remove_revenue_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
     db.delete_contribution(contribution=contribution, removed_by=removed_by)
 
-def validate_money_transaction_for_expense(mt_type:int, use_untreated_amount:bool, whose, amount=None,
-                                           number_of_installment:int=None, start_period:str=None, mt_date:date=None):
+
+def validate_money_transaction_for_expense(mt_type: int, use_untreated_amount: bool, whose, amount=None,
+                                           number_of_installment: int = None, start_period: str = None,
+                                           mt_date: date = None):
     if not isinstance(whose, Member) and not isinstance(whose, Share):
         raise InvalidMoneyTransactionValidation("'whose' alanı Share yada Member olmalıdır.")
     if bool(start_period) and not bool(mt_date):
