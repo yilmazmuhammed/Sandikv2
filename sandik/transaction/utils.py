@@ -60,7 +60,7 @@ def get_debt_distribution(amount, member, share=None):
                     "share_id": _share.id,
                     "share_order_of_member": _share.share_order_of_member,
                     "number_of_installment": sandik_preferences.max_number_of_installment(
-                        sandik=member.sandik_ref, amount=amount
+                        sandik=member.sandik_ref, amount=macb
                     ),
                 })
                 remaining_amount -= macb
