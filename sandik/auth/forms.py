@@ -110,7 +110,8 @@ class LoginForm(CustomFlaskForm):
     )
 
     remember_me = BooleanField(
-        label="Beni hatırla"
+        label="Beni hatırla",
+        default=True
     )
 
     submit = SubmitField(label="Giriş yap")

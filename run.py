@@ -2,10 +2,10 @@ import os
 
 from dotenv import load_dotenv
 
-root = os.path.dirname(os.path.realpath(__file__))
-
-project_folder = os.path.expanduser(root)  # adjust as appropriate
-load_dotenv(os.path.join(project_folder, '.env'))
+if os.getenv("FLASK_DEBUG"):
+    load_dotenv(os.path.join(os.path.dirname(__file__), '.env_debug'), override=True)
+else:
+    load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 from sandik.app import create_app
 

@@ -2,7 +2,9 @@
 {% import "utils/parts/macros.html" as macros%}
 
 {% block js_block %}
+  {{ JSGlue.include() }}
   <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+
   <script>
     jQuery(function($){
 
@@ -174,7 +176,77 @@
       {% endif %}
 
     });
+
+    $(document)
+    .on("click", "#calculate-debts-detail", function (e){
+      let detailed_debts_table = $("#detailed-debts-table");
+      let amount = $("#amount-of-debt-to-be-calculated").val();
+      if(!amount ){
+        detailed_debts_table.html(`Lütfen borç miktarını giriniz!`);
+        detailed_debts_table.show();
+        return;
+      }
+
+      jQuery.ajax({
+        url: Flask.url_for("transaction_api_bp.get_debt_distribution_api", {sandik_id: {{ g.sandik.id }}, member_id: {{ g.member.id }}, amount: amount}),
+        error: function (xhr, ajaxOptions, thrownError) {
+          detailed_debts_table.html(xhr.responseText);
+          detailed_debts_table.show();
+        },
+        success: function (data) {
+          console.log(data);
+          let html = "";
+          if(data.result === true){
+
+          html += `
+            <table class="table">
+              <thead>
+                <tr class="row text-center font-bold">
+                  <td colspan="4">Borç dağılım tablosu</td>
+                </tr>
+                <tr class="row text-center font-bold">
+                  <td>Hisse</td>
+                  <td>Miktar</td>
+                  <td>Taksit</td>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+
+          for(let i=0; i<data.debts.length; i++){
+            let debt = data.debts[i];
+            html += `
+              <tr class="row text-center">
+                <td>Hisse ` + debt.share_order_of_member + `</td>
+                <td>` + debt.amount + ` ₺</td>
+                <td>` + debt.number_of_installment + `</td>
+              </tr>
+            `;
+          }
+          html += `
+              </tbody>
+            </table>
+          `;
+          }
+          else {
+            html = data.msg;
+          }
+
+          detailed_debts_table.html(html);
+          detailed_debts_table.show();
+        },
+        async: false,
+      });
+    });
   </script>
+{% endblock %}
+
+{% block css_block %}
+  <style>
+    .table > tbody > tr > th, .table > tbody > tr > td {
+      vertical-align: middle;
+    }
+  </style>
 {% endblock %}
 
 {% block content_block %}
@@ -305,30 +377,48 @@
                   </span>
                 </td>
               </tr>
-              </tbody>
-            </table>
-            <table class="table" id="detailed-borrowing-table" style="display: none;">
-              <thead>
-                <tr class="row text-center font-bold">
-                  <td>Hisse</td>
-                  <td>Miktar</td>
-                  <td>Taksit</td>
-                </tr>
-              </thead>
-              <tbody>
-              {% for share in g.member.get_active_shares().order_by('lambda s: s.share_order_of_member') %}
-              {% set max_debt_amount=catch_exception(sandik_preferences.remaining_debt_balance, default_value="---", sandik=share.sandik_ref, whose=share)  %}
-                <tr class="row text-center">
-                  <td>Hisse {{ share.share_order_of_member }}</td>
-                  <td>{{ max_debt_amount }} ₺</td>
-                  <td>{{ catch_exception(sandik_preferences.max_number_of_installment, default_value="---", sandik=share.sandik_ref, amount=max_debt_amount) }}</td>
-                </tr>
-              {% endfor %}
-              {% set max_debt_amount=catch_exception(sandik_preferences.remaining_debt_balance, default_value="---", sandik=g.member.sandik_ref, whose=g.member) %}
-              <tr class="row text-center font-bold">
-                <td class="">Toplam</td>
-                <td>{{ max_debt_amount }} ₺</td>
-                <td></td>
+              <tr>
+                <td colspan="4" id="detailed-borrowing-table" style="display: none;">
+                  <table class="table">
+                    <thead>
+                      <tr class="row text-center font-bold">
+                        <td>Hisse</td>
+                        <td>Miktar</td>
+                        <td>Taksit</td>
+                      </tr>
+                    </thead>
+                    <tbody>
+                    {% for share in g.member.get_active_shares().order_by('lambda s: s.share_order_of_member') %}
+                    {% set max_debt_amount=catch_exception(sandik_preferences.remaining_debt_balance, default_value="---", sandik=share.sandik_ref, whose=share)  %}
+                      <tr class="row text-center">
+                        <td>Hisse {{ share.share_order_of_member }}</td>
+                        <td>{{ max_debt_amount }} ₺</td>
+                        <td>{{ catch_exception(sandik_preferences.max_number_of_installment, default_value="---", sandik=share.sandik_ref, amount=max_debt_amount) }}</td>
+                      </tr>
+                    {% endfor %}
+                    {% set max_debt_amount=catch_exception(sandik_preferences.remaining_debt_balance, default_value="---", sandik=g.member.sandik_ref, whose=g.member) %}
+                    <tr class="row text-center font-bold">
+                      <td class="">Toplam</td>
+                      <td>{{ max_debt_amount }} ₺</td>
+                      <td></td>
+                    </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+
+              <tr class="row text-center" >
+                <th><label for="amount-of-debt-to-be-calculated" class="font-bold">Borç hesapla:</label></th>
+                <td><input class="form-control input-sm" id="amount-of-debt-to-be-calculated" name="amount" placeholder="1000"></td>
+                <td>
+                  <span class="btn btn-xs btn-info" id="calculate-debts-detail">
+                    <i class="fa-solid fa-calculator"></i>
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="4" id="detailed-debts-table" style="display: none;" class="text-center">
+                </td>
               </tr>
               </tbody>
             </table>

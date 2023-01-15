@@ -57,13 +57,15 @@ def to_be_member_or_manager_of_sandik_required(func):
     return decorated_view
 
 
-def sandik_authorization_required(permission):
+def sandik_authorization_required(permission, allow_member=False):
     def sandik_authorization_required_decorator(func):
         @sandik_required
         @login_required
         @wraps(func)
         def decorated_view(*args, **kwargs):
-            if current_user.has_sandik_authority(sandik=g.sandik, permission=permission):
+            if allow_member and db.get_member(id=kwargs.get('member_id')) in current_user.members_set:
+                pass
+            elif current_user.has_sandik_authority(sandik=g.sandik, permission=permission):
                 pass
             elif current_user.is_admin():
                 flash("Bu sayfaya erişim için sandık yetkiniz bulunmamaktadır. "
@@ -114,5 +116,19 @@ def sandik_rule_required(func):
 
         g.sandik_rule = sandik_rule
         return func(sandik_rule_id=sandik_rule_id, *args, **kwargs)
+
+    return decorated_view
+
+
+def member_required(func):
+    @wraps(func)
+    @sandik_required
+    def decorated_view(member_id, *args, **kwargs):
+        member = db.get_member(id=member_id, sandik_ref=g.sandik)
+        if not member:
+            abort(404, "Sandık üyesi bulunamadı")
+
+        g.member = member
+        return func(member_id=member_id, *args, **kwargs)
 
     return decorated_view
