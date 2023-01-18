@@ -287,6 +287,13 @@ def lower_order_of_sandik_rule(sandik_rule, updated_by):
     return None
 
 
+def remove_sandik_rule(sandik_rule, deleted_by):
+    Log(web_user_ref=deleted_by, type=Log.TYPE.SANDIK_RULE.DELETE, detail=str(sandik_rule.to_dict()))
+    for log in sandik_rule.logs_set:
+        log.detail += f"deleted_sandik_rule_id: {sandik_rule.id}"
+    sandik_rule.delete()
+
+
 """
 ########################################################################################################################
 ########################################################################################################################

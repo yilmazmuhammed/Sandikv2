@@ -16,7 +16,8 @@
             { "name": "order", "title": "#", "breakpoints": "xs sm"},
             { "name": "condition_formula", "title": "Koşul formülü" },
             { "name": "value_formula", "title": "Değer formülü", },
-            { "name": "actions", "title": "", "breakpoints": "xs", },
+            { "name": "move_actions", "title": "Taşı", "breakpoints": "xs", },
+            { "name": "other_actions", "title": "Eylemler", "breakpoints": "lg", },
           ],
           "rows": [
           {% for r in g.sandik_rules[rule_type_key] %}
@@ -24,9 +25,12 @@
               "order": `<span title='ID: {{ r.id }}'>{{ r.order }}</span>`,
               "condition_formula": `{{ r.condition_formula }}`,
               "value_formula": `{{ r.value_formula }}`,
-              "actions": `
+              "move_actions": `
               {{ macros.button(url=url_for("sandik_page_bp.raise_order_of_sandik_rule_page", sandik_id=g.sandik.id, sandik_rule_id=r.id), icon="fa-solid fa-arrow-up", type='default', size='xs', title='Yukarı taşı') }}
               {{ macros.button(url=url_for("sandik_page_bp.lower_order_of_sandik_rule_page", sandik_id=g.sandik.id, sandik_rule_id=r.id), icon="fa-solid fa-arrow-down", type='default', size='xs', title='Aşağı taşı') }}
+              `,
+              "other_actions": `
+              {{ macros.button(url=url_for("sandik_page_bp.remove_sandik_rule_page", sandik_id=g.sandik.id, sandik_rule_id=r.id), icon="fa-solid fa-trash", type='danger', size='xs', title='Sil', confirm_msg='Kuralı silmek istediğinizden emin misiniz?') }}
               `,
             },
           {% endfor %}

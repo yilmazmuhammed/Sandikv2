@@ -548,6 +548,17 @@ def lower_order_of_sandik_rule_page(sandik_id, sandik_rule_id):
     return redirect(request.referrer or url_for("sandik_page_bp.sandik_rules_page", sandik_id=sandik_id))
 
 
+@sandik_page_bp.route("/<int:sandik_id>/sk-<int:sandik_rule_id>/sil")
+@sandik_authorization_required(permission="write")
+def remove_sandik_rule_page(sandik_id, sandik_rule_id):
+    sandik_rule = db.get_sandik_rule(id=sandik_rule_id, sandik_ref=g.sandik)
+    if not sandik_rule:
+        abort(404, "Sandık kuralı bulunamadı")
+
+    db.remove_sandik_rule(sandik_rule=sandik_rule, deleted_by=current_user)
+    return redirect(request.referrer)
+
+
 """
 ########################################################################################################################
 ########################################################################################################################

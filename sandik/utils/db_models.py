@@ -518,6 +518,7 @@ class Log(db.Entity):
             first, last = 1500, 1599
             CREATE = first + 1
             UPDATE = first + 2
+            DELETE = first + 3
 
         class RETRACTED:
             first, last = 1600, 1699
