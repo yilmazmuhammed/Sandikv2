@@ -286,6 +286,14 @@ def members_of_sandik_page(sandik_id):
                            page_info=LayoutPI(title="Üyeler", active_dropdown="members"))
 
 
+@sandik_page_bp.route("/<int:sandik_id>/uyeler-detayli")
+@sandik_authorization_required(permission="read")
+def members_of_sandik_with_detail_page(sandik_id):
+    g.members = g.sandik.members_set.order_by(lambda m: m.web_user_ref.name_surname.lower())
+    return render_template("sandik/members_of_sandik_with_detail_page.html",
+                           page_info=LayoutPI(title="Detaylı üye listesi", active_dropdown="members"))
+
+
 @sandik_page_bp.route("/<int:sandik_id>/uyelik-basvurulari")
 @sandik_authorization_required(permission="read")
 def membership_applications_to_sandik_page(sandik_id):

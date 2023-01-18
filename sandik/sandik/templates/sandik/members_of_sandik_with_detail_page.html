@@ -1,0 +1,98 @@
+{% extends "utils/layout.html" %}
+{% import "utils/parts/macros.html" as macros%}
+
+{% block js_block %}
+  <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+  <script>
+    jQuery(function($){
+      $('#members-table').footable({
+        "components": {
+          "filtering": create_footable_basic_filter("is_active", "Üye durumu:", ["Aktif", "Pasif"], "Aktif")
+        },
+        "toggleColumn": "first",
+        "paging": {
+          "enabled": true,
+          "size": 50,
+        },
+        "filtering": {
+          "enabled": true,
+          "delay": 1,
+          "dropdownTitle": "Şu sütunlarda ara:"
+        },
+        "sorting": {
+          "enabled": true
+        },
+        "columns": [
+          { "name": "index", "title": "#"},
+          { "name": "name_surname", "title": "Üye ismi" },
+          { "name": "shares_count", "title": "Hisse sayısı", "breakpoints": "xs sm md", "classes": "text-center", },
+          { "name": "sum_of_paid_contributions", "title": "Ödenen aidat", "classes": "text-center" },
+          { "name": "sum_of_debts", "title": "Alınan borç", "classes": "text-center" },
+          { "name": "sum_of_paid_installments", "title": "Ödenen taksit", "classes": "text-center", "breakpoints": "xs sm md lg" },
+          { "name": "total_of_undistributed_amount", "title": "İşleme konmamış", "classes": "text-center", "breakpoints": "xs sm md lg" },
+          { "name": "sum_of_unpaid_amount_of_debts", "title": "Kalan borç", "classes": "text-center text-danger" },
+          {#{ "name": "end_of_month", "title": "Ay sonu", "classes": "text-center" },#}
+          {#{ "name": "end_of_mil", "title": "Mil sonu", "classes": "text-center" },#}
+          { "name": "max_amount_can_borrow", "title": "Alabileceği borç miktarı", "classes": "text-center text-success" },
+          { "name": "date_of_membership", "title": "Üyelik tarihi", "breakpoints": "xs sm md lg" },
+          { "name": "is_active", "title": "Durum", "classes": "text-center", "breakpoints": "xs sm md lg" ,  },
+          {% if current_user.is_authenticated and (current_user.is_admin() or current_user.has_permission(sandik=g.sandik, permission="read")) %}
+          { "name": "actions", "title": "", },
+          { "name": "actions2", "title": "İşlemler", "breakpoints": "xs sm md lg", },
+          {% endif %}
+        ],
+        "rows": [
+        {% for member in g.members %}
+          {
+            "index": `<span title='ID: {{ member.id }}'>{{ loop.index }}</span>`,
+            "name_surname": `{{ member.web_user_ref.name_surname }}`,
+            "sum_of_paid_contributions": `{{ member.sum_of_paid_contributions() }} ₺`,
+            "sum_of_debts": `{{ member.sum_of_debts() }} ₺`,
+            "sum_of_paid_installments": `{{ member.sum_of_paid_installments() }} ₺`,
+            "total_of_undistributed_amount": `{{ member.total_of_undistributed_amount() }} ₺`,
+            "sum_of_unpaid_amount_of_debts": `{{ member.sum_of_unpaid_amount_of_debts() }} ₺`,
+            {#"end_of_month": `... ₺`,#}
+            {#"end_of_mil": `... ₺`,#}
+            "max_amount_can_borrow": `{{ catch_exception(member.max_amount_can_borrow, default_value="---", use_untreated_amount=False, dont_care_sandik_status=True) }} ₺`,
+            "shares_count": `{{ member.shares_count() }}`,
+            "is_active": `{{ "Aktif" if member.is_active else "Pasif" }}`,
+            "date_of_membership": `{{ member.date_of_membership.strftime("%Y-%m-%d") }}`,
+            {% if current_user.is_authenticated and (current_user.is_admin() or current_user.has_permission(sandik=g.sandik, permission="read")) %}
+            "actions": `
+              <tr>
+                <td>{{ macros.button(url=url_for("sandik_page_bp.member_summary_for_management_page", member_id=member.id, sandik_id=g.sandik.id), icon='fa fa-search', type='info', size='xs', title='Üye özeti') }}</td>
+                <td style='padding:5px;'></td>
+                <td>{{ macros.button(url=url_for("transaction_page_bp.money_transactions_of_member_for_management_page", member_id=member.id, sandik_id=g.sandik.id), icon='fa fa-list', type='info', size='xs', title='Tüm para giriş/çıkışları') }}</td>
+              </tr>
+            `,
+            "actions2": `
+              <tr>
+                <td>{{ macros.button(url=url_for("sandik_page_bp.remove_member_from_sandik_page", member_id=member.id, sandik_id=g.sandik.id), icon='fa fa-trash', type='danger', size='xs', title='Üyeyi sil', confirm_msg='Üyeyi silmek istediğinizden emin misiniz?') }}</td>
+              </tr>
+            `,
+            {% endif %}
+          },
+        {% endfor %}
+        ]
+      });
+
+    });
+  </script>
+{% endblock %}
+
+{% block content_block %}
+  {{ macros.page_header(page_info.title) }}
+  <div class="wrapper-md">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        {{ page_info.title }}
+        <span class="pull-right">
+          {{ macros.button(url=url_for('sandik_page_bp.add_member_to_sandik_page', sandik_id=g.sandik.id), icon='fa fa-plus', type='primary', size='xs', title='Üye ekle') }}
+        </span>
+      </div>
+      <div class="table table-responsive">
+        <table class="table" id="members-table"></table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -275,12 +275,15 @@ class Member(db.Entity):
             amount += link.other_member(whose=self).get_balance()
         return amount
 
-    def max_amount_can_borrow(self, use_untreated_amount=False):
+    def max_amount_can_borrow(self, use_untreated_amount=False, dont_care_sandik_status=False):
         from sandik.utils import sandik_preferences
         remaining_debt_amount = sandik_preferences.remaining_debt_balance(sandik=self.sandik_ref, whose=self)
 
         if use_untreated_amount:
             remaining_debt_amount += self.total_of_undistributed_amount()
+
+        if dont_care_sandik_status:
+            return remaining_debt_amount
 
         if self.sandik_ref.is_type_classic():
             amount = self.sandik_ref.get_final_status()
