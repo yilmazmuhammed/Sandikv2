@@ -27,15 +27,15 @@
           { "name": "name_surname", "title": "Üye ismi" },
           { "name": "shares_count", "title": "Hisse sayısı", "breakpoints": "xs sm md", "classes": "text-center", },
           { "name": "sum_of_paid_contributions", "title": "Ödenen aidat", "classes": "text-center" },
-          { "name": "sum_of_debts", "title": "Alınan borç", "classes": "text-center" },
-          { "name": "sum_of_paid_installments", "title": "Ödenen taksit", "classes": "text-center", "breakpoints": "xs sm md lg" },
-          { "name": "total_of_undistributed_amount", "title": "İşleme konmamış", "classes": "text-center", "breakpoints": "xs sm md lg" },
+          { "name": "sum_of_debts", "title": "Alınan borç", "classes": "text-center",},
+          { "name": "sum_of_paid_installments", "title": "Ödenen taksit", "breakpoints": "xs sm md lg",},
+          { "name": "total_of_undistributed_amount", "title": "İşleme konmamış", "breakpoints": "xs sm md lg" },
           { "name": "sum_of_unpaid_amount_of_debts", "title": "Kalan borç", "classes": "text-center text-danger" },
           {#{ "name": "end_of_month", "title": "Ay sonu", "classes": "text-center" },#}
           {#{ "name": "end_of_mil", "title": "Mil sonu", "classes": "text-center" },#}
           { "name": "max_amount_can_borrow", "title": "Alabileceği borç miktarı", "classes": "text-center text-success" },
           { "name": "date_of_membership", "title": "Üyelik tarihi", "breakpoints": "xs sm md lg" },
-          { "name": "is_active", "title": "Durum", "classes": "text-center", "breakpoints": "xs sm md lg" ,  },
+          { "name": "is_active", "title": "Durum", "breakpoints": "xs sm md lg" ,  },
           {% if current_user.is_authenticated and (current_user.is_admin() or current_user.has_permission(sandik=g.sandik, permission="read")) %}
           { "name": "actions", "title": "", },
           { "name": "actions2", "title": "İşlemler", "breakpoints": "xs sm md lg", },
