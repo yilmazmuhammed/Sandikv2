@@ -7,7 +7,11 @@
 <script>
 jQuery(function($){
   {{ transaction_macros.footable_js_of_payments(table_id="all-payments-table", table_type="all", payments=g.payments) }}
-  {{ transaction_macros.footable_js_of_payments(table_id="due-and-unpaid-payments-table", table_type="due-and-unpaid", payments=g.due_and_unpaid_payments, rev_index=False) }}
+  {% if g.type == "management" %}
+    {{ transaction_macros.footable_js_of_grouped_payments(table_id="due-and-unpaid-payments-table", table_type="due-and-unpaid", payment_groups=g.due_and_unpaid_payment_groups, rev_index=False) }}
+  {% else %}
+    {{ transaction_macros.footable_js_of_payments(table_id="due-and-unpaid-payments-table", table_type="due-and-unpaid", payments=g.due_and_unpaid_payments, rev_index=False) }}
+  {% endif %}
 });
 </script>
 {% endblock %}

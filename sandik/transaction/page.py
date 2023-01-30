@@ -281,8 +281,17 @@ def transactions_of_member_page(sandik_id):
 def payments_of_sandik_page(sandik_id):
     g.type = "management"
     g.payments = utils.get_payments(whose=g.sandik)
-    due_and_unpaid_payments = utils.get_payments(whose=g.sandik, is_fully_paid=False, is_due=True)
-    g.due_and_unpaid_payments = sorted(due_and_unpaid_payments, key=lambda p: p.term)
+
+    due_and_unpaid_payment_groups = {}
+    for p in utils.get_payments(whose=g.sandik, is_fully_paid=False, is_due=True):
+        group_by = (p.term, p.member_ref.web_user_ref.name_surname)
+        if not due_and_unpaid_payment_groups.get(group_by):
+            due_and_unpaid_payment_groups[group_by] = {"payments": [], "remaining_amount": 0, "term": p.term,
+                                                 "name_surname": p.member_ref.web_user_ref.name_surname}
+        due_and_unpaid_payment_groups[group_by]["payments"].append(p)
+        due_and_unpaid_payment_groups[group_by]["remaining_amount"] += p.get_unpaid_amount()
+    g.due_and_unpaid_payment_groups = sorted(due_and_unpaid_payment_groups.values(),
+                                             key=lambda p: (p["term"], p["name_surname"]))
     return render_template("transaction/payments_page.html",
                            page_info=LayoutPI(title="Sandıktaki ödemeler", active_dropdown="management-transactions"))
 
