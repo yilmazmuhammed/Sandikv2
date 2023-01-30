@@ -1,3 +1,112 @@
+{% import "utils/parts/macros.html" as utils_macros %}
+
 {% macro get_members_of_sandik_as_js_list(sandik) -%}
   [{% for member in sandik.members_set.order_by("lambda m: m.web_user_ref.name_surname") %}"{{member.web_user_ref.name_surname}}",{%endfor%}]
+{%- endmacro %}
+
+{% macro footable_js_of_payments(table_id, table_type, payments, rev_index=True) -%}
+  $('#{{ table_id }}').footable({
+    components: {
+      {% if table_type == 'all' %}
+        filtering: create_footable_basic_filter("is_fully_paid", "Ödenme durumu:", ["Ödenmedi", "Eksik", "Ödendi"], "Ödenmedi"),
+      {% elif table_type == "due-and-unpaid" %}
+        {% if g.type == "management" %}
+          {# TODO 2 dropdown filtre aynı anda gözükmediği için sadece due-and-unpaid tablosuna ekleniyor #}
+          filtering: create_footable_basic_filter("name_surname", "Üye:", {{ get_members_of_sandik_as_js_list(g.sandik) }}, "Üye:"),
+        {% endif %}
+      {% endif %}
+    },
+    "toggleColumn": "first",
+    "paging": {
+      "enabled": true,
+      "size": 50
+    },
+    "filtering": {
+      "enabled": true,
+      "delay": 1,
+      "dropdownTitle": "Şu sütunlarda ara:"
+    },
+    "sorting": {
+      "enabled": true
+    },
+		"columns": [
+			{ "name": "id", "title": "#", "breakpoints": "xs sm"},
+			{ "name": "term", "title": "Dönem" },
+			{ "name": "name_surname", "title": "İsim Soyisim" },
+			{ "name": "transaction_type", "title": "İşlem türü", "breakpoints": "xs", },
+			{ "name": "remaining_amount", "title": "Ödenmemiş miktar", },
+			{ "name": "amount", "title": "Miktar", },
+			{ "name": "is_fully_paid", "title": "Ödenme durumu", "breakpoints": "xs sm md", },
+			{ "name": "detail", "title": "Detay", "breakpoints": "xs sm md", },
+			{ "name": "sub_receipts", "title": "", "breakpoints": "xs sm md lg", },
+			{ "name": "action", "title": "", "breakpoints": "xs sm md", },
+		],
+		"rows": [
+    {% for p in payments %}
+      {% if isinstance(p, Contribution) %}
+        {% set id_prefix='c' %}
+        {% set transaction_type='Aidat' %}
+        {% set detail='' %}
+      {% elif isinstance(p, Installment) %}
+        {% set id_prefix='i' %}
+        {% set transaction_type='Taksit (' + p.get_installment_no()|string+ '/' +p.debt_ref.number_of_installment|string+')' %}
+        {% set detail='Borç: #'+p.debt_ref.id|string %}
+      {% else %}
+        {% set id_prefix='UNKNOWN' %}
+        {% set transaction_type='UNKNOWN' %}
+        {% set detail='' %}
+      {% endif %}
+      {
+        "id": `<span title='ID: {{ id_prefix }}-{{ p.id }}'>{% if rev_index %}{{ loop.revindex }}{% else %}{{ loop.index }}{% endif %}</span>`,
+        "term": "{{ p.term }}",
+        "name_surname": "{{ p.member_ref.web_user_ref.name_surname }} - {{ p.share_ref.share_order_of_member }}",
+        "transaction_type": `{{ transaction_type }}`,
+        "amount": "{{ p.amount }} ₺",
+        "remaining_amount": `<span class="{% if p.is_fully_paid %}text-success{% else %}text-danger{% endif %}">{{ p.get_unpaid_amount() }} ₺</span>`,
+        "is_fully_paid": `{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
+        "sub_receipts": `
+          {% if p.sub_receipts_set.count() == 0 %}
+          İşlem yok
+          {% else %}
+            <div class="table table-responsive">
+              <table class="table table-striped table-bordered" id="sub-receipts-of-{{ id_prefix }}{{ p.id }}-table">
+                <tr>
+                  <th colspan=2 class='text-center'>Para girişi</th>
+                  <th colspan=3 class='text-center'>İlişkilendirme</th>
+                </tr>
+                <tr>
+                  <th>Tarih</th>
+                  <th>Miktar</th>
+                  <th>Tarih</th>
+                  <th>Miktar</th>
+                  <th>Kalan Miktar</th>
+                </tr>
+                {% set sr_amounts = [] %}
+                {% for sr in p.sub_receipts_set.order_by('lambda sr: (sr.money_transaction_ref.date, sr.creation_time)') %}
+                  {% set asd = sr_amounts.append(sr.amount) %}
+                  {% set remaining_amount=p.amount-sr_amounts | sum() %}
+                  <tr>
+                    <td title='{% if sr.money_transaction_ref.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}Manuel{% elif sr.money_transaction_ref.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}Banka işlemi{% endif %}'>{{ sr.money_transaction_ref.date.strftime("%Y-%m-%d") }}</td>
+                    <td>{{ sr.money_transaction_ref.amount }} ₺</td>
+                    <td title='{% if sr.is_auto %}Otomatik{% else %}Manuel{% endif %}'>{{ sr.creation_time.strftime("%Y-%m-%d") }}</td>
+                    <td>{{ sr.amount }} ₺</td>
+                    <td>{{ remaining_amount }} ₺</td>
+                  </tr>
+                {% endfor %}
+              </table>
+            </div>
+          {% endif %}
+        `,
+        "detail": "{{ detail }}",
+        "action":`
+          <tr>
+            {% if isinstance(p, Contribution) %}
+              <td>{{ utils_macros.button(url=url_for("transaction_page_bp.remove_contribution_by_manager_page", sandik_id=g.sandik.id, contribution_id=p.id), icon='fa fa-trash', type='danger', size='xs', title='İşlemi sil', confirm_msg='Aidatı silmek üzeresiniz. Bu işlem geri alınamaz. Silme işlemine devam etmek istiyor musunuz?') }}</td>
+            {% endif %}
+          </tr>
+        `
+      },
+    {% endfor %}
+    ]
+  });
 {%- endmacro %}
