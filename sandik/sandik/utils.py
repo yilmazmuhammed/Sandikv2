@@ -293,6 +293,8 @@ def remove_share_from_member(share: Share, removed_by, refunded_money_transactio
 
     db.update_share(share=share, updated_by=removed_by, is_active=False)
 
+    transaction_utils.remove_unpaid_contributions(share=share, removed_by=removed_by)
+
     return refunded_money_transaction
 
 

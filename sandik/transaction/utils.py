@@ -496,6 +496,12 @@ def remove_money_transaction(money_transaction, removed_by):
                                                          created_by=removed_by)
 
 
+def remove_unpaid_contributions(share, removed_by):
+    unpaid_contributions = db.select_contributions(lambda c: c.share_ref == share and c.get_unpaid_amount() > 0)
+    for c in unpaid_contributions:
+        remove_contribution(contribution=c, removed_by=removed_by)
+
+
 def remove_contribution(contribution, removed_by):
     for sub_receipt in contribution.sub_receipts_set:
         remove_revenue_sub_receipt(sub_receipt=sub_receipt, removed_by=removed_by)
