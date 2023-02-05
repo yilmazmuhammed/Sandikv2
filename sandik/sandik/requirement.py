@@ -12,7 +12,7 @@ def sandik_required(func):
     def decorated_view(sandik_id, *args, **kwargs):
         sandik = db.get_sandik(id=sandik_id)
         if not sandik:
-            abort(404)
+            abort(404, "Sandık bulunamadı")
 
         g.sandik = sandik
         if current_user.is_authenticated:
@@ -85,7 +85,7 @@ def trust_relationship_required(func):
     def decorated_view(trust_relationship_id, *args, **kwargs):
         trust_relationship = db.get_trust_relationship(id=trust_relationship_id)
         if not trust_relationship:
-            abort(404)
+            abort(404, "Güven bağı bulunamadı")
 
         g.trust_relationship = trust_relationship
         return func(trust_relationship_id=trust_relationship_id, *args, **kwargs)
@@ -112,7 +112,7 @@ def sandik_rule_required(func):
     def decorated_view(sandik_rule_id, *args, **kwargs):
         sandik_rule = db.get_sandik_rule(id=sandik_rule_id)
         if not sandik_rule:
-            abort(404)
+            abort(404, "Sandık kuralı bulunamadı")
 
         g.sandik_rule = sandik_rule
         return func(sandik_rule_id=sandik_rule_id, *args, **kwargs)

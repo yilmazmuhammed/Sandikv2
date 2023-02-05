@@ -8,7 +8,7 @@ current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 root = os.path.dirname(parent)
 
-sys.path.append(root)
+sys.path.append(root)  # import'lardaki sandik.* modülleri için
 
 if os.getenv("FLASK_DEBUG"):
     load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env_debug'))

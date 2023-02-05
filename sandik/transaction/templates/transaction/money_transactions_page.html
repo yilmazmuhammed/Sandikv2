@@ -43,7 +43,7 @@ jQuery(function($){
     "rows": [
     {% for mt in g.money_transactions %}
       {
-        "id": "<span title='ID: {{ mt.id }}'>{{ g.first_index - loop.index }}</span>",
+        "id": "<span title='ID: {{ mt.id }}'>{{ g.first_index - loop.index + 1 }}</span>",
         "date": "{{ mt.date.strftime("%Y-%m-%d") }}",
         "amount": "{{ mt.amount }} ₺",
         "name_surname": `{% if g.type == "management"%}<a href="{{ url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=g.sandik.id, member_id=mt.member_ref.id) }}" title="Üye özeti için tıklayınız..." class="font-bold text-primary">{{ mt.member_ref.web_user_ref.name_surname }}</a>{% else %}{{ mt.member_ref.web_user_ref.name_surname }}{% endif %}`,

@@ -22,7 +22,7 @@ def web_user_required(func):
     def decorated_view(web_user_id, *args, **kwargs):
         web_user = db.get_web_user(id=web_user_id)
         if not web_user:
-            abort(404)
+            abort(404, "Kullanıcı bulunamadı")
 
         g.web_user = web_user
         return func(web_user_id=web_user_id, *args, **kwargs)

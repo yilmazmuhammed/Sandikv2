@@ -13,10 +13,10 @@ def notification_required(func):
     def decorated_view(notification_id, *args, **kwargs):
         notification = db.get_notification(id=notification_id)
         if not notification:
-            abort(404)
+            abort(404, "Bildirim bulunamadı")
 
         if notification.web_user_ref != current_user:
-            abort(403)
+            abort(403, "Bu bildirimi size ait değildir.")
 
         g.notification = notification
         return func(notification_id=notification_id, *args, **kwargs)

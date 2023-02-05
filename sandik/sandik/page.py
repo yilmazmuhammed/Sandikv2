@@ -136,7 +136,7 @@ def send_request_trust_link_page(sandik_id, member_id):
 @trust_relationship_required
 def accept_trust_relationship_request_page(sandik_id, trust_relationship_id):
     if g.trust_relationship.receiver_member_ref.web_user_ref != current_user:
-        abort(403)
+        abort(403, "Size gönderilmeyen bir güven bağı isteğini kabul edemezsiniz.")
 
     db.accept_trust_relationship_request(trust_relationship=g.trust_relationship, confirmed_by=current_user)
     return redirect(request.referrer)
@@ -193,9 +193,7 @@ def add_member_to_sandik_page(sandik_id):
 
     if form.validate_on_submit():
         try:
-            if form.email_address.data and form.web_user.data:
-                raise AddMemberException("Lütfen e-posta adresi ve site kullanıcısından birini doldurunuz.")
-            elif not form.email_address.data and not form.web_user.data:
+            if int(bool(form.email_address.data)) + int(bool(form.web_user.data)) != 1:
                 raise AddMemberException("Lütfen e-posta adresi ve site kullanıcısından birini doldurunuz.")
 
             web_user = None
@@ -421,7 +419,7 @@ def create_sandik_authority_page(sandik_id):
 def delete_sandik_authority_page(sandik_id, sandik_authority_id):
     authority = db.get_sandik_authority(id=sandik_authority_id, sandik_ref=g.sandik)
     if not authority:
-        abort(404)
+        abort(404, "Sandık yetkisi bulunamadı")
 
     db.delete_sandik_authority(sandik_authority=authority, deleted_by=current_user)
     return redirect(request.referrer)
@@ -476,7 +474,7 @@ def add_authorized_to_sandik_page(sandik_id):
 def remove_authorized_from_sandik_page(sandik_id, web_user_id):
     authority = g.web_user.get_sandik_authority(sandik=g.sandik)
     if not authority:
-        abort(404)
+        abort(404, "Kullanıcı bu sandıkta yetkili değil.")
 
     db.delete_authorized_from_sandik(sandik_authority=authority, web_user=g.web_user, removed_by=current_user)
     return redirect(request.referrer)
@@ -558,12 +556,9 @@ def lower_order_of_sandik_rule_page(sandik_id, sandik_rule_id):
 
 @sandik_page_bp.route("/<int:sandik_id>/sk-<int:sandik_rule_id>/sil")
 @sandik_authorization_required(permission="write")
+@sandik_rule_required
 def remove_sandik_rule_page(sandik_id, sandik_rule_id):
-    sandik_rule = db.get_sandik_rule(id=sandik_rule_id, sandik_ref=g.sandik)
-    if not sandik_rule:
-        abort(404, "Sandık kuralı bulunamadı")
-
-    db.remove_sandik_rule(sandik_rule=sandik_rule, deleted_by=current_user)
+    db.remove_sandik_rule(sandik_rule=g.sandik_rule, deleted_by=current_user)
     return redirect(request.referrer)
 
 

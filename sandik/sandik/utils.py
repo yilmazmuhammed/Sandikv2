@@ -70,6 +70,7 @@ def add_member_to_sandik(sandik, web_user, date_of_membership, contribution_amou
     for i in range(number_of_share):
         add_share_to_member(member=member, added_by=added_by, date_of_opening=date_of_membership)
 
+    # TODO Klasik sandıkta güven bağı oluşturulmasına gerek var mı?
     if sandik.is_type_classic():
         create_trust_relationships_with_all_members_of_sandik(member=member, created_by=added_by)
 

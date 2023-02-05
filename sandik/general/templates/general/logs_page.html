@@ -28,7 +28,7 @@
         "rows": [
         {% for log in g.logs %}
           {
-            "id": "<span title='ID: {{ log.id }}'>{{ g.first_index - loop.index }}</span>",
+            "id": "<span title='ID: {{ log.id }}'>{{ g.first_index - loop.index + 1 }}</span>",
             "web_user_ref": `<span title="E-posta: {{ log.web_user_ref.email_address }}">{{ log.web_user_ref.name_surname }}</span>`,
             "time": `{{ log.time.strftime("%Y-%m-%d %H:%M:%S") }}`,
             "type": `<span title='{{ log.type }}'>{{log.TYPE.print_attributes(log.type)}}</span>`,
