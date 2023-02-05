@@ -281,8 +281,9 @@
 
 
 
-              {% if current_user.is_admin()  %}
+              {% if current_user.is_authenticated and current_user.is_admin()  %}
               <li class="line dk"></li>
+
               <!-- Site yönetimi menüleri-->
               <li class="hidden-folded padder m-t m-b-sm text-muted text-xs">
                 <span>Site yöneticisi</span>
@@ -348,6 +349,19 @@
                 </a>
               </li>
               {% endif %}
+
+
+
+              <li class="line dk"></li>
+
+              <li id="website-transactions-dropdown">
+                <a href="{{ url_for('website_transaction_page_bp.website_transactions_of_sandik_page') }}">
+                  <i class="fa-solid fa-book"></i>
+                  <span>Websitesi masrafları</span>
+                </a>
+              </li>
+
+
             </ul>
           </nav>
           <!-- nav -->

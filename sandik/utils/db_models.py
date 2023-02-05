@@ -29,7 +29,8 @@ class MoneyTransaction(db.Entity):
     amount = Required(Decimal)
     detail = Optional(str, 1000)
     type = Required(int)
-    is_fully_distributed = Required(bool, default=False)  # MoneyTransaction amount ile SubReceipts amountları toplamı eşit ise True
+    is_fully_distributed = Required(bool,
+                                    default=False)  # MoneyTransaction amount ile SubReceipts amountları toplamı eşit ise True
     creation_type = Required(int)
     bank_transaction_ref = Optional(BankTransaction)
     logs_set = Set('Log')
@@ -333,6 +334,7 @@ class WebUser(db.Entity, UserMixin):
     is_active_ = Required(bool, default=False)
     telegram_chat_id = Optional(int)
     phone_number = Optional(str)
+    website_transactions_set = Set('WebsiteTransaction')
     created_logs_set = Set('Log', reverse='web_user_ref')
     logs_set = Set('Log', reverse='logged_web_user_ref')
     bank_accounts_set = Set('BankAccount')
@@ -410,6 +412,7 @@ class Log(db.Entity):
     logged_share_ref = Optional(Share)
     logged_member_ref = Optional(Member)
     logged_sandik_ref = Optional('Sandik')
+    logged_website_transaction_ref = Optional('WebsiteTransaction')
     logged_sms_package_ref = Optional('SmsPackage')
     logged_web_user_ref = Optional(WebUser, reverse='logs_set')
     logged_sandik_authority_type_ref = Optional('SandikAuthorityType')
@@ -525,6 +528,11 @@ class Log(db.Entity):
 
         class RETRACTED:
             first, last = 1600, 1699
+            CREATE = first + 1
+            DELETE = first + 3
+
+        class WEBSITE_TRANSACTION:
+            first, last = 1700, 1799
             CREATE = first + 1
             DELETE = first + 3
 
@@ -1048,6 +1056,36 @@ class SandikRule(db.Entity):
             GE: GE,
             GT: GT,
         }
+
+
+class WebsiteTransaction(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    payer = Optional(str)
+    amount = Required(Decimal)
+    type = Required(int)
+    category = Required(str)
+    logs_set = Set(Log)
+    web_user_ref = Optional(WebUser)
+    date = Required(date)
+    detail = Optional(str)
+
+    class TYPE:
+        REVENUE = 0  # GELİR
+        EXPENSE = 1  # GİDER
+
+        strings = {REVENUE: "Para girişi", EXPENSE: "Para çıkışı"}
+
+    def get_payer_name(self, is_hidden=True):
+        if is_hidden:
+            if self.web_user_ref:
+                # return self.web_user_ref.id
+                return " ".join([w[0] + "***" for w in self.web_user_ref.name_surname.split(" ")])
+            elif self.payer:
+                return " ".join([w[0] + "***" for w in self.payer.split(" ")])
+            else:
+                return "-"
+        else:
+            return self.web_user_ref.name_surname if self.web_user_ref else self.payer
 
 
 DATABASE_PROVIDER = os.getenv("DATABASE_PROVIDER")

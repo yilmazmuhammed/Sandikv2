@@ -220,6 +220,21 @@ ALTER TABLE "trustrelationship" ADD CONSTRAINT "fk_trustrelationship__receiver_m
 
 ALTER TABLE "trustrelationship" ADD CONSTRAINT "fk_trustrelationship__requester_member_ref" FOREIGN KEY ("requester_member_ref") REFERENCES "member" ("id") ON DELETE CASCADE;
 
+CREATE TABLE "websitetransaction" (
+  "id" SERIAL PRIMARY KEY,
+  "payer" TEXT NOT NULL,
+  "amount" DECIMAL(12, 2) NOT NULL,
+  "type" INTEGER NOT NULL,
+  "category" TEXT NOT NULL,
+  "web_user_ref" INTEGER,
+  "date" DATE NOT NULL,
+  "detail" TEXT NOT NULL
+);
+
+CREATE INDEX "idx_websitetransaction__web_user_ref" ON "websitetransaction" ("web_user_ref");
+
+ALTER TABLE "websitetransaction" ADD CONSTRAINT "fk_websitetransaction__web_user_ref" FOREIGN KEY ("web_user_ref") REFERENCES "webuser" ("id") ON DELETE SET NULL;
+
 CREATE TABLE "subreceipt" (
   "id" SERIAL PRIMARY KEY,
   "amount" DECIMAL(12, 2) NOT NULL,
@@ -293,6 +308,7 @@ CREATE TABLE "log" (
   "logged_share_ref" INTEGER,
   "logged_member_ref" INTEGER,
   "logged_sandik_ref" INTEGER,
+  "logged_website_transaction_ref" INTEGER,
   "logged_sms_package_ref" INTEGER,
   "logged_web_user_ref" INTEGER,
   "logged_sandik_authority_type_ref" INTEGER,
@@ -334,6 +350,8 @@ CREATE INDEX "idx_log__logged_trust_relationship_ref" ON "log" ("logged_trust_re
 
 CREATE INDEX "idx_log__logged_web_user_ref" ON "log" ("logged_web_user_ref");
 
+CREATE INDEX "idx_log__logged_website_transaction_ref" ON "log" ("logged_website_transaction_ref");
+
 CREATE INDEX "idx_log__web_user_ref" ON "log" ("web_user_ref");
 
 ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_bank_account_ref" FOREIGN KEY ("logged_bank_account_ref") REFERENCES "bankaccount" ("id") ON DELETE SET NULL;
@@ -366,6 +384,8 @@ ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_trust_relationship_ref" FOREIGN
 
 ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_web_user_ref" FOREIGN KEY ("logged_web_user_ref") REFERENCES "webuser" ("id") ON DELETE SET NULL;
 
+ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_website_transaction_ref" FOREIGN KEY ("logged_website_transaction_ref") REFERENCES "websitetransaction" ("id") ON DELETE SET NULL;
+
 ALTER TABLE "log" ADD CONSTRAINT "fk_log__web_user_ref" FOREIGN KEY ("web_user_ref") REFERENCES "webuser" ("id") ON DELETE CASCADE;
 
 CREATE TABLE "installment" (
@@ -378,9 +398,9 @@ CREATE TABLE "installment" (
 
 CREATE INDEX "idx_installment__debt_ref" ON "installment" ("debt_ref");
 
-ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_installment_ref" FOREIGN KEY ("logged_installment_ref") REFERENCES "installment" ("id") ON DELETE SET NULL;
-
 ALTER TABLE "subreceipt" ADD CONSTRAINT "fk_subreceipt__installment_ref" FOREIGN KEY ("installment_ref") REFERENCES "installment" ("id") ON DELETE SET NULL;
+
+ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_installment_ref" FOREIGN KEY ("logged_installment_ref") REFERENCES "installment" ("id") ON DELETE SET NULL;
 
 CREATE TABLE "debt" (
   "id" SERIAL PRIMARY KEY,
@@ -400,8 +420,8 @@ ALTER TABLE "debt" ADD CONSTRAINT "fk_debt__share_ref" FOREIGN KEY ("share_ref")
 
 ALTER TABLE "debt" ADD CONSTRAINT "fk_debt__sub_receipt_ref" FOREIGN KEY ("sub_receipt_ref") REFERENCES "subreceipt" ("id");
 
-ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_debt_ref" FOREIGN KEY ("logged_debt_ref") REFERENCES "debt" ("id") ON DELETE SET NULL;
+ALTER TABLE "pieceofdebt" ADD CONSTRAINT "fk_pieceofdebt__debt_ref" FOREIGN KEY ("debt_ref") REFERENCES "debt" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "installment" ADD CONSTRAINT "fk_installment__debt_ref" FOREIGN KEY ("debt_ref") REFERENCES "debt" ("id") ON DELETE CASCADE;
 
-ALTER TABLE "pieceofdebt" ADD CONSTRAINT "fk_pieceofdebt__debt_ref" FOREIGN KEY ("debt_ref") REFERENCES "debt" ("id") ON DELETE CASCADE
+ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_debt_ref" FOREIGN KEY ("logged_debt_ref") REFERENCES "debt" ("id") ON DELETE SET NULL

@@ -29,6 +29,7 @@
         </div>
         <!-- / buttons -->
 
+        {% if current_user.is_authenticated %}
         <!-- link and dropdown -->
         <ul class="nav navbar-nav hidden-sm">
           <li class="dropdown" id="my-sandik-dropdown">
@@ -38,6 +39,7 @@
               <span>{% if g.sandik %}{{ g.sandik.name }}{% else %}Sandıklarım{% endif %}</span>
               <span class="caret"></span>
             </a>
+
             <ul class="dropdown-menu" role="menu">
               {% for sandik in current_user.my_sandiks() | sort(attribute="name") %}
                 <li><a href="{{ url_for('sandik_page_bp.sandik_index_page', sandik_id=sandik.id) }}">{{ sandik.name }}</a></li>
@@ -48,6 +50,7 @@
               <li><a href="{{ url_for('sandik_page_bp.apply_for_membership_page') }}">Üyelik başvurusu yap...</a></li>
               <li><a href="{{ url_for('sandik_page_bp.create_sandik_page') }}">Yeni sandık oluştur...</a></li>
             </ul>
+
           </li>
         </ul>
         <!-- / link and dropdown -->
@@ -116,6 +119,13 @@
           </li>
         </ul>
         <!-- / navbar right -->
+        {% else %}
+          <ul class="nav navbar-nav navbar-right m-r-md">
+            <li><a href="{{ url_for('auth_page_bp.login_page') }}">Giriş yap</a></li>
+            <li><a href="{{ url_for('auth_page_bp.register_page') }}">Kayıt ol</a></li>
+          </ul>
+        {% endif %}
+
       </div>
       <!-- / navbar collapse -->
   </header>
