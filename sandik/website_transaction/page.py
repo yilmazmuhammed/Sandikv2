@@ -52,7 +52,7 @@ def website_transactions_of_sandik_page():
     g.sum_of_transactions = db.sum_of_website_transactions()
 
     return render_template("website_transaction/website_transactions_page.html",
-                           page_info=LayoutPI(title="Websitesi masrafları/bağışları",
+                           page_info=LayoutPI(title="Websitesi masrafları",
                                               active_dropdown="website-transactions"))
 
 
