@@ -15,6 +15,7 @@ from sandik.transaction.api import transaction_api_bp
 from sandik.transaction.page import transaction_page_bp
 from sandik.utils import CustomJSONEncoder, sandik_preferences, set_parameters_of_url
 from sandik.utils.db_models import MoneyTransaction, Installment, Contribution, SandikRule
+from sandik.website_transaction.page import website_transaction_page_bp
 
 
 def initialize_flask() -> Flask:
@@ -48,6 +49,7 @@ def register_blueprints(flask_app):
     flask_app.register_blueprint(transaction_api_bp, url_prefix="/api/sandik/<int:sandik_id>/")
     flask_app.register_blueprint(backup_page_bp, url_prefix="/yedek/")
     flask_app.register_blueprint(backup_dw_bp, url_prefix="/indir/yedek/")
+    flask_app.register_blueprint(website_transaction_page_bp, url_prefix="/websitesi-masraflari/")
     return flask_app
 
 

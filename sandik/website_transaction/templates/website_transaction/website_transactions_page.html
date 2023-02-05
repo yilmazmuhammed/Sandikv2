@@ -1,0 +1,108 @@
+{% extends "utils/layout.html" %}
+{% import "utils/parts/macros.html" as macros%}
+
+{% block js_block %}
+<script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+<script>
+jQuery(function($){
+  $('#website-transactions-table').footable({
+    components: {
+      {% if g.type == "management" %}
+        filtering: create_footable_basic_filter("name_surname", "Üye:", {{ macros2.get_members_of_sandik_as_js_list(g.sandik) }}, "Üye:"),
+      {% endif %}
+    },
+    "toggleColumn": "first",
+    "paging": {
+      "enabled": true,
+      "size": {{ g.page_size }}
+    },
+    "filtering": {
+      "enabled": true,
+      "delay": 1,
+      "dropdownTitle": "Şu sütunlarda ara:"
+    },
+    "sorting": {
+      "enabled": true
+    },
+    "columns": [
+        { "name": "id", "title": "#"},
+        { "name": "date", "title": "Tarih" },
+        { "name": "amount", "title": "Miktar", },
+        { "name": "payer", "title": "Bağışçı" },
+        { "name": "category", "title": "İşlem kategorisi", },
+        { "name": "detail", "title": "Detay", },
+        {% if current_user.is_authenticated and current_user.is_admin() %}
+        { "name": "actions", "title": "", "breakpoints": "xs sm md" },
+        {% endif %}
+    ],
+    "rows": [
+    {% for wt in g.website_transactions %}
+      {
+        "id": "<span title='ID: {{ wt.id }}'>{{ g.first_index - loop.index + 1 }}</span>",
+        "date": "{{ wt.date.strftime("%Y-%m-%d") }}",
+        "amount": "{% if wt.type == wt.TYPE.EXPENSE %}-{% endif %}{{ wt.amount }} ₺",
+        "payer": `{{ wt.get_payer_name(is_hidden=not (current_user.is_authenticated and (current_user.is_admin() or current_user == wt.web_user_ref))) }}`,
+        "category": `{{ wt.category }}`,
+        "detail": "{{ wt.detail }}",
+        {% if current_user.is_authenticated and current_user.is_admin() %}
+        "actions":`
+          <tr>
+            <td>{{ macros.button(url=url_for("website_transaction_page_bp.delete_website_transaction_page", website_transaction_id=wt.id), icon='fa fa-trash', type='danger', size='xs', title='İşlemi sil', confirm_msg='İşlemi silmek üzeresiniz. Bu işlem geri alınamaz. Silme işlemine devam etmek istiyor musunuz?') }}</td>
+          </tr>
+        `
+        {% endif %}
+      },
+    {% endfor %}
+    ]
+  });
+});
+</script>
+{% endblock %}
+
+{% block content_block %}
+  {{ macros.page_header(page_info.title) }}
+  <div class="wrapper-md">
+    <div class="panel panel-default">
+      <div class="panel-heading font-bold">
+        {{ page_info.title }}
+        <span class="pull-right">
+          {% if current_user.is_authenticated and current_user.is_admin() %}
+          <a href="{{ url_for('website_transaction_page_bp.add_website_transaction_page') }}" class="btn btn-xs btn-primary">
+            <i class="fa fa-plus"></i>
+          </a>
+          {% endif %}
+        </span>
+      </div>
+      <div class="table table-responsive">
+        <table class="table table-striped" id="website-transactions-table"></table>
+      </div>
+      <div class="panel-footer text-center">
+        <div class="row">
+          <div class="text-md font-bold">
+            <span>Son durum: </span>
+            <span class="{% if g.sum_of_transactions >= 0 %}text-success{% else %}text-danger{% endif %}">
+              {{ g.sum_of_transactions }} ₺
+            </span>
+          </div>
+        </div>
+        <div class="row">
+          {{ macros.pagination(page_num=g.page_num, page_count=g.page_count) }}
+        </div>
+      </div>
+    </div>
+    <div class="panel panel-default">
+      <div class="panel-heading font-bold">
+        Destek
+      </div>
+      <div class="panel-body text-center">
+          <span class="font-bold">Banka: </span><span>Kuveyt Türk Katılım Bankası</span><br>
+          <span class="font-bold">Hesap sahibi: </span><span>Muhammed YILMAZ</span><br>
+          <span class="font-bold">IBAN: </span><span>TR96 0020 5000 0939 8451 3000 13</span>
+      </div>
+      <div class="panel-footer text-center">
+        Yardımlaşma Sandığı sisteminin masraflarına destek olmak isterseniz bilgileri verilan banka hesabına
+        destek olmak istediğiniz tutarı gönderebilirsiniz.
+      </div>
+    </div>
+  </div>
+{% endblock %}

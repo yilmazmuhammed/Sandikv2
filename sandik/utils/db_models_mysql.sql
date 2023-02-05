@@ -220,6 +220,21 @@ ALTER TABLE `trustrelationship` ADD CONSTRAINT `fk_trustrelationship__receiver_m
 
 ALTER TABLE `trustrelationship` ADD CONSTRAINT `fk_trustrelationship__requester_member_ref` FOREIGN KEY (`requester_member_ref`) REFERENCES `member` (`id`) ON DELETE CASCADE;
 
+CREATE TABLE `websitetransaction` (
+  `id` INTEGER PRIMARY KEY AUTO_INCREMENT,
+  `payer` VARCHAR(255) NOT NULL,
+  `amount` DECIMAL(12, 2) NOT NULL,
+  `type` INTEGER NOT NULL,
+  `category` VARCHAR(255) NOT NULL,
+  `web_user_ref` INTEGER,
+  `date` DATE NOT NULL,
+  `detail` VARCHAR(255) NOT NULL
+);
+
+CREATE INDEX `idx_websitetransaction__web_user_ref` ON `websitetransaction` (`web_user_ref`);
+
+ALTER TABLE `websitetransaction` ADD CONSTRAINT `fk_websitetransaction__web_user_ref` FOREIGN KEY (`web_user_ref`) REFERENCES `webuser` (`id`) ON DELETE SET NULL;
+
 CREATE TABLE `subreceipt` (
   `id` INTEGER PRIMARY KEY AUTO_INCREMENT,
   `amount` DECIMAL(12, 2) NOT NULL,
@@ -293,6 +308,7 @@ CREATE TABLE `log` (
   `logged_share_ref` INTEGER,
   `logged_member_ref` INTEGER,
   `logged_sandik_ref` INTEGER,
+  `logged_website_transaction_ref` INTEGER,
   `logged_sms_package_ref` INTEGER,
   `logged_web_user_ref` INTEGER,
   `logged_sandik_authority_type_ref` INTEGER,
@@ -334,6 +350,8 @@ CREATE INDEX `idx_log__logged_trust_relationship_ref` ON `log` (`logged_trust_re
 
 CREATE INDEX `idx_log__logged_web_user_ref` ON `log` (`logged_web_user_ref`);
 
+CREATE INDEX `idx_log__logged_website_transaction_ref` ON `log` (`logged_website_transaction_ref`);
+
 CREATE INDEX `idx_log__web_user_ref` ON `log` (`web_user_ref`);
 
 ALTER TABLE `log` ADD CONSTRAINT `fk_log__logged_bank_account_ref` FOREIGN KEY (`logged_bank_account_ref`) REFERENCES `bankaccount` (`id`) ON DELETE SET NULL;
@@ -365,6 +383,8 @@ ALTER TABLE `log` ADD CONSTRAINT `fk_log__logged_sub_receipt_ref` FOREIGN KEY (`
 ALTER TABLE `log` ADD CONSTRAINT `fk_log__logged_trust_relationship_ref` FOREIGN KEY (`logged_trust_relationship_ref`) REFERENCES `trustrelationship` (`id`) ON DELETE SET NULL;
 
 ALTER TABLE `log` ADD CONSTRAINT `fk_log__logged_web_user_ref` FOREIGN KEY (`logged_web_user_ref`) REFERENCES `webuser` (`id`) ON DELETE SET NULL;
+
+ALTER TABLE `log` ADD CONSTRAINT `fk_log__logged_website_transaction_ref` FOREIGN KEY (`logged_website_transaction_ref`) REFERENCES `websitetransaction` (`id`) ON DELETE SET NULL;
 
 ALTER TABLE `log` ADD CONSTRAINT `fk_log__web_user_ref` FOREIGN KEY (`web_user_ref`) REFERENCES `webuser` (`id`) ON DELETE CASCADE;
 

@@ -1,0 +1,34 @@
+{% extends "utils/form_layout.html" %}
+
+{% block js_block2 %}
+  {{ JSGlue.include() }}
+  <script src="{{ url_for('static', filename='my_custom/js/custom.js') }}"></script>
+  <script>
+  function linked_field(value, field){
+    if(value === "new") {
+        field.val("");
+        field.closest(".form-group").show();
+      } else {
+        field.val(value);
+        field.closest(".form-group").hide();
+      }
+  }
+  let category = $('[name="category"]')
+  $(document)
+    .ready(function() {
+      console.log($("[name='category_list']").val());
+      if($("[name='category_list']").val() !== "new"){
+        console.log("asdasd");
+        category.closest(".form-group").hide();
+      }
+
+      $("option").filter(function() {
+        return $(this).text() === "<divider>";
+      }).attr("disabled", "").text("-----------");
+
+    })
+    .on("change", "[name='category_list']", function() {
+      linked_field($(this).val(), category);
+    });
+  </script>
+{% endblock %}
