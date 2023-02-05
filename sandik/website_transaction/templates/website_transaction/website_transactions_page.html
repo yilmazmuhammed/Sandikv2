@@ -63,7 +63,7 @@ jQuery(function($){
   {{ macros.page_header(page_info.title) }}
   <div class="wrapper-md">
     <div class="panel panel-default">
-      <div class="panel-heading">
+      <div class="panel-heading font-bold">
         {{ page_info.title }}
         <span class="pull-right">
           {% if current_user.is_authenticated and current_user.is_admin() %}
@@ -88,6 +88,20 @@ jQuery(function($){
         <div class="row">
           {{ macros.pagination(page_num=g.page_num, page_count=g.page_count) }}
         </div>
+      </div>
+    </div>
+    <div class="panel panel-default">
+      <div class="panel-heading font-bold">
+        Bağış
+      </div>
+      <div class="panel-body text-center">
+          <span>Yardımlaşma Sandığı sisteminin masraflarına destek olmak isterseniz aşağıdaki IBAN'a bağışlamak
+            istediğiniz tutarı gönderebilirsiniz. </span><br>
+          <span>Banka: Kuveyt Türk Katılım Bankası</span><br>
+          <span>Hesap sahibi: Muhammed YILMAZ</span><br>
+          <span>IBAN: TR96 0020 5000 0939 8451 3000 13</span>
+      </div>
+      <div class="panel-footer text-center">
       </div>
     </div>
   </div>
