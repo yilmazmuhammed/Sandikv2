@@ -3,12 +3,12 @@ from pony.orm.core import EntityMeta, flush
 
 from sandik.utils.db_models import Sandik, SandikAuthorityType, SandikRule, SmsPackage, WebUser, BankAccount, Member, \
     MoneyTransaction, BankTransaction, Notification, Share, Contribution, TrustRelationship, SubReceipt, Retracted, \
-    PieceOfDebt, Log, Installment, Debt
+    PieceOfDebt, Log, Installment, Debt, WebsiteTransaction
 
 DATABASE_TABLES_TO_BACKUP_WITH_ORDER = [
     Sandik, SandikAuthorityType, SandikRule, SmsPackage, WebUser, BankAccount, Member, MoneyTransaction,
     BankTransaction, Notification, Share, Contribution, TrustRelationship, SubReceipt, Debt, Installment, Retracted,
-    PieceOfDebt, Log
+    PieceOfDebt, WebsiteTransaction, Log
 ]
 
 INCLUDED_RELATION_SETS = {
