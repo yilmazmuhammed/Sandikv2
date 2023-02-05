@@ -351,7 +351,7 @@
               {% endif %}
 
 
-
+              {% if current_user.is_authenticated and current_user.is_admin() %}
               <li class="line dk"></li>
 
               <li id="website-transactions-dropdown">
@@ -360,7 +360,7 @@
                   <span>Websitesi masrafları</span>
                 </a>
               </li>
-
+              {% endif %}
 
             </ul>
           </nav>
