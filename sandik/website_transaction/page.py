@@ -43,7 +43,7 @@ def add_website_transaction_page():
                                             active_dropdown="website-transactions"))
 
 
-@website_transaction_page_bp.route('websitesi-masraflari')
+@website_transaction_page_bp.route('listele')
 @paging_must_be_verified(default_page_num=1, default_page_size=50)
 def website_transactions_of_sandik_page():
     g.total_count, g.page_count, g.first_index, g.website_transactions = get_paging_variables(
