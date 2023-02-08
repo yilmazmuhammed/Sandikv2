@@ -1,5 +1,3 @@
-import os
-
 from flask import Blueprint, render_template, request, redirect, flash, url_for, g, abort
 from flask_login import current_user
 from pony.orm import desc
@@ -146,29 +144,9 @@ def notifications_page():
 @admin_required
 @paging_must_be_verified(default_page_num=1, default_page_size=50)
 def logs_page():
-
     g.total_count, g.page_count, g.first_index, g.logs = get_paging_variables(
         entities_query=db.select_logs().order_by(lambda l: desc(l.time)), page_size=g.page_size, page_num=g.page_num
     )
 
-    return render_template("general/logs_page.html", page_info=LayoutPI(title="Seyir defteri", active_dropdown="logs"))
-
-@general_page_bp.route("/kaynak-kodu-guncelle-ve-sistemi-yenile")
-@admin_required
-def update_source_code_and_reload_webapp():
-    print("UFAK BİR TEST")
-    domain = request.host
-    api_token = os.getenv("API_TOKEN")
-    username = os.getenv("PYTHON_ANYWHERE_USERNAME")
-    print("domain:", domain)
-    print("api_token:", api_token)
-    print("username:", username)
-
-    ret = utils.git_pull()
-    print("git response:", ret)
-    if username:
-        print("relaod webapp")
-        paw_api = utils.PythonAnywhereApi(token=api_token, username=username, domain=domain)
-        response = paw_api.webapp_reload()
-        print(response)
-    return request.referrer
+    return render_template("general/logs_page.html",
+                           page_info=LayoutPI(title="Seyir defteri", active_dropdown="developer"))

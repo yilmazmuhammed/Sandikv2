@@ -1,0 +1,123 @@
+{% extends "utils/layout.html" %}
+
+{% block js_block %}
+{{ JSGlue.include() }}
+<script>
+  function update_run_time(){
+    let run_time = $("#run-time");
+    let elapsed_time = $("#elapsed-time");
+    let webapp_connection = $("#webapp-connection");
+    jQuery.ajax({
+      url: Flask.url_for("general_api_bp.get_run_time_api"),
+      error: function (xhr, ajaxOptions, thrownError) {
+        console.log("Error:", xhr.statusText);
+        console.log("xhr:", xhr);
+        console.log("xhr.statusCode:", xhr.statusCode());
+        console.log("ajaxOptions:", ajaxOptions);
+        webapp_connection.html("Status: " + xhr.statusText + "<br>Response: " + xhr.responseText);
+      },
+      success: function (data) {
+        if(data.result === true) {
+          console.log("data:", data);
+          run_time.html(data.run_time.substring(0, data.run_time.indexOf(".")));
+          elapsed_time.html(data.elapsed_time.days + " Gün, " + data.elapsed_time.hours + " Saat, " +
+            data.elapsed_time.minutes + " Dakika, " + data.elapsed_time.seconds + " Saniye");
+
+          webapp_connection.html("Aktif");
+        }
+      },
+      async: false,
+    });
+  }
+
+  function update_source_code(){
+    let update_source_code_response = $("#update-source-code-response");
+    jQuery.ajax({
+      url: Flask.url_for("paw_api_bp.update_source_code_api"),
+      error: function (xhr, ajaxOptions, thrownError) {
+        console.log("xhr:", xhr);
+        update_source_code_response.html("Status: " + xhr.statusText + "<br>Response: " + xhr.responseText);
+      },
+      success: function (data) {
+        console.log("update_source_code response:", data);
+        update_source_code_response.html(data.msg);
+      },
+      async: false,
+    });
+  }
+
+  function reload_webapp(){
+    let reload_webapp_response = $("#reload-webapp-response");
+    jQuery.ajax({
+      url: Flask.url_for("paw_api_bp.reload_webapp_api"),
+      error: function (xhr, ajaxOptions, thrownError) {
+        console.log("xhr:", xhr);
+        reload_webapp_response.html("Status: " + xhr.statusText + "<br>Response: " + xhr.responseText);
+      },
+      success: function (data) {
+        console.log("reload_webapp response:", data);
+        reload_webapp_response.html(data.msg);
+      },
+      async: false,
+    });
+  }
+
+  $(document)
+    .ready(function () {
+      setInterval(update_run_time, 1000);
+    })
+    .on("click", "#update-source-code", function (){
+      update_source_code();
+    })
+    .on("click", "#reload-webapp", function (){
+      reload_webapp();
+    });
+</script>
+{% endblock %}
+
+{% block content_block %}
+  {{ macros.page_header(page_info.title) }}
+
+  <div class="wrapper-md">
+
+    <div class="row">
+
+        <div class="col-md-offset-4 col-md-4">
+          <div class="panel panel-default">
+            <div class="panel-heading font-bold">
+              <span>Bilgiler</span>
+            </div>
+            <div>
+              <table class="table">
+                <tbody>
+                  <tr class="row">
+                    <th class="text-center"><button class="btn btn-info" id="update-source-code">Kaynak kodu güncelle</button></th>
+                    <td id="update-source-code-response"></td>
+                  </tr>
+                  <tr class="row">
+                    <th class="text-center"><button class="btn btn-info" id="reload-webapp">Uygulamayı yenile</button></th>
+                    <td id="reload-webapp-response"></td>
+                  </tr>
+                  <tr class="row">
+                    <th>Çalıştırılma zamanı:</th>
+                    <td id="run-time"></td>
+                  </tr>
+                  <tr class="row">
+                    <th>Çalışma süresi:</th>
+                    <td id="elapsed-time"></td>
+                  </tr>
+                  <tr class="row">
+                    <th>Webapp bağlantısı:</th>
+                    <td id="webapp-connection"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+  </div>
+{% endblock %}
