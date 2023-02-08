@@ -4,6 +4,7 @@
 {{ JSGlue.include() }}
 <script>
   function update_run_time(){
+    let reload_webapp_response = $("#reload-webapp-response");
     let run_time = $("#run-time");
     let elapsed_time = $("#elapsed-time");
     let webapp_connection = $("#webapp-connection");
@@ -26,6 +27,9 @@
             data.elapsed_time.minutes + " Dakika, " + data.elapsed_time.seconds + " Saniye");
 
           webapp_connection.html(`<span class="btn btn-success">Aktif</span>`);
+          if(reload_webapp_response.html().includes("Something went wrong")){
+            reload_webapp_response.html("Webapp başlatıldı.");
+          }
         }
       },
       async: false,
@@ -42,7 +46,7 @@
       },
       success: function (data) {
         console.log("update_source_code response:", data);
-        update_source_code_response.html(data.msg);
+        update_source_code_response.html(data.msg.replaceAll("\n", "<br>"));
       },
       async: false,
     });
@@ -58,7 +62,7 @@
       },
       success: function (data) {
         console.log("reload_webapp response:", data);
-        reload_webapp_response.html(data.msg);
+        reload_webapp_response.html(data.msg.replaceAll("\n", "<br>"));
       },
       async: false,
     });
