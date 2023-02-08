@@ -58,7 +58,12 @@
       url: Flask.url_for("paw_api_bp.reload_webapp_api"),
       error: function (xhr, ajaxOptions, thrownError) {
         console.log("xhr:", xhr);
-        reload_webapp_response.html("Status: " + xhr.statusText + "<br>Response: " + xhr.responseText);
+        if(xhr.responseText.includes("</html>")){
+          reload_webapp_response.html("Status: " + xhr.statusText +`<br>Response: <iframe srcdoc="` + xhr.responseText + `"></iframe>`);
+        }
+        else{
+          reload_webapp_response.html("Status: " + xhr.statusText + "<br>Response: " + xhr.responseText);
+        }
       },
       success: function (data) {
         console.log("reload_webapp response:", data);
