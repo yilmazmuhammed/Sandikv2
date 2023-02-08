@@ -156,6 +156,7 @@ def logs_page():
 @general_page_bp.route("/kaynak-kodu-guncelle-ve-sistemi-yenile")
 @admin_required
 def update_source_code_and_reload_webapp():
+    print("UFAK BİR TEST")
     domain = request.host
     api_token = os.getenv("API_TOKEN")
     username = os.getenv("PYTHON_ANYWHERE_USERNAME")
