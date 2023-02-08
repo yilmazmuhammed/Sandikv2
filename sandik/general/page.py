@@ -144,9 +144,9 @@ def notifications_page():
 @admin_required
 @paging_must_be_verified(default_page_num=1, default_page_size=50)
 def logs_page():
-
     g.total_count, g.page_count, g.first_index, g.logs = get_paging_variables(
         entities_query=db.select_logs().order_by(lambda l: desc(l.time)), page_size=g.page_size, page_num=g.page_num
     )
 
-    return render_template("general/logs_page.html", page_info=LayoutPI(title="Seyir defteri", active_dropdown="logs"))
+    return render_template("general/logs_page.html",
+                           page_info=LayoutPI(title="Seyir defteri", active_dropdown="developer"))

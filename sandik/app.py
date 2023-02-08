@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 from flask import Flask
 from flask_jsglue import JSGlue
@@ -8,7 +9,10 @@ from sandik.auth.page import auth_page_bp
 from sandik.auth.utils import setup_login_manager
 from sandik.backup.download import backup_dw_bp
 from sandik.backup.page import backup_page_bp
+from sandik.general.api import general_api_bp
 from sandik.general.page import general_page_bp
+from sandik.paw.api import paw_api_bp
+from sandik.paw.page import paw_page_bp
 from sandik.sandik.api import sandik_api_bp
 from sandik.sandik.page import sandik_page_bp
 from sandik.transaction.api import transaction_api_bp
@@ -17,6 +21,8 @@ from sandik.utils import CustomJSONEncoder, sandik_preferences, set_parameters_o
 from sandik.utils.db_models import MoneyTransaction, Installment, Contribution, SandikRule
 from sandik.website_transaction.page import website_transaction_page_bp
 
+os.environ["DATETIME_STR_FORMAT"] = "%Y-%m-%d %H:%M:%S.%f"
+os.environ["RUN_TIME"] = datetime.now().strftime(os.getenv("DATETIME_STR_FORMAT"))
 
 def initialize_flask() -> Flask:
     flask_app = Flask(
@@ -42,6 +48,7 @@ def initialize_flask_js_glue(flask_app):
 
 def register_blueprints(flask_app):
     flask_app.register_blueprint(general_page_bp, url_prefix="/")
+    flask_app.register_blueprint(general_api_bp, url_prefix="/api/")
     flask_app.register_blueprint(auth_page_bp, url_prefix="/")
     flask_app.register_blueprint(sandik_page_bp, url_prefix="/sandik/")
     flask_app.register_blueprint(sandik_api_bp, url_prefix="/api/sandik/")
@@ -50,6 +57,8 @@ def register_blueprints(flask_app):
     flask_app.register_blueprint(backup_page_bp, url_prefix="/yedek/")
     flask_app.register_blueprint(backup_dw_bp, url_prefix="/indir/yedek/")
     flask_app.register_blueprint(website_transaction_page_bp, url_prefix="/websitesi-masraflari/")
+    flask_app.register_blueprint(paw_page_bp, url_prefix="/paw/")
+    flask_app.register_blueprint(paw_api_bp, url_prefix="/api/paw/")
     return flask_app
 
 
