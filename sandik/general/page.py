@@ -1,3 +1,5 @@
+import os
+
 from flask import Blueprint, render_template, request, redirect, flash, url_for, g, abort
 from flask_login import current_user
 from pony.orm import desc
@@ -150,3 +152,22 @@ def logs_page():
     )
 
     return render_template("general/logs_page.html", page_info=LayoutPI(title="Seyir defteri", active_dropdown="logs"))
+
+@general_page_bp.route("/kaynak-kodu-guncelle-ve-sistemi-yenile")
+@admin_required
+def update_source_code_and_reload_webapp():
+    domain = request.host
+    api_token = os.getenv("API_TOKEN")
+    username = os.getenv("PYTHON_ANYWHERE_USERNAME")
+    print("domain:", domain)
+    print("api_token:", api_token)
+    print("username:", username)
+
+    ret = utils.git_pull()
+    print("git response:", ret)
+    if username:
+        print("relaod webapp")
+        paw_api = utils.PythonAnywhereApi(token=api_token, username=username, domain=domain)
+        response = paw_api.webapp_reload()
+        print(response)
+    return request.referrer
