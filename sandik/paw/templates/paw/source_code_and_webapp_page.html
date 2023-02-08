@@ -14,7 +14,9 @@
         console.log("xhr:", xhr);
         console.log("xhr.statusCode:", xhr.statusCode());
         console.log("ajaxOptions:", ajaxOptions);
-        webapp_connection.html("Status: " + xhr.statusText + "<br>Response: " + xhr.responseText);
+        webapp_connection.html();
+        webapp_connection.html(`<span class="btn btn-danger">Pasif</span>` +
+          "<br>Status: " + xhr.statusText + "<br>Response: " + xhr.responseText);
       },
       success: function (data) {
         if(data.result === true) {
@@ -23,7 +25,7 @@
           elapsed_time.html(data.elapsed_time.days + " Gün, " + data.elapsed_time.hours + " Saat, " +
             data.elapsed_time.minutes + " Dakika, " + data.elapsed_time.seconds + " Saniye");
 
-          webapp_connection.html("Aktif");
+          webapp_connection.html(`<span class="btn btn-success">Aktif</span>`);
         }
       },
       async: false,
@@ -91,11 +93,11 @@
               <table class="table">
                 <tbody>
                   <tr class="row">
-                    <th class="text-center"><button class="btn btn-info" id="update-source-code">Kaynak kodu güncelle</button></th>
+                    <th class="text-center"><button class="btn btn-info btn-rounded" id="update-source-code">Kaynak kodu güncelle</button></th>
                     <td id="update-source-code-response"></td>
                   </tr>
                   <tr class="row">
-                    <th class="text-center"><button class="btn btn-info" id="reload-webapp">Uygulamayı yenile</button></th>
+                    <th class="text-center"><button class="btn btn-info btn-rounded" id="reload-webapp">Uygulamayı yenile</button></th>
                     <td id="reload-webapp-response"></td>
                   </tr>
                   <tr class="row">
