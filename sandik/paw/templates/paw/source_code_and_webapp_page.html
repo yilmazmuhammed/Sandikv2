@@ -59,7 +59,9 @@
       error: function (xhr, ajaxOptions, thrownError) {
         console.log("xhr:", xhr);
         if(xhr.responseText.includes("</html>")){
-          reload_webapp_response.html("Status: " + xhr.statusText +`<br>Response: <iframe srcdoc="` + xhr.responseText + `"></iframe>`);
+          let first_index = xhr.responseText.indexOf("<body>") + 6;
+          let last_index = xhr.responseText.indexOf("</body>");
+          reload_webapp_response.html("Status: " + xhr.statusText +`<br>Response: `+ xhr.responseText.substring(first_index, last_index));
         }
         else{
           reload_webapp_response.html("Status: " + xhr.statusText + "<br>Response: " + xhr.responseText);
