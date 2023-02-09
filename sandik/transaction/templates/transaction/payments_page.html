@@ -6,11 +6,15 @@
 <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
 <script>
 jQuery(function($){
-  {{ transaction_macros.footable_js_of_payments(table_id="all-payments-table", table_type="all", payments=g.payments) }}
-  {% if g.type == "management" %}
-    {{ transaction_macros.footable_js_of_grouped_payments(table_id="due-and-unpaid-payments-table", table_type="due-and-unpaid", payment_groups=g.due_and_unpaid_payment_groups, rev_index=False) }}
+  {% if g.all_payments["is_grouped"] %}
+    {{ transaction_macros.footable_js_of_grouped_payments(table_id="all-payments-table", table_type="all", payment_groups=g.all_payments["groups"]) }}
   {% else %}
-    {{ transaction_macros.footable_js_of_payments(table_id="due-and-unpaid-payments-table", table_type="due-and-unpaid", payments=g.due_and_unpaid_payments, rev_index=False) }}
+    {{ transaction_macros.footable_js_of_payments(table_id="all-payments-table", table_type="all", payments=g.all_payments["payments"]) }}
+  {% endif %}
+  {% if g.due_and_unpaid_payment["is_grouped"] %}
+    {{ transaction_macros.footable_js_of_grouped_payments(table_id="due-and-unpaid-payments-table", table_type="due-and-unpaid", payment_groups=g.due_and_unpaid_payment["groups"], rev_index=False) }}
+  {% else %}
+    {{ transaction_macros.footable_js_of_payments(table_id="due-and-unpaid-payments-table", table_type="due-and-unpaid", payments=g.due_and_unpaid_payment["payments"], rev_index=False) }}
   {% endif %}
 });
 </script>

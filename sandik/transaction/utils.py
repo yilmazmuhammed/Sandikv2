@@ -540,3 +540,15 @@ def validate_money_transaction_for_expense(mt_type: int, use_untreated_amount: b
         raise UndefinedMoneyTransactionValidation(f"Para çıkışı dışında doğrulama işlemi tanımlanmamıştır.")
 
     return None
+
+
+def get_payment_grouped_by_member(whose, is_fully_paid=None, is_due=None):
+    due_and_unpaid_payment_groups = {}
+    for p in get_payments(whose=whose, is_fully_paid=is_fully_paid, is_due=is_due):
+        group_by = (p.term, p.member_ref.web_user_ref)
+        if not due_and_unpaid_payment_groups.get(group_by):
+            due_and_unpaid_payment_groups[group_by] = {"payments": [], "remaining_amount": 0, "term": p.term,
+                                                       "name_surname": p.member_ref.web_user_ref.name_surname}
+        due_and_unpaid_payment_groups[group_by]["payments"].append(p)
+        due_and_unpaid_payment_groups[group_by]["remaining_amount"] += p.get_unpaid_amount()
+    return sorted(due_and_unpaid_payment_groups.values(), key=lambda p: (p["term"], p["name_surname"]))
