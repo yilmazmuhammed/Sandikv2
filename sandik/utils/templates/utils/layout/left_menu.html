@@ -310,6 +310,7 @@
                   </li>
                 </ul>
               </li>
+
               <li id="backup-dropdown">
                 <a href="#" class="auto">
                   <span class="pull-right text-muted">
@@ -342,11 +343,33 @@
                   </li>
                 </ul>
               </li>
-              <li id="logs-dropdown">
-                <a href="{{ url_for('general_page_bp.logs_page') }}">
-                  <i class="fa-solid fa-book"></i>
-                  <span>Seyir defteri</span>
+
+              <li id="developer-dropdown">
+                <a href="#" class="auto">
+                  <span class="pull-right text-muted">
+                    <i class="fa fa-fw fa-angle-right text"></i>
+                    <i class="fa fa-fw fa-angle-down text-active"></i>
+                  </span>
+                  <i class="fa-solid fa-code"></i>
+                  <span>Geliştirici</span>
                 </a>
+                <ul class="nav nav-sub dk">
+                  <li class="nav-sub-header">
+                    <a href="#">
+                      <span>Geliştirici</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{{ url_for('general_page_bp.logs_page') }}">
+                      <span>Seyir defteri</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{{ url_for('paw_page_bp.source_code_and_webapp_page') }}">
+                      <span>Kaynak kod ve uygulama</span>
+                    </a>
+                  </li>
+                </ul>
               </li>
               {% endif %}
 
