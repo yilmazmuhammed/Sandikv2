@@ -1,7 +1,6 @@
 {% extends "utils/layout.html" %}
 
 {% block js_block %}
-{{ JSGlue.include() }}
 <script>
   function update_run_time(){
     let reload_webapp_response = $("#reload-webapp-response");
@@ -9,7 +8,7 @@
     let elapsed_time = $("#elapsed-time");
     let webapp_connection = $("#webapp-connection");
     jQuery.ajax({
-      url: Flask.url_for("general_api_bp.get_run_time_api"),
+      url: "{{ url_for("general_api_bp.get_run_time_api") }}",
       error: function (xhr, ajaxOptions, thrownError) {
         console.log("Error:", xhr.statusText);
         console.log("xhr:", xhr);
@@ -40,7 +39,7 @@
   function update_source_code(){
     let update_source_code_response = $("#update-source-code-response");
     jQuery.ajax({
-      url: Flask.url_for("paw_api_bp.update_source_code_api"),
+      url: "{{ url_for("paw_api_bp.update_source_code_api") }}",
       error: function (xhr, ajaxOptions, thrownError) {
         console.log("xhr:", xhr);
         update_source_code_response.html("Status: " + xhr.statusText + "<br>Response: " + xhr.responseText);
@@ -56,7 +55,7 @@
   function reload_webapp(){
     let reload_webapp_response = $("#reload-webapp-response");
     jQuery.ajax({
-      url: Flask.url_for("paw_api_bp.reload_webapp_api"),
+      url: "{{ url_for("paw_api_bp.reload_webapp_api") }}",
       error: function (xhr, ajaxOptions, thrownError) {
         console.log("xhr:", xhr);
         if(xhr.responseText.includes("</html>")){
