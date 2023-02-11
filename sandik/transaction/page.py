@@ -36,7 +36,7 @@ def add_money_transaction_by_manager_page(sandik_id):
             member, _ = sandik_utils.validate_whose_of_sandik(sandik=g.sandik, member_id=form.member.data)
 
             if int(form.type.data) == MoneyTransaction.TYPE.EXPENSE:
-                 utils.validate_money_transaction_for_expense(
+                utils.validate_money_transaction_for_expense(
                     mt_type=int(form.type.data), use_untreated_amount=form_data["use_untreated_amount"],
                     amount=form.amount.data, whose=member
                 )
@@ -117,7 +117,8 @@ def add_custom_contribution_by_manager_page(sandik_id):
 
     if form.validate_on_submit():
         try:
-            _, share = sandik_utils.validate_whose_of_sandik(sandik=g.sandik, member_id=form.member.data, share_id=form.share.data)
+            member, share = sandik_utils.validate_whose_of_sandik(sandik=g.sandik, member_id=form.member.data,
+                                                                  share_id=form.share.data)
             utils.add_custom_contribution(amount=form.amount.data, period=form.period.data, share=share,
                                           created_by=current_user)
             return redirect(url_for("transaction_page_bp.add_custom_contribution_by_manager_page", sandik_id=sandik_id))
@@ -125,10 +126,12 @@ def add_custom_contribution_by_manager_page(sandik_id):
             flash(str(e), "danger")
         except NotValidPeriod as e:
             flash(str(e), "danger")
+            form.share.choices += sandik_db.shares_by_member_form_choices(member=member)
 
     return render_template("transaction/add_custom_contribution_by_manager_page.html",
                            page_info=FormPI(title="Manuel aidat ekle", form=form,
                                             active_dropdown="management-transactions"))
+
 
 @transaction_page_bp.route('borc-ekle', methods=["GET", "POST"])
 @sandik_authorization_required("write")
@@ -157,9 +160,12 @@ def add_custom_debt_by_manager_page(sandik_id):
                 start_period=form.start_period.data or None
             )
             return redirect(url_for("transaction_page_bp.add_custom_debt_by_manager_page", sandik_id=sandik_id))
-        except (ThereIsNoMember, ThereIsNoShare, MaximumDebtAmountExceeded, NoValidRuleFound, InvalidStartingTerm,
-                MaximumInstallmentExceeded) as e:
+        except (ThereIsNoMember, ThereIsNoShare) as e:
             flash(str(e), "danger")
+        except (MaximumDebtAmountExceeded, NoValidRuleFound, InvalidStartingTerm, MaximumInstallmentExceeded) as e:
+            flash(str(e), "danger")
+            form.share.choices += sandik_db.shares_by_member_form_choices(member=member)
+
         except Exception as e:
             raise e
             rollback()
@@ -168,7 +174,7 @@ def add_custom_debt_by_manager_page(sandik_id):
         form.date.data = datetime.today()
 
     return render_template("transaction/add_custom_contribution_by_manager_page.html",
-                           page_info=FormPI(title="Manuel aidat ekle", form=form,
+                           page_info=FormPI(title="Manuel borç ekle", form=form,
                                             active_dropdown="management-transactions"))
 
 
@@ -287,7 +293,7 @@ def payments_of_sandik_page(sandik_id):
         group_by = (p.term, p.member_ref.web_user_ref.name_surname)
         if not due_and_unpaid_payment_groups.get(group_by):
             due_and_unpaid_payment_groups[group_by] = {"payments": [], "remaining_amount": 0, "term": p.term,
-                                                 "name_surname": p.member_ref.web_user_ref.name_surname}
+                                                       "name_surname": p.member_ref.web_user_ref.name_surname}
         due_and_unpaid_payment_groups[group_by]["payments"].append(p)
         due_and_unpaid_payment_groups[group_by]["remaining_amount"] += p.get_unpaid_amount()
     g.due_and_unpaid_payment_groups = sorted(due_and_unpaid_payment_groups.values(),
