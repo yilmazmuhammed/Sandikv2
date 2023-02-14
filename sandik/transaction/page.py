@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from flask import Blueprint, request, render_template, g, flash, url_for, abort
 from flask_login import current_user
 from pony.orm import desc, rollback
@@ -53,8 +51,6 @@ def add_money_transaction_by_manager_page(sandik_id):
             raise e
             rollback()
             flash(str(e), "danger")
-    elif not form.is_submitted():
-        form.date.data = datetime.today()
 
     return render_template("transaction/add_money_transaction_by_manager_page.html",
                            page_info=FormPI(title="Para giriş/çıkışı ekle", form=form,
@@ -101,8 +97,6 @@ def add_money_transaction_for_debt_payment_by_manager_page(sandik_id):
             raise e
             rollback()
             flash(str(e), "danger")
-    elif not form.is_submitted():
-        form.date.data = datetime.today()
 
     return render_template(
         "transaction/add_money_transaction_for_debt_payment_by_manager_page.html",
@@ -170,8 +164,6 @@ def add_custom_debt_by_manager_page(sandik_id):
             raise e
             rollback()
             flash(str(e), "danger")
-    elif not form.is_submitted():
-        form.date.data = datetime.today()
 
     return render_template("transaction/add_custom_contribution_by_manager_page.html",
                            page_info=FormPI(title="Manuel borç ekle", form=form,

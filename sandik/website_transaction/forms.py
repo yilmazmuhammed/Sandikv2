@@ -32,7 +32,7 @@ class WebsiteTransactionForm(CustomFlaskForm):
         validators=[
             input_required_validator("İşlem tarihi"),
         ],
-        default=datetime.today()
+        default=datetime.today
     )
 
     amount = DecimalField(

@@ -24,7 +24,7 @@ class MoneyTransactionForm(CustomFlaskForm):
         validators=[
             input_required_validator("İşlem tarihi"),
         ],
-        default=datetime.today()
+        default=datetime.today
     )
 
     amount = DecimalField(
@@ -80,7 +80,7 @@ class DebtPaymentForm(CustomFlaskForm):
         validators=[
             input_required_validator("İşlem tarihi"),
         ],
-        default=datetime.today()
+        default=datetime.today
     )
 
     debt = SelectField(
@@ -188,7 +188,7 @@ class DebtForm(CustomFlaskForm):
         validators=[
             input_required_validator("İşlem tarihi"),
         ],
-        default=datetime.today()
+        default=datetime.today
     )
 
     amount = DecimalField(

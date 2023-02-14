@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from flask import Blueprint, request, render_template, redirect, url_for, g
 from flask_login import current_user
 
@@ -35,8 +33,6 @@ def add_website_transaction_page():
             raise e
             rollback()
             flash(str(e), "danger")
-    elif not form.is_submitted():
-        form.date.data = datetime.today()
 
     return render_template("website_transaction/add_website_transaction_page.html",
                            page_info=FormPI(title="Websitesi Masraf İşlemi Ekle", form=form,
