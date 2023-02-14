@@ -120,7 +120,7 @@ def add_custom_contribution_by_manager_page(sandik_id):
             flash(str(e), "danger")
         except NotValidPeriod as e:
             flash(str(e), "danger")
-            form.share.choices += sandik_db.shares_by_member_form_choices(member=member)
+            form.share.choices += sandik_db.shares_of_member_form_choices(member=member)
 
     return render_template("transaction/add_custom_contribution_by_manager_page.html",
                            page_info=FormPI(title="Manuel aidat ekle", form=form,
@@ -158,7 +158,7 @@ def add_custom_debt_by_manager_page(sandik_id):
             flash(str(e), "danger")
         except (MaximumDebtAmountExceeded, NoValidRuleFound, InvalidStartingTerm, MaximumInstallmentExceeded) as e:
             flash(str(e), "danger")
-            form.share.choices += sandik_db.shares_by_member_form_choices(member=member)
+            form.share.choices += sandik_db.shares_of_member_form_choices(member=member)
 
         except Exception as e:
             raise e
