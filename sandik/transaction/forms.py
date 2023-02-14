@@ -204,7 +204,7 @@ class DebtForm(CustomFlaskForm):
         label="Taksit sayısı:",
         validators=[
             Optional(),
-            min_number_validator(field="Taksit sayısı",min=1),
+            min_number_validator(field="Taksit sayısı", min=1),
         ],
         render_kw={"placeholder": "5"},
     )
@@ -232,4 +232,3 @@ class DebtForm(CustomFlaskForm):
     def __init__(self, sandik, form_title='Para işlemi formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.member.choices += sandik_db.members_form_choices(sandik=sandik)
-
