@@ -28,9 +28,9 @@ jQuery(function($){
 			{ "name": "id", "title": "#", "breakpoints": "xs sm"},
 			{ "name": "date", "title": "Tarih" },
 			{ "name": "name_surname", "title": "İsim Soyisim" },
-			{ "name": "amount", "title": "Miktar", },
-			{ "name": "status", "title": "Ödenme durumu", },
 			{ "name": "unpaid_amount", "title": "Kalan miktar", "breakpoints": "xs sm md", },
+			{ "name": "status", "title": "Ödenme durumu", },
+			{ "name": "amount", "title": "Miktar", },
 			{ "name": "installments", "title": "", "breakpoints": "xs sm md lg", },
 			{# { "name": "action", "title": "", "breakpoints": "xs sm md lg", }, #}
 		],
@@ -41,8 +41,8 @@ jQuery(function($){
         "date": "{{ d.sub_receipt_ref.money_transaction_ref.date.strftime("%Y-%m-%d") }}",
         "name_surname": "{{ d.member_ref.web_user_ref.name_surname }}",
         "amount": "{{ d.amount }} ₺",
-        "status": `{% if d.get_unpaid_amount() == 0 %}<span class="text-success">Ödendi</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
-        "unpaid_amount": "{{ d.get_unpaid_amount() }} ₺",
+        "status": `<span class="text-{{ "danger" if d.get_unpaid_amount() else "success" }}">{{ "Ödenmedi" if d.get_unpaid_amount() else "Ödendi" }}</span>`,
+        "unpaid_amount": `<span class="text-{{ "danger" if d.get_unpaid_amount() else "success" }}">{{ d.get_unpaid_amount() }} ₺</span>`,
         "installments": `
           <div class="table table-responsive">
             <table class="table table-striped table-bordered text-center" id="installments-of-d{{ d.id }}-table">
@@ -62,7 +62,7 @@ jQuery(function($){
                   <td>{{ i.term }} ₺</td>
                   <td>{{ i.amount }} ₺</td>
                   <td class="{{ "text-success" if i.is_fully_paid else "text-danger" }}">{{ "Ödendi" if i.is_fully_paid else "Tamamlanmadı" }}</td>
-                  <td>{{ i.get_unpaid_amount() }} ₺</td>
+                  <td class="{{ "text-success" if i.is_fully_paid else "text-danger" }}">{{ i.get_unpaid_amount() }} ₺</td>
                 </tr>
               {% endfor %}
               </tbody>
@@ -106,9 +106,9 @@ jQuery(function($){
 			{ "name": "id", "title": "#", "breakpoints": "xs sm"},
 			{ "name": "date", "title": "Tarih" },
 			{ "name": "name_surname", "title": "İsim Soyisim" },
-			{ "name": "amount", "title": "Miktar", },
-			{ "name": "status", "title": "Ödenme durumu", },
 			{ "name": "unpaid_amount", "title": "Kalan miktar", "breakpoints": "xs sm md", },
+			{ "name": "status", "title": "Ödenme durumu", },
+			{ "name": "amount", "title": "Miktar", },
 			{ "name": "installments", "title": "", "breakpoints": "xs sm md lg", },
 			{# { "name": "action", "title": "", "breakpoints": "xs sm md lg", }, #}
 		],
@@ -119,8 +119,8 @@ jQuery(function($){
         "date": "{{ d.sub_receipt_ref.money_transaction_ref.date.strftime("%Y-%m-%d") }}",
         "name_surname": "{{ d.member_ref.web_user_ref.name_surname }}",
         "amount": "{{ d.amount }} ₺",
-        "status": `{% if d.get_unpaid_amount() == 0 %}<span class="text-success">Ödendi</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
-        "unpaid_amount": "{{ d.get_unpaid_amount() }} ₺",
+        "status": `<span class="text-{{ "danger" if d.get_unpaid_amount() else "success" }}">{{ "Ödenmedi" if d.get_unpaid_amount() else "Ödendi" }}</span>`,
+        "unpaid_amount": `<span class="text-{{ "danger" if d.get_unpaid_amount() else "success" }}">{{ d.get_unpaid_amount() }} ₺</span>`,
         "installments": `
           <div class="table table-responsive">
             <table class="table table-striped table-bordered text-center" id="installments-of-d{{ d.id }}-table">
@@ -140,7 +140,7 @@ jQuery(function($){
                   <td>{{ i.term }} ₺</td>
                   <td>{{ i.amount }} ₺</td>
                   <td class="{{ "text-success" if i.is_fully_paid else "text-danger" }}">{{ "Ödendi" if i.is_fully_paid else "Tamamlanmadı" }}</td>
-                  <td>{{ i.get_unpaid_amount() }} ₺</td>
+                  <td class="{{ "text-success" if i.is_fully_paid else "text-danger" }}">{{ i.get_unpaid_amount() }} ₺</td>
                 </tr>
               {% endfor %}
               </tbody>

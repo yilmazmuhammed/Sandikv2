@@ -202,7 +202,7 @@ class AddMemberForm(CustomFlaskForm):
         validators=[
             input_required_validator("Üyelik tarihi"),
         ],
-        default=datetime.today()
+        default=datetime.today
     )
 
     contribution_amount = DecimalField(
@@ -307,7 +307,7 @@ class AddShareForm(CustomFlaskForm):
         validators=[
             input_required_validator("Hisse açılış tarihi"),
         ],
-        default=datetime.today()
+        default=datetime.today
     )
 
     submit = SubmitField(label="Kaydet")

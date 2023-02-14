@@ -171,6 +171,12 @@ def members_form_choices(sandik, only_active=True):
     return choices
 
 
+def shares_of_member_form_choices(member, only_active=True):
+    shares = member.get_active_shares() if only_active else member.shares_set
+    choices = sorted([(s.id, f"Hisse {s.share_order_of_member}") for s in shares])
+    return choices
+
+
 """
 ########################################################################################################################
 ##############################################  Güven bağı fonksiyonları  ##############################################

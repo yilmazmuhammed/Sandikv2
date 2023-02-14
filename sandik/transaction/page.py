@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from flask import Blueprint, request, render_template, g, flash, url_for, abort
 from flask_login import current_user
 from pony.orm import desc, rollback
@@ -53,8 +51,6 @@ def add_money_transaction_by_manager_page(sandik_id):
             raise e
             rollback()
             flash(str(e), "danger")
-    elif not form.is_submitted():
-        form.date.data = datetime.today()
 
     return render_template("transaction/add_money_transaction_by_manager_page.html",
                            page_info=FormPI(title="Para giriş/çıkışı ekle", form=form,
@@ -101,8 +97,6 @@ def add_money_transaction_for_debt_payment_by_manager_page(sandik_id):
             raise e
             rollback()
             flash(str(e), "danger")
-    elif not form.is_submitted():
-        form.date.data = datetime.today()
 
     return render_template(
         "transaction/add_money_transaction_for_debt_payment_by_manager_page.html",
@@ -117,8 +111,8 @@ def add_custom_contribution_by_manager_page(sandik_id):
 
     if form.validate_on_submit():
         try:
-            _, share = sandik_utils.validate_whose_of_sandik(sandik=g.sandik, member_id=form.member.data,
-                                                             share_id=form.share.data)
+            member, share = sandik_utils.validate_whose_of_sandik(sandik=g.sandik, member_id=form.member.data,
+                                                                  share_id=form.share.data)
             utils.add_custom_contribution(amount=form.amount.data, period=form.period.data, share=share,
                                           created_by=current_user)
             return redirect(url_for("transaction_page_bp.add_custom_contribution_by_manager_page", sandik_id=sandik_id))
@@ -126,6 +120,7 @@ def add_custom_contribution_by_manager_page(sandik_id):
             flash(str(e), "danger")
         except NotValidPeriod as e:
             flash(str(e), "danger")
+            form.share.choices += sandik_db.shares_of_member_form_choices(member=member)
 
     return render_template("transaction/add_custom_contribution_by_manager_page.html",
                            page_info=FormPI(title="Manuel aidat ekle", form=form,
@@ -159,18 +154,19 @@ def add_custom_debt_by_manager_page(sandik_id):
                 start_period=form.start_period.data or None
             )
             return redirect(url_for("transaction_page_bp.add_custom_debt_by_manager_page", sandik_id=sandik_id))
-        except (ThereIsNoMember, ThereIsNoShare, MaximumDebtAmountExceeded, NoValidRuleFound, InvalidStartingTerm,
-                MaximumInstallmentExceeded) as e:
+        except (ThereIsNoMember, ThereIsNoShare) as e:
             flash(str(e), "danger")
+        except (MaximumDebtAmountExceeded, NoValidRuleFound, InvalidStartingTerm, MaximumInstallmentExceeded) as e:
+            flash(str(e), "danger")
+            form.share.choices += sandik_db.shares_of_member_form_choices(member=member)
+
         except Exception as e:
             raise e
             rollback()
             flash(str(e), "danger")
-    elif not form.is_submitted():
-        form.date.data = datetime.today()
 
     return render_template("transaction/add_custom_contribution_by_manager_page.html",
-                           page_info=FormPI(title="Manuel aidat ekle", form=form,
+                           page_info=FormPI(title="Manuel borç ekle", form=form,
                                             active_dropdown="management-transactions"))
 
 
