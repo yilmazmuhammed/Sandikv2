@@ -77,6 +77,7 @@
 
   $(document)
     .ready(function () {
+      update_run_time();
       setInterval(update_run_time, 1000);
     })
     .on("click", "#update-source-code", function (){
