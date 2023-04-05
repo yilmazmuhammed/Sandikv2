@@ -70,7 +70,7 @@ def create_sandik_from_sandikv1_data(data, created_by):
             new_web_user = auth_db.create_web_user(email_address=web_user["email_address"],
                                                    password_hash=hasher.hash(f'{web_user["username"]}pw'),
                                                    name=web_user["name"], surname=web_user["surname"],
-                                                   is_active=True, created_by=created_by)
+                                                   is_active_=True, created_by=created_by)
         web_users[web_user["username"]] = new_web_user
 
     # Sandık üyelerini oluştur
