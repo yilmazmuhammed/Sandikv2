@@ -29,14 +29,14 @@ class FormPI(LayoutPI):
 
 
 def form_open(form_name, f_id=None, enctype=None, f_action="", f_class="form-horizontal"):
-    f_open = """<form action="%s" method="post" name="%s" """ % (f_action, form_name,)
+    f_open = f"""<form action="{f_action}" method="post" name="{form_name}" """
 
     if f_id:
-        f_open += """ id="%s" """ % (f_id,)
+        f_open += f""" id="{f_id}" """
     if enctype:
-        f_open += """ enctype="%s" """ % (enctype,)
+        f_open += f""" enctype="{enctype}" """
 
-    f_open += """class="%s">""" % (f_class,)
+    f_open += f"""class="{f_class}">"""
 
     return f_open
 
@@ -120,7 +120,7 @@ def flask_form_to_dict(request_form: MultiDict, exclude=None, boolean_fields=Non
     return result
 
 
-class PhoneNumberValidator(object):
+class PhoneNumberValidator:
     """
     Validates an phone number. Requires phonenumbers package to be
     installed. For ex: pip install phonenumbers.
@@ -170,7 +170,7 @@ class PhoneNumberValidator(object):
             raise ValidationError(self.message, "\nTelefon numarası doğrulanamıyor.")
 
 
-class IbanValidator(object):
+class IbanValidator:
     def __init__(self, message=None):
         self.message = message or "IBAN'ınızı başına 'TR' koymadan 24 haneli olarak şekilde giriniz."
 
@@ -186,16 +186,16 @@ class IbanValidator(object):
 
 
 def input_required_validator(field):
-    return InputRequired("Lütfen %s giriniz" % (field.lower(),))
+    return InputRequired(f"Lütfen {field.lower()} giriniz")
 
 
 def max_length_validator(field, max: int):
-    return Length(max=max, message="%s %s karakterden fazla olamaz." % (field.capitalize(), max))
+    return Length(max=max, message=f"{field.capitalize()} {max} karakterden fazla olamaz.")
 
 
 def min_length_validator(field, min: int):
-    return Length(min=min, message="%s %s karakterden az olamaz." % (field.capitalize(), min))
+    return Length(min=min, message=f"{field.capitalize()} {min} karakterden az olamaz.")
 
 
 def min_number_validator(field, min: int):
-    return NumberRange(min=min, message="%s, en az %s olmalıdır." % (field.capitalize(), min))
+    return NumberRange(min=min, message=f"{field.capitalize()}, en az {min} olmalıdır.")

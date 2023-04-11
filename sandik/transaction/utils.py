@@ -258,10 +258,10 @@ def create_due_contributions_for_sandik(sandik, created_by, created_from=""):
 
 
 def create_due_contributions_for_all_sandiks(created_by, created_from=""):
-    print(f"START: Creating contributions for 'all sandiks'...")
+    print("START: Creating contributions for 'all sandiks'...")
     for sandik in Sandik.select(lambda s: s.is_active):
         create_due_contributions_for_sandik(sandik=sandik, created_by=created_by, created_from=created_from)
-    print(f"FINISH: Creating contributions for 'all sandiks'...")
+    print("FINISH: Creating contributions for 'all sandiks'...")
 
 
 def pay_unpaid_payments_from_untreated_amount_for_member(member: Member, pay_future_payments: bool,
@@ -383,7 +383,7 @@ def get_debts(whose, only_unpaid=False):
         raise InvalidWhoseType("whose 'Sandik', 'Member' veya 'Share' olmalıdır", errcode=3, create_log=True)
 
     if only_unpaid:
-        filter_str += f" and d.get_unpaid_amount() > 0"
+        filter_str += " and d.get_unpaid_amount() > 0"
 
     debts = db.select_debts(filter_str).order_by(
         lambda d: (d.sub_receipt_ref.money_transaction_ref.date, d.id)
@@ -537,7 +537,7 @@ def validate_money_transaction_for_expense(mt_type: int, use_untreated_amount: b
             if b <= c:
                 raise InvalidStartingTerm("Ödeme başlangıcı, borç tarihinden bir sonraki aydan önce başlayamaz.")
     else:
-        raise UndefinedMoneyTransactionValidation(f"Para çıkışı dışında doğrulama işlemi tanımlanmamıştır.")
+        raise UndefinedMoneyTransactionValidation("Para çıkışı dışında doğrulama işlemi tanımlanmamıştır.")
 
     return None
 

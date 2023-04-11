@@ -143,14 +143,14 @@ class Notification:
                         url=url_for("sandik_page_bp.trust_links_page", sandik_id=sandik.id)
                     )
             general_db.create_notification(
-                to_web_user=web_user, title=f"Üyelik başvurunuz onaylandı", text=sandik.name,
+                to_web_user=web_user, title="Üyelik başvurunuz onaylandı", text=sandik.name,
                 url=url_for("sandik_page_bp.sandik_summary_for_member_page", sandik_id=sandik.id)
             )
 
         @staticmethod
         def send_adding_share_notification(sandik, web_user):
             general_db.create_notification(
-                to_web_user=web_user, title=f"Yeni hisse açıldı.", text=sandik.name,
+                to_web_user=web_user, title="Yeni hisse açıldı.", text=sandik.name,
                 url=url_for("sandik_page_bp.sandik_summary_for_member_page", sandik_id=sandik.id)
             )
 
@@ -164,7 +164,7 @@ class Notification:
                         url=url_for("sandik_page_bp.trust_links_page", sandik_id=sandik.id)
                     )
             general_db.create_notification(
-                to_web_user=web_user, title=f"Sandık üyeliğiniz oluşturuldu", text=sandik.name,
+                to_web_user=web_user, title="Sandık üyeliğiniz oluşturuldu", text=sandik.name,
                 url=url_for("sandik_page_bp.sandik_summary_for_member_page", sandik_id=sandik.id)
             )
 
@@ -304,7 +304,7 @@ def rule_formula_validator(formula_string, variables, operators, formula_type):
         raise InvalidArgument(f"type is {formula_type} not in {SandikRule.FORMULA_TYPE.strings.keys()}")
 
     data = formula_string.replace(' ', '')
-    operators = sorted(operators, reverse=True, key=lambda o: len(o))
+    operators = sorted(operators, reverse=True, key=len)
     i = 0
     comp_operator_counts = 0
     while i < len(data):
@@ -327,9 +327,9 @@ def rule_formula_validator(formula_string, variables, operators, formula_type):
         else:
             raise InvalidRuleCharacter(i)
     if formula_type == SandikRule.FORMULA_TYPE.VALUE and comp_operator_counts != 0:
-        raise RuleOperatorCountException(f"Değer formülünde karşılaştırma işareti bulunamaz")
+        raise RuleOperatorCountException("Değer formülünde karşılaştırma işareti bulunamaz")
     if formula_type == SandikRule.FORMULA_TYPE.CONDITION and comp_operator_counts > 1:
-        raise RuleOperatorCountException(f"Koşul formülünde en fazla 1 tane karşılaştırma işareti bulunmalıdır.")
+        raise RuleOperatorCountException("Koşul formülünde en fazla 1 tane karşılaştırma işareti bulunmalıdır.")
 
 
 def add_sandik_rule_to_sandik(condition_formula, value_formula, type, sandik, **kwargs):

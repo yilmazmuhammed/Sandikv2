@@ -32,7 +32,7 @@ def register_page():
                 flash("Hesap oluşturuldu.", 'success')
                 return redirect(url_for("auth_page_bp.login_page"))
             except RegisterException as ex:
-                flash(u"%s" % ex, 'danger')
+                flash(f"{ex}", 'danger')
     return render_template("auth/register_page.html", page_info=FormPI(form=form, title="Kayıt ol"))
 
 
@@ -101,7 +101,7 @@ def update_web_user_page_base(web_user_id):
             db.update_web_user(web_user=g.web_user, updated_by=current_user, **form_data)
             flash("Kullanıcı bilgileri güncellendi", "success")
         except EmailAlreadyExist as ex:
-            flash(u"%s" % ex, 'danger')
+            flash(f"{ex}", 'danger')
     return render_template("utils/form_layout.html",
                            page_info=FormPI(title="Site kullanıcısını güncelle", form=form,
                                             active_dropdown="web-users"))

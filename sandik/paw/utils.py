@@ -20,10 +20,8 @@ class PythonAnywhereApi:
         self._username = username
         self._domain = domain
 
-        self._base_url = 'https://{host}/api/v0/user/{username}/'.format(
-            host=self.HOST, username=self._username
-        )
-        self._headers = {'Authorization': 'Token {token}'.format(token=self._token)}
+        self._base_url = f'https://{self.HOST}/api/v0/user/{self._username}/'
+        self._headers = {'Authorization': f'Token {self._token}'}
 
     def _request(self, method, endpoint):
         url = urljoin(self._base_url, endpoint)
