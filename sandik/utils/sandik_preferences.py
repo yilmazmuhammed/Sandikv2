@@ -50,7 +50,7 @@ def remaining_debt_balance(sandik, whose):
 
 
 def get_max_number_of_share(sandik):
-    no_rule_msg = f"Açılabilecek maksimum hisse sayısını tespit etmek için geçerli kural bulunamadı!" \
-                  f"<br>Lütfen önce açılabilecek hisse sayısı için sandık kuralı ekleyiniz."
+    no_rule_msg = "Açılabilecek maksimum hisse sayısını tespit etmek için geçerli kural bulunamadı!" \
+                  "<br>Lütfen önce açılabilecek hisse sayısı için sandık kuralı ekleyiniz."
     return base_sandik_rule_function(sandik=sandik, rule_type=SandikRule.TYPE.MAX_NUMBER_OF_SHARE,
                                      no_rule_msg=no_rule_msg, result_cast=int)

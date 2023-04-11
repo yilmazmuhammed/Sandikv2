@@ -10,7 +10,7 @@ def create_bank_account(created_by, is_primary, **kwargs) -> BankAccount:
     if is_primary:
         if BankAccount.get(sandik_ref=sandik, web_user_ref=web_user, is_primary=is_primary):
             raise ThereIsAlreadyPrimaryBankAccount(
-                f"Aynı anda sadece bir tane birincil (varsayılan) banka hesabı bulunabilir.")
+                "Aynı anda sadece bir tane birincil (varsayılan) banka hesabı bulunabilir.")
     log = Log(web_user_ref=created_by, type=Log.TYPE.BANK_ACCOUNT.CREATE, logged_sandik_ref=sandik,
               logged_web_user_ref=web_user)
     return BankAccount(logs_set=log, is_primary=is_primary, **kwargs)

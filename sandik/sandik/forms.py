@@ -340,7 +340,7 @@ class SendSmsForm(CustomFlaskForm):
 """
 
 
-class SandikRuleFormulaValidator(object):
+class SandikRuleFormulaValidator:
     def __init__(self, formula_type, message=None):
         self.message = message or "Sandık formülü geçerli değil!"
         self.formula_type = formula_type

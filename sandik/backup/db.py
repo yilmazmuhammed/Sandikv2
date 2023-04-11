@@ -46,8 +46,7 @@ def restore_table(table, rows):
             if isinstance(column_attr, Set):
                 reverse_entity = column_attr.reverse.entity
                 row[column] = [reverse_entity[i] for i in row[column]]
-            elif row[column] is not None and (
-                    isinstance(column_attr, Optional) or isinstance(column_attr, Required)):
+            elif row[column] is not None and isinstance(column_attr, (Optional, Required)):
                 if isinstance(column_attr.py_type, EntityMeta):
                     row[column] = column_attr.py_type[row[column]]
             else:
