@@ -149,7 +149,12 @@
       {
         "id": `{% if rev_index %}{{ loop.revindex }}{% else %}{{ loop.index }}{% endif %}`,
         "term": "{{ pg["term"] }}",
-        "name_surname": "{{ pg["name_surname"] }}",
+        "name_surname": `
+          {% if g.type == "management"%}
+            <a href="{{ url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=g.sandik.id, member_id=pg["payments"][0].member_ref.id) }}" title="Üye özeti için tıklayınız..." class="font-bold text-primary">{{ pg["name_surname"] }}</a>
+          {% else %}
+            {{ pg["name_surname"] }}
+          {% endif %}`,
         "remaining_amount": `<span class="{% if pg["remaining_amount"] == 0 %}text-success{% else %}text-danger{% endif %}">{{ pg["remaining_amount"] }} ₺</span>`,
         "is_fully_paid": `{% if pg["remaining_amount"] == 0 %}<span class="text-success">Ödendi</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
         "payments": `
