@@ -41,7 +41,7 @@ class BankAccountForm(CustomFlaskForm):
     def __init__(self, form_title="Banka hesabı formu", *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
 
-    def fill_with_back_account(self, bank_account):
+    def fill_with_bank_account(self, bank_account):
         self.title.data = bank_account.title
         self.holder.data = bank_account.holder
         self.iban.data = bank_account.iban

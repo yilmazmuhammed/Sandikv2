@@ -1,5 +1,7 @@
 1- Sistemin işler hale getirilmesi
 
+TODO    MINOR       Sub receiptlerin tarihi olarak creation_time'ı değil, ilişkili işlemlerin tarihlerinden büyük olanı göster
+
 TODO    CRITICAL    Site yedeklenmesi
   - Para giriş çıkışları
   - Borçlar

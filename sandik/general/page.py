@@ -107,10 +107,10 @@ def update_bank_account_page(bank_account_id):
 
     form = forms.BankAccountForm()
     if request.method == "GET":
-        form.fill_with_back_account(bank_account=bank_account)
+        form.fill_with_bank_account(bank_account=bank_account)
 
     if form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form, boolean_fields=["is_primary"])
+        form_data = flask_form_to_dict(request_form=request.form, boolean_fields=["is_primary"], with_empty_fields=True)
         try:
             db.update_bank_account(bank_account=bank_account, updated_by=current_user, **form_data)
 
