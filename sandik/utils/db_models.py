@@ -322,6 +322,9 @@ class Member(db.Entity):
     def get_unpaid_debts(self):
         return select(d for d in Debt if d.member_ref == self and d.get_unpaid_amount() > 0)
 
+    def get_unpaid_contributions(self):
+        return select(c for c in Contribution if c.member_ref == self and c.get_unpaid_amount() > 0)
+
 
 class WebUser(db.Entity, UserMixin):
     id = PrimaryKey(int, auto=True)
@@ -730,6 +733,12 @@ class Contribution(db.Entity):
             from sandik.utils.exceptions import UnexpectedValue
             raise UnexpectedValue("ERRCODE: 0010, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
 
+    def to_extended_dict(self, **kwargs):
+        ret = self.to_dict(**kwargs)
+        ret["paid_amount"] = self.get_paid_amount()
+        ret["unpaid_amount"] = self.get_unpaid_amount()
+        return ret
+
 
 class Debt(db.Entity):
     id = PrimaryKey(int, auto=True)
@@ -1024,8 +1033,10 @@ class SandikRule(db.Entity):
 
         functions = {
             "TEMPLATE": lambda whose=None, amount=None: print(),
-            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_MEMBER: lambda whose=None, amount=None: whose.total_amount_of_paid_contribution(),
-            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_SHARE: lambda whose=None, amount=None: whose.total_amount_of_paid_contribution(),
+            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_MEMBER: lambda whose=None,
+                                                                    amount=None: whose.total_amount_of_paid_contribution(),
+            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_SHARE: lambda whose=None,
+                                                                   amount=None: whose.total_amount_of_paid_contribution(),
             AMOUNT_OF_DEBT: lambda whose=None, amount=None: amount,
         }
 

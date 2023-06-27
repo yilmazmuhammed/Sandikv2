@@ -24,6 +24,20 @@ def get_unpaid_debts_of_member_api(sandik_id):
     return jsonify(result=True, member_id=member.id, debts=debts)
 
 
+@transaction_api_bp.route('odenmemis-aidatlar')
+@sandik_authorization_required("read")
+def get_unpaid_contributions_of_member_api(sandik_id):
+    if not request.args.get("member"):
+        return jsonify(result=False, msg="'member' parametresi ile member_id'nin gonderilmesi gerekmektedir.")
+
+    member = sandik_db.get_member(id=request.args.get("member"))
+    if not member:
+        return jsonify(result=False, msg="Üye bulunamadı")
+
+    contributions = [contribution.to_extended_dict() for contribution in member.get_unpaid_contributions()]
+    return jsonify(result=True, member_id=member.id, contributions=contributions)
+
+
 @transaction_api_bp.route('borc-detaylarini-hesapla/uye-<int:member_id>')
 @sandik_authorization_required("read", allow_member=True)
 @member_required

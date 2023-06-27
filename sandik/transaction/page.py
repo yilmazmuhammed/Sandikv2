@@ -104,6 +104,51 @@ def add_money_transaction_for_debt_payment_by_manager_page(sandik_id):
     )
 
 
+@transaction_page_bp.route('aidat-odemesi-ekle', methods=["GET", "POST"])
+@sandik_authorization_required("write")
+def add_money_transaction_for_contribution_payment_by_manager_page(sandik_id):
+    form = forms.ContributionPaymentForm(sandik=g.sandik, form_title="Aidat ödemesi")
+
+    if form.validate_on_submit():
+        form_data = flask_form_to_dict(request_form=request.form, exclude=["member", "contribution"])
+        try:
+            member = sandik_db.get_member(id=form.member.data)
+            if not member:
+                raise ThereIsNoMember("Üye açılan listeden seçilmelidir")
+
+            contribution = db.get_contribution(id=form.contribution.data)
+            if not contribution or contribution.member_ref != member:
+                raise ThereIsNoDebt("Ödenecek aidat açılan listeden seçilmelidir")
+
+            remaining_unpaid_amount = contribution.get_unpaid_amount()
+            if remaining_unpaid_amount < form.amount.data:
+                raise MaximumAmountExceeded("Kalan aidat miktarından daha fazla ödeme yapılamaz. <br>"
+                                            f"Kalan aidat miktarı: {remaining_unpaid_amount}")
+
+            money_transaction = utils.add_money_transaction(
+                type=MoneyTransaction.TYPE.REVENUE, payments=[contribution],
+                use_untreated_amount=None, pay_future_payments=None,
+                member=member, creation_type=MoneyTransaction.CREATION_TYPE.BY_MANUEL,
+                created_by=current_user, **form_data
+            )
+            return redirect(
+                url_for("transaction_page_bp.add_money_transaction_for_contribution_payment_by_manager_page",
+                        sandik_id=sandik_id)
+            )
+        except MaximumAmountExceeded as e:
+            # rollback()
+            flash(str(e), "danger")
+        except Exception as e:
+            raise e
+            rollback()
+            flash(str(e), "danger")
+
+    return render_template(
+        "transaction/add_money_transaction_for_contribution_payment_by_manager_page.html",
+        page_info=FormPI(title="Aidat ödemesi ekle", form=form, active_dropdown="management-transactions")
+    )
+
+
 @transaction_page_bp.route('aidat-ekle', methods=["GET", "POST"])
 @sandik_authorization_required("write")
 def add_custom_contribution_by_manager_page(sandik_id):
