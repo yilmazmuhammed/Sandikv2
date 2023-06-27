@@ -1,0 +1,206 @@
+{% extends "utils/layout.html" %}
+
+{% block js_block %}
+<script src="{{ url_for('form_page_bp.static', filename='js/forms.js') }}"></script>
+<script>
+  jQuery(function($){
+    $('#form-questions-table').footable({
+      "toggleColumn": "first",
+		  "expandFirst": false,
+      "paging": {
+        "enabled": true,
+      },
+      "filtering": {
+        "enabled": false,
+        "delay": 1,
+      "dropdownTitle": "Şu sütunlarda ara:"
+      },
+      "sorting": {
+        "enabled": true
+      },
+      "columns": [
+        { "name": "id", "title": "#"},
+        { "name": "text", "title": "Soru" },
+        { "name": "type", "title": "Soru tipi", "breakpoints": "xs"},
+        { "name": "is_required", "title": "Zorunlu mu", "breakpoints": "xs" },
+        { "name": "is_unique", "title": "Eşsiz mi", "breakpoints": "xs" },
+      ],
+      "rows": [
+      {% for fqc in g.form.fq_connections_set.order_by("lambda fq: fq.question_order") %}
+        {
+          "id": `<span title="ID={{ fqc.form_question_ref.id }}">{{ loop.index }}</span>`,
+          "text": `{{ fqc.primary_text("html")|safe }}`,
+          "type": question_types[{{ fqc.form_question_ref.type }}],
+          "is_required": `{% if fqc.is_required %}Zorunlu{% else %}Değil{% endif %}`,
+          "is_unique": `{% if fqc.is_unique %}Benzersiz{% else %}Değil{% endif %}`,
+        },
+      {% endfor %}
+      ]
+	  });
+
+    $('#responses-table').footable({
+      "toggleColumn": "first",
+		  "expandFirst": false,
+      "paging": {
+        "enabled": true,
+      },
+      "filtering": {
+        "enabled": true,
+        "delay": 1,
+        "dropdownTitle": "Şu sütunlarda ara:"
+      },
+      "sorting": {
+        "enabled": true
+      },
+      "columns": [
+        { "name": "fr_id", "title": "#"},
+        { "name": "time", "title": "Time"},
+        {% for fqc in g.form.fq_connections_set.order_by("lambda fqc: fqc.question_order") %}
+        {% if fqc.form_question_ref.type not in fqc.form_question_ref.TYPE.CONTENT_TYPES %}
+        { "name": "fqc_{{ fqc.id }}", "title": "{% if fqc.text %}{{ fqc.text }}{% else %}{{ fqc.form_question_ref.text }}{% endif %}"},
+        {% endif %}
+        {% endfor %}
+      ],
+      "rows": [
+      {% for fr in g.form.valid_responses().order_by("lambda fr: fr.id") %}
+        {
+          "fr_id": `{{ loop.index }}`,
+          "time": `{{ fr.get_creation_log().time.strftime("%d/%m/%Y, %H:%M:%S") }}`,
+          {% for fqa in fr.answers_set.order_by("lambda fa: fa.fq_connection_ref.question_order") %}
+            "fqc_{{ fqa.fq_connection_ref.id }}": `{{ fqa.answer_str }}`,
+          {% endfor %}
+        },
+      {% endfor %}
+      ]
+	  });
+  });
+
+</script>
+{% endblock %}
+
+{% block content_block %}
+  <div class="bg-light lter b-b wrapper-md">
+    <h1 class="m-n font-thin h3">{{ page_info.title }}</h1>
+  </div>
+  <div class="wrapper-md">
+    <div class="row">
+      <div class="col-sm-offset-2 col-sm-8">
+        <div class="panel panel-default">
+          <div class="panel-body text-center">
+            <a class="h3" target="_blank" href="{{ url_for("form_page_bp.form_embed_page", form_id_str=g.form.id_str, _external=True) }}">{{ url_for("form_page_bp.form_embed_page", form_id_str=g.form.id_str, _external=True) }}</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-6">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            {{ page_info.title }}
+            <span class="pull-right">
+              <a href="{{ url_for('form_page_bp.copy_form_page', form_id=g.form.id) }}" class="btn btn-xs btn-default dialog-confirm" confirm-message='Form bilgileri, soruları ve yanıt olayları kopyalanarak yeni bir form oluşturulacak. Devam etmek istiyor musunuz?'>
+                <i class="glyphicon glyphicon-copy" title="Formu kopyala"></i>
+              </a>
+              <a href="{{ url_for('form_page_bp.update_form_page', form_id=g.form.id) }}" class="btn btn-xs btn-default">
+                <i class="glyphicon glyphicon-pencil" title="Formu düzenle"></i>
+              </a>
+            </span>
+          </div>
+          <div class="table table-responsive">
+            <table id="form-details" class="table">
+              <tbody>
+              <tr class="row">
+                <th class="col-xs-4">#</th>
+                <td class="col-xs-8">{{ g.form.id }}</td>
+              </tr>
+              <tr class="row">
+                <th>Form ismi:</th>
+                <td>{{ g.form.name }}</td>
+              </tr>
+              <tr class="row">
+                <th>Form tipi:</th>
+                <td>{{ g.form.get_type_str() }}</td>
+              </tr>
+              <tr class="row">
+                <th>Durumu:</th>
+                <td>
+                  {% if g.form.get_status()[0] %}
+                    <span class="text-success">{{ g.form.get_status()[1] }}</span>
+                  {% else %}
+                    <span class="text-danger">{{ g.form.get_status()[1] }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr class="row">
+                <th>Yanıt sayısı:</th>
+                <td>{{ g.form.valid_responses().count() }}</td>
+              </tr>
+              <tr class="row">
+                <th>Başlangıç zamanı:</th>
+                <td>{% if g.form.start_time %}{{ g.form.start_time }}{% else %}{% endif %}</td>
+              </tr>
+              <tr class="row">
+                <th>Bitiş zamanı:</th>
+                <td>{% if g.form.end_time %}{{ g.form.end_time }}{% else %}{% endif %}</td>
+              </tr>
+              <tr class="row">
+                <th>Dönüş mesajı:</th>
+                <td>{{ g.form.completed_message|safe }}</td>
+              </tr>
+              <tr class="row">
+                <th>Yanıt sayısı sınırı:</th>
+                <td>
+                    {% if g.form.responses_capacity %}{{ g.form.responses_capacity }}<br>{{ g.form.overcapacity_message }}{% else %}Yanıt sınırı yok{% endif %}
+                    <span class="pull-right">
+                      {{ macros.button(url=url_for("form_page_bp.update_form_capacity_page", form_id=g.form.id), icon='fas fa-pencil-alt', type='info', size='xs', title='Düzenle') }}
+                    </span>
+                </td>
+              </tr>
+              <tr class="row">
+                <th>Resim url'si:</th>
+                <td><a href="{{ g.form.image_url }}">{{ g.form.image_url }}</a></td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">
+            <span>Sorular</span>
+            <span class="pull-right">
+              <a href="{{ url_for("form_page_bp.form_questions_page", form_id=g.form.id) }}" class="btn btn-xs btn-default">
+                <i class="glyphicon glyphicon-pencil" title="Soruları güncelle"></i>
+              </a>
+            </span>
+          </div>
+          <div class="table table-responsive">
+            <table id="form-questions-table" class="table"></table>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-12">
+      <div class="panel panel-default">
+        <div class="panel-heading font-bold">
+          <span>
+            <a href="{{ url_for("form_page_bp.form_responses_page", form_id=g.form.id) }}">Form yanıtları</a>
+          </span>
+          <span class="pull-right">
+            <a href="{{ url_for("form_api_bp.download_form_responses_api", form_id=g.form.id, file_format="xlsx", only_valid=1) }}" class="btn btn-xs btn-primary">
+              <i class="fa fa-file-excel-o" title="XLSX dosyasını indir"></i>
+            </a>
+            <a href="{{ url_for("form_api_bp.download_form_responses_api", form_id=g.form.id, file_format="csv", only_valid=1) }}" class="btn btn-xs btn-primary">
+              <i class="fa fa-file-csv" title="CSV dosyasını indir"></i>
+            </a>
+          </span>
+        </div>
+        <div class="table table-responsive">
+          <table id="responses-table" class="table"></table>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+{#  <table class="table"></table>#}
+{% endblock %}

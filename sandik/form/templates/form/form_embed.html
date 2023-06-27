@@ -1,0 +1,269 @@
+{% extends "utils/layout_embed.html" %}
+
+{% block css_block %}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/16.0.4/css/intlTelInput.css">
+  <style>
+    html {
+      background-color: transparent;
+    }
+    .container-border{
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      padding: 24px;
+    }
+    label {
+      font-family: 'Google Sans',Roboto,Arial,sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      letter-spacing: .1px;
+      line-height: 24px;
+      color: #202124;
+      font-weight: 400;
+      {#width: 100%;#}
+      word-break: break-word;
+    }
+    .radio label {
+      font-family: Roboto,Arial,sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: .2px;
+      line-height: 20px;
+      color: #202124;
+
+    }
+    input, textarea {
+      font-family: Roboto,Arial,sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: .2px;
+      line-height: 20px;
+      color: #202124;
+    }
+    h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+      font-family: Roboto,Arial,sans-serif;
+    }
+    .form-control:not(select){
+      border: none;
+      border-bottom: 1px solid #ccc;
+    }
+    .panel-body {
+      padding: 40px;
+      background-color: transparent;
+    }
+    .row, .col {
+        margin: auto;
+        max-width: 90vw;
+        width: 640px;
+    }
+  </style>
+{% endblock %}
+
+{% block js_block %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/16.0.4/js/intlTelInput.min.js"></script>
+  <script>
+    let fancy_phones = {};
+    $(document)
+      .ready(function () {
+        /* ------------------------ Uluslararası telefon formatı için tel alanları ----------------------- */
+        let inputs = document.getElementsByTagName('input');
+        for(let i = 0; i < inputs.length; i++) {
+          if(inputs[i].type.toLowerCase() == 'tel') {
+            fancy_phones[inputs[i].id] = window.intlTelInput(inputs[i], {
+              initialCountry:"tr",
+              separateDialCode: true,
+              utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/16.0.4/js/utils.js",
+            });
+          }
+        }
+        /* ------------------------------------------------------------------------------------------------ */
+      
+        /* ------------------------------- Sayfa yüksekliğini parenta yolla ------------------------------- */
+        window.parent.postMessage({"form_height":$( this ).height()}, "*");
+        /* ------------------------------------------------------------------------------------------------ */
+      })
+      .on("change", "input:radio", function (){
+          if($(this).val() === "0"){
+            $('.option-other-text[name="'+this.name+'-other"]').prop("required", $('[name="'+this.name+'"]').prop("required"));
+          }
+          else{
+            $('.option-other-text[name="'+this.name+'-other"]').val("").prop("required", false)
+          }
+      })
+      .on("click", ".option-other-text", function (){
+          $("#"+this.id.split("-text")[0]).click();
+      })
+      .on("submit", "form", function (){
+        $(this).prop("action", "?margin-top="+($( this ).height()-100));
+      
+        /* ----------------- Uluslararası telefon formatı için tel alanları gönderilirken ----------------- */
+        let inputs = document.getElementsByTagName('input');
+        for(let i = 0; i < inputs.length; i++) {
+          if(inputs[i].type.toLowerCase() == 'tel') {
+            $("#"+inputs[i].id).val(fancy_phones[inputs[i].id].getNumber());
+          }
+        }
+        /* ------------------------------------------------------------------------------------------------ */
+      
+        /* -- Form gönderildikten sonra ekranda gözükmesin ve yanıtınız gönderiliyor mesajı yazdırılsın --- */
+        $(this).after("<div class=\"col-12 alert alert-info\" role=\"alert\">\n" +
+                      "  Yanıtınız gönderiliyor, lütfen bekleyiniz...2\n" +
+                      "</div>")
+        $(this).hide();
+        /* ------------------------------------------------------------------------------------------------ */
+      
+        /* --------------------------- Submit butonuna basıldığını parent'a söyle -------------------------- */
+        window.parent.postMessage({"form_height":$( this ).height(), "on_submitted": true}, "*");
+        /* ------------------------------------------------------------------------------------------------ */
+      });
+  </script>
+{% endblock %}
+
+{% block content_block %}
+  <div class="wrapper-md">
+    <div class="row">
+      <div class="col">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">{{ page_info.title }}</div>
+          <div class="panel-body">
+            <div>
+            {% for category, message in get_flashed_messages(with_categories=true) %}
+              <div class="col-12 alert alert-{{ category }}" role="alert">
+                  {{ message|replace("<**", "<strong>")|replace("**>", "</strong>")|replace("<*", "<em>")|replace("*>", "</em>")|safe }}
+              </div>
+            {% endfor %}
+            </div>
+            {% if page_info.errors %}
+              <div class="col-12 alert alert-danger" role="alert">
+                <ul>
+                  {% for error in page_info.errors %}
+                  <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+            {% if page_info.is_open %}
+            {{ page_info.form.open|safe }}
+              {% for field in page_info.form %}
+                {% if field.id == "csrf_token" or field.type in ["HiddenField"] %}
+                  {{ field }}
+                {% elif field.type in ["ContentField"] %}
+                  <div class="form-group container-fluid container-border">
+                    <div class="col-xs-12 h5">
+                      <p>{{ field.text|replace("<**", "<strong>")|replace("**>", "</strong>")|replace("<*", "<em>")|replace("*>", "</em>")|safe }}</p>
+                    </div>
+                  </div>
+                {% elif field.type in ["ImageField"] %}
+                  <div class="form-group container-fluid container-border">
+                    <div class="col-xs-12 h5">
+                      <img src="{{ field.url }}" style="max-width: 100%" alt="{{ field.url }}">
+                    </div>
+                  </div>
+                {% elif field.type in ["StringField", "TextAreaField", "IntegerField", "DecimalField", "DateField", "TimeField", "SelectField", "SelectMultipleField", "TelField", "EmailField"] %}
+                  <div class="form-group container-fluid container-border">
+                    <div class="col-xs-12 h5">
+                      {{ field.label }}{% if field.flags.required %} <span class="text-danger">*</span>{% else %}&ensp;{% endif %}
+                    </div>
+                    <div class="col-xs-12">
+                      {{ field(class="form-control") }}
+                    </div>
+                  </div>
+                {% elif field.type in ["RadioField"] %}
+                  <div class="form-group container-fluid container-border">
+                    <div class="col-xs-12">
+                      {{ field.label }}{% if field.flags.required %} <span class="text-danger">*</span>{% else %}&ensp;{% endif %}
+                    </div>
+                    <div class="col-xs-12">
+                    {% for i in range((field.choices)|length) %}
+                      <div class="radio">
+                        <label>
+                          <input type="radio" name="{{ field.name }}" id="{{ field.id }}-{{ i }}" value="{{ field.choices[i][0] }}" {% if field.flags.required %}required{% endif %}>
+                          {% if field.choices[i][0]==0 %}
+                          <input class="form-control option-other-text" id="{{ field.id }}-{{ i }}-text" name="{{ field.name }}-other" placeholder="Diğer..." type="text" value="" style="height: 25px;">
+                          {% else %}
+                          {{ field.choices[i][1] }}
+                          {% endif %}
+                        </label>
+                      </div>
+                    {% endfor %}
+                    </div>
+                  </div>
+                {% elif field.type in ["MultiCheckboxField"] %}
+                  <div class="form-group container-fluid container-border">
+                    <div class="col-xs-12">
+                      {{ field.label }}{% if field.flags.required %}<span class="text-danger">*</span>{% else %}&ensp;{% endif %}
+                    </div>
+                    <div class="col-xs-12">
+                    {% for i in range((field.choices)|length) %}
+                      <div class="checkbox">
+                        <label>
+{#                          TODO is_required kontrolü ekle #}
+                          <input type="checkbox" name="{{ field.name }}" id="{{ field.id }}-{{ i }}" value="{{ field.choices[i][0] }}">
+                          {{ field.choices[i][1] }}
+                        </label>
+                      </div>
+                    {% endfor %}
+                    </div>
+                  </div>
+                {% elif field.type in ["BooleanField"] %}
+                  <div class="form-group container-fluid container-border">
+                    <div class="col-xs-12">
+                      {{ field.label }}{% if field.flags.required %}<span class="text-danger">*</span>{% else %}&ensp;{% endif %}
+                    </div>
+                    <div class="col-xs-12">
+                      <label class="i-switch m-t-xs m-r">
+                        {{ field() }}
+                        <i></i>
+                      </label>
+                    </div>
+                  </div>
+                {% elif field.type in ["FieldList"] %}
+                  {% for sub_field in field %}
+                    <div class="form-group">
+                      <div class="col-lg-3 control-label">
+                        {{ sub_field.label }}{% if field.flags.required or sub_field.flags.required %}*{% else %}&ensp;{% endif %}
+                      </div>
+                      <div class="col-lg-9">
+                        <div class="row" style="margin-bottom: 5px;" id="row-{{ sub_field.id }}">
+                          <div class="col-lg-9">
+                            {{ sub_field(class="form-control", style="padding: 0px; border: 0px;") }}
+                          </div>
+                          <div id="add-remove-file-field-div-{{ sub_field.id }}" class="col-lg-3" style="margin-top: 6px;" >
+                            <a class="add-file-field" id="{{ sub_field.id }}"><i class="glyphicon glyphicon-plus"></i></a>
+                            <a class="remove-file-field" id="{{ sub_field.id }}"><i class="glyphicon glyphicon-minus"></i></a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                {% elif field.type in ["CustomSelectField"] %}
+                  <div class="form-group">
+                    <div class="col-lg-3 control-label">
+                      {{ field.label }} {% if field.flags.required %}*{% endif %}
+                    </div>
+                    <div class="col-lg-9">
+                      {{ field(class="form-control m-b") }}
+                    </div>
+
+                  </div>
+                {% elif field.type in ["SubmitField"] %}
+                  <div class="form-group">
+                    <div class="col-lg-offset-1 col-lg-11 text-center">
+                      {{ field(class="btn btn-m btn-primary") }}
+                    </div>
+                  </div>
+                {% endif %}
+              {% endfor %}
+            {{ page_info.form.close|safe }}
+            {% endif %}
+          </div>
+        <div class="panel-footer">
+          <div class="footer text-center m-l-lg m-r-lg">
+            <span class="small text-muted">Formu doldururken sıkıntı yaşarsanız <a style="white-space: nowrap;" class="font-bold" href="https://wa.me/+905516284878?text={{ page_info.title }} formunu doldururken sıkıntı yaşadım. Yardımcı olabilir misiniz?">+90 551 628 48 78</a> telefon numarasından <a class="text-primary font-bold" href="https://wa.me/+905516284878?text={{ page_info.title }} formunu doldururken sıkıntı yaşadım. Yardımcı olabilir misiniz?">WhatsApp</a> aracılığı ile bizimle iletişime geçebilirsiniz.</span>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  {% endblock %}

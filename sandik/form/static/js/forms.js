@@ -1,0 +1,15 @@
+let question_types = {
+  1: "Kısa yanıtlı",
+  2: "Uzun yanıtlı",
+  3: "Çoktan seçmeli",
+  4: "Onay kutulu",
+  5: "Puanlama",
+  6: "Tarih",
+  7: "Saat",
+  8: "Zaman",
+  9: "İçerik",
+  10: "E-posta adresi",
+  11: "Telefon numarası",
+  12: "Açılan menü",
+  13: "Görsel",
+};

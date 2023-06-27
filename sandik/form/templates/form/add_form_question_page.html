@@ -1,0 +1,111 @@
+{% extends "utils/layout.html" %}
+
+{% block js_block %}
+<script src="https://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+{#<script src="{{ url_for('static', filename='libs/jquery/html5sortable/jquery.sortable.js') }}"></script>#}
+<script src="{{ url_for('static', filename='my_custom/js/jquery.ui.touch-punch.min.js') }}"></script>
+<script src="{{ url_for('form_page_bp.static', filename='js/forms.js') }}"></script>
+<script src="{{ url_for('form_page_bp.static', filename='js/add_form_questions.js') }}"></script>
+<script>
+  (function($) {
+    $(document).ready(function() {
+
+      {% if g.form %}
+        console.log("qwe");
+        {% for fq_connection in g.form.fq_connections_set.order_by("lambda q: q.question_order") %}
+        console.log("asd");
+          {% if fq_connection.form_question_ref.type %}
+            add_only_question(
+              {{fq_connection.form_question_ref.type}},
+              "fq_id_{{ fq_connection.id }}",
+              `{{ fq_connection.primary_text() }}`,
+              {{ fq_connection.is_required|tojson }},
+              {{ fq_connection.is_unique|tojson }}
+            );
+
+            {% if fq_connection.form_question_ref.type in [3,4,12] %}
+              add_options_field(
+                "fq_id_{{ fq_connection.id }}",
+                [
+                  {% for option in fq_connection.form_question_ref.options_set.order_by("lambda o: o.order") %}
+                    ["id{{ option.id }}", "{{ option.text }}", {% if option.is_other %}true{% else %}false{% endif %}],
+                  {% endfor %}
+                ]
+              );
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+      reorder();
+    });
+  })(jQuery);
+</script>
+{% endblock %}
+  {% block content_block %}
+  <div class="bg-light lter b-b wrapper-md">
+    <h1 class="m-n font-thin h3">Form Elements</h1>
+  </div>
+  <div class="wrapper-md">
+    <div class="row">
+      <div class="col-md-offset-3 col-md-6">
+        <div class="panel panel-default">
+          <div class="panel-heading font-bold">{{ page_info.form.form_title }}</div>
+          <div class="panel-body">
+            {% if page_info.form.errors %}
+              <div class="col-12 alert alert-danger" role="alert">
+                <ul>
+                  {% for key in page_info.form.errors %}
+                  {% for error in page_info.form.errors[key] %}
+                  <li>{{ error }}</li>
+                  {% endfor %}
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+            {{ page_info.form.open|safe }}
+              {{ page_info.form.hidden_tag() }}
+              <ul class="list-group gutter list-group-lg list-group-sp" ui-jq="sortable" id="question_list">
+              </ul>
+
+              <div class="form-group">
+                <div class="col-lg-12 text-center">
+                  {{ page_info.form.submit(class="btn btn-m btn-info") }}
+                </div>
+              </div>
+{#            {{ page_info.form.close|safe }}#}
+{#          </div>#}
+{#        </div>#}
+{#      </div>#}
+{#      <div class="col-sm-3">#}
+{#        <div class="panel panel-default">#}
+{#          <div class="panel-heading font-bold">Yeni soru ekle</div>#}
+{#          <div class="panel-body">#}
+              <div class="btn-toolbar list-group-item bg-light text-center">
+                <div class="row text-center h3 font-bold" style="margin-bottom: 10px;">Yeni soru ekle</div>
+                <div class="row">
+                  <a id="add-short-answer-question" class="btn btn-primary" style="margin-bottom: 10px;">Kısa yanıt</a>
+                  <a id="add-long-answer-question" class="btn btn-primary" style="margin-bottom: 10px;">Paragraf</a>
+                </div>
+                <div class="row">
+                  <a id="add-multiple-choices-question" class="btn btn-primary" style="margin-bottom: 10px;">Çoktan seçmeli</a>
+                  <a id="add-check-boxes-question" class="btn btn-primary" style="margin-bottom: 10px;">Onay kutuları</a>
+                  <a id="add-dropdown-question" class="btn btn-primary" style="margin-bottom: 10px;">Açılır menü</a>
+                </div>
+                <div class="row">
+                  <a id="add-email-question" class="btn btn-primary" style="margin-bottom: 10px;">E-posta adresi</a>
+                  <a id="add-phone-number-question" class="btn btn-primary" style="margin-bottom: 10px;">Telefon numarası</a>
+                  <a id="add-time-question" class="btn btn-primary" style="margin-bottom: 10px;">Saat</a>
+                  <a id="add-date-question" class="btn btn-primary" style="margin-bottom: 10px;">Tarih</a>
+                </div>
+                <div class="row">
+                  <a id="add-content" class="btn btn-primary" style="margin-bottom: 10px;">İçerik</a>
+                  <a id="add-image" class="btn btn-primary" style="margin-bottom: 10px;">Görsel</a>
+                </div>
+              </div>
+            {{ page_info.form.close|safe }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endblock %}

@@ -322,6 +322,9 @@ class Member(db.Entity):
     def get_unpaid_debts(self):
         return select(d for d in Debt if d.member_ref == self and d.get_unpaid_amount() > 0)
 
+    def get_unpaid_contributions(self):
+        return select(c for c in Contribution if c.member_ref == self and c.get_unpaid_amount() > 0)
+
 
 class WebUser(db.Entity, UserMixin):
     id = PrimaryKey(int, auto=True)

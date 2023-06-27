@@ -1,0 +1,76 @@
+{% extends "utils/layout.html" %}
+{% block js_block %}
+<script>
+jQuery(function($){
+	$('#forms-table').footable({
+    "toggleColumn": "first",
+    "expandFirst": false,
+    "paging": {
+      "enabled": true,
+    },
+    "filtering": {
+      "enabled": true,
+      "delay": 1,
+    "dropdownTitle": "Şu sütunlarda ara:"
+    },
+    "sorting": {
+      "enabled": false
+    },
+    "columns": [
+      { "name": "id", "title": "#"},
+      { "name": "name", "title": "Form ismi" },
+      { "name": "type", "title": "Form tipi", "breakpoints": "xs"},
+      { "name": "status", "title": "Durumu", "classes": "text-center" },
+      { "name": "response_count", "title": "Yanıt sayısı", "breakpoints": "xs", "classes": "text-center" },
+      { "name": "start_time", "title": "Başlangıç zamanı", "breakpoints": "xs sm", "classes": "text-center" },
+      { "name": "end_time", "title": "Bitiş zamanı", "breakpoints": "xs sm", "classes": "text-center" },
+      { "name": "details", "title": "" },
+      { "name": "responses", "title": "" },
+    ],
+    "rows": [
+    {% for form in g.forms | sort(attribute="id", reverse=True) %}
+      {
+        "id": "<span title='ID: {{ form.id }}'>{{ loop.revindex }}</span>",
+        "name": "<a href='{{url_for("form_page_bp.form_detail_page", form_id=form.id)}}'>{{ form.name }}</a>",
+        "type": "{{ form.get_type_str() }}",
+        "status": {% if form.get_status()[0] %}
+                    "<span class=\"text-success\">{{ form.get_status()[1] }}</span>"
+                  {% else %}
+                    "<span class=\"text-danger\">{{ form.get_status()[1] }}</span>"
+                  {% endif %},
+        "response_count": {{ form.valid_responses().count() }},
+        "start_time": {% if form.start_time %}"{{ form.start_time.strftime('%d-%m-%Y %H:%M') }}"{% else %}"-"{% endif %},
+        "end_time": {% if form.end_time %}"{{ form.end_time.strftime('%d-%m-%Y %H:%M') }}"{% else %}"-"{% endif %},
+        "details":
+          "<a href='{{ url_for("form_page_bp.form_detail_page", form_id=form.id) }}' class='hidden-xs btn btn-rounded btn-xs btn-info'>Detay</a>\n"+
+          "<a href='{{ url_for("form_page_bp.form_detail_page", form_id=form.id) }}' class='visible-xs btn btn-xs btn-info'><i class='fa fa-search'></i></a>",
+        "responses":
+          "<a href='{{ url_for("form_page_bp.form_responses_page", form_id=form.id) }}' class='hidden-xs btn btn-rounded btn-xs btn-info'>Yanıtlar</a>\n"+
+          "<a href='{{ url_for("form_page_bp.form_responses_page", form_id=form.id) }}' class='visible-xs btn btn-xs btn-info'><i class='fas fa-list'></i></a>",
+      },
+    {% endfor %}
+    ]
+	});
+});
+</script>
+{% endblock %}
+{% block content_block %}
+  <div class="bg-light lter b-b wrapper-md">
+    <h1 class="m-n font-thin h3">{{ page_info.title }}</h1>
+  </div>
+  <div class="wrapper-md">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        {{ page_info.title }}
+        <span class="pull-right">
+          <a href="{{ url_for('form_page_bp.create_form_page') }}" class="btn btn-xs btn-primary">
+            <i class="fa fa-plus"></i>
+          </a>
+        </span>
+      </div>
+      <div>
+        <table class="table" id="forms-table"></table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

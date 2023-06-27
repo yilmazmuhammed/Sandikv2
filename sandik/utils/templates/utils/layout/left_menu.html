@@ -284,6 +284,36 @@
               {% if current_user.is_authenticated and current_user.is_admin()  %}
               <li class="line dk"></li>
 
+              <li id="form-dropdown">
+                <a href class="auto">
+                  <span class="pull-right text-muted">
+                    <i class="fa fa-fw fa-angle-right text"></i>
+                    <i class="fa fa-fw fa-angle-down text-active"></i>
+                  </span>
+          {#                  <b class="badge bg-info pull-right">3</b>#}
+                  <i class="fa fa-file-text-o"></i>
+                  <span>Formlar</span>
+                </a>
+                <ul class="nav nav-sub dk">
+                  <li class="nav-sub-header">
+                    <a href>
+                      <span>Formlar</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{{ url_for("form_page_bp.forms_page") }}">
+                      <span>Tüm formlar</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{{ url_for("form_page_bp.create_form_page") }}">
+                      <span>Form oluştur</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="line dk"></li>
+
               <!-- Site yönetimi menüleri-->
               <li class="hidden-folded padder m-t m-b-sm text-muted text-xs">
                 <span>Site yöneticisi</span>
