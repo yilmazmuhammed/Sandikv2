@@ -122,7 +122,7 @@ def add_money_transaction_for_contribution_payment_by_manager_page(sandik_id):
 
             remaining_unpaid_amount = contribution.get_unpaid_amount()
             if remaining_unpaid_amount < form.amount.data:
-                raise MaximumAmountExceeded(f"Kalan aidat miktarından daha fazla ödeme yapılamaz. <br>"
+                raise MaximumAmountExceeded("Kalan aidat miktarından daha fazla ödeme yapılamaz. <br>"
                                             f"Kalan aidat miktarı: {remaining_unpaid_amount}")
 
             money_transaction = utils.add_money_transaction(
