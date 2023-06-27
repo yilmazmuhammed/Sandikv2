@@ -1,9 +1,10 @@
+from datetime import datetime
 from json.decoder import JSONDecodeError
 
 from flask import json
 from flask_wtf import FlaskForm
 from werkzeug.datastructures import MultiDict
-from wtforms import SelectMultipleField, widgets, ValidationError
+from wtforms import SelectMultipleField, widgets, ValidationError, Field
 from wtforms.validators import InputRequired, Length, NumberRange
 
 try:
@@ -66,6 +67,18 @@ class CustomFlaskForm(FlaskForm):
 class MultiCheckboxField(SelectMultipleField):
     widget = widgets.ListWidget(prefix_label=False)
     option_widget = widgets.CheckboxInput()
+
+
+class ContentField(Field):
+    def __init__(self, text, *args, **kwargs):
+        self.text = text
+        super().__init__(*args, **kwargs)
+
+
+class ImageField(Field):
+    def __init__(self, url, *args, **kwargs):
+        self.url = url
+        super().__init__(*args, **kwargs)
 
 
 def custom_json_loads(string):
@@ -199,3 +212,12 @@ def min_length_validator(field, min: int):
 
 def min_number_validator(field, min: int):
     return NumberRange(min=min, message=f"{field.capitalize()}, en az {min} olmalıdır.")
+
+
+def combine_date_and_time_from_form_data(form_data, field_names: list):
+    for i in field_names:
+        if form_data.get(i + '_date') or form_data.get(i + '_time'):
+            d = form_data.pop(i + '_date', "0001-01-01") or "0001-01-01"
+            t = form_data.pop(i + '_time', '00:00') or "00:00"
+            form_data[i + '_time'] = datetime.strptime(f"{d} {t}", "%Y-%m-%d %H:%M")
+    return form_data

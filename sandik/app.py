@@ -9,6 +9,8 @@ from sandik.auth.page import auth_page_bp
 from sandik.auth.utils import setup_login_manager
 from sandik.backup.download import backup_dw_bp
 from sandik.backup.page import backup_page_bp
+from sandik.form.api import form_api_bp
+from sandik.form.page import form_page_bp
 from sandik.general.api import general_api_bp
 from sandik.general.page import general_page_bp
 from sandik.paw.api import paw_api_bp
@@ -50,6 +52,8 @@ def register_blueprints(flask_app):
     flask_app.register_blueprint(general_page_bp, url_prefix="/")
     flask_app.register_blueprint(general_api_bp, url_prefix="/api/")
     flask_app.register_blueprint(auth_page_bp, url_prefix="/")
+    flask_app.register_blueprint(form_api_bp, url_prefix="/api/form/")
+    flask_app.register_blueprint(form_page_bp, url_prefix="/form/")
     flask_app.register_blueprint(sandik_page_bp, url_prefix="/sandik/")
     flask_app.register_blueprint(sandik_api_bp, url_prefix="/api/sandik/")
     flask_app.register_blueprint(transaction_page_bp, url_prefix="/sandik/<int:sandik_id>/")

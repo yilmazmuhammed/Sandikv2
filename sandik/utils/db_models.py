@@ -1,14 +1,25 @@
 import inspect
 import math
 import os
+import random
 from datetime import date, datetime
 from decimal import Decimal
+from string import ascii_lowercase
 
 import cexprtk
 from flask_login import UserMixin
 from pony.orm import *
 
 db = Database()
+
+
+class DB_ROW_TYPE:
+    def form_choices(self):
+        return [(key, value) for key, value in self.strings.items()]
+
+    @classmethod
+    def get_type_str(cls, type):
+        return cls.strings.get(type, "UNKNOWN")
 
 
 class BankTransaction(db.Entity):
@@ -37,7 +48,7 @@ class MoneyTransaction(db.Entity):
     member_ref = Required('Member')
     sub_receipts_set = Set('SubReceipt')
 
-    class TYPE:
+    class TYPE(DB_ROW_TYPE):
         REVENUE = 0  # sandık geliri
         EXPENSE = 1  # sandık gideri
 
@@ -346,6 +357,8 @@ class WebUser(db.Entity, UserMixin):
     members_set = Set(Member)
     notifications_set = Set('Notification')
     sms_packages_set = Set('SmsPackage')
+    form_responses_set = Set('FormResponse')
+    form_participations_set = Set('FormParticipation')
 
     @property
     def is_active(self):
@@ -421,6 +434,8 @@ class Log(db.Entity):
     logged_sandik_authority_type_ref = Optional('SandikAuthorityType')
     logged_trust_relationship_ref = Optional('TrustRelationship')
     logged_sandik_rule_ref = Optional('SandikRule')
+    logged_form_ref = Optional('Form')
+    logged_form_response_ref = Optional('FormResponse')
 
     class TYPE:
         CREATE = 1
@@ -562,8 +577,9 @@ class Sandik(db.Entity):
     sms_packages_set = Set('SmsPackage')
     type = Required(int)
     sandik_rules_set = Set('SandikRule')
+    forms_set = Set('Form')
 
-    class TYPE:
+    class TYPE(DB_ROW_TYPE):
         CLASSIC = 1
         WITH_TRUST_RELATIONSHIP = 2
 
@@ -935,7 +951,7 @@ class SmsPackage(db.Entity):
     logs_set = Set(Log)
     sandik_ref = Optional(Sandik)
 
-    class TYPE:
+    class TYPE(DB_ROW_TYPE):
         class SANDIK:
             THERE_IS_UNCONFIRMED_TRUST_RELATIONSHIP_REQUEST = 101
 
@@ -994,7 +1010,7 @@ class SandikRule(db.Entity):
     def evaluate_value_formula(self, **kwargs):
         return self.calculate_formula(formula=self.value_formula, **kwargs)
 
-    class TYPE:
+    class TYPE(DB_ROW_TYPE):
         MAX_AMOUNT_OF_DEBT = 1
         MAX_NUMBER_OF_INSTALLMENT = 2
         MAX_NUMBER_OF_SHARE = 3
@@ -1005,7 +1021,7 @@ class SandikRule(db.Entity):
             MAX_NUMBER_OF_SHARE: "En fazla açılabilecek hisse sayısı",
         }
 
-    class FORMULA_TYPE:
+    class FORMULA_TYPE(DB_ROW_TYPE):
         CONDITION = "condition"
         VALUE = "value"
 
@@ -1027,8 +1043,10 @@ class SandikRule(db.Entity):
 
         functions = {
             "TEMPLATE": lambda whose=None, amount=None: print(),
-            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_MEMBER: lambda whose=None, amount=None: whose.total_amount_of_paid_contribution(),
-            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_SHARE: lambda whose=None, amount=None: whose.total_amount_of_paid_contribution(),
+            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_MEMBER: lambda whose=None,
+                                                                    amount=None: whose.total_amount_of_paid_contribution(),
+            TOTAL_AMOUNT_OF_CONTRIBUTION_PAID_BY_THE_SHARE: lambda whose=None,
+                                                                   amount=None: whose.total_amount_of_paid_contribution(),
             AMOUNT_OF_DEBT: lambda whose=None, amount=None: amount,
         }
 
@@ -1072,7 +1090,7 @@ class WebsiteTransaction(db.Entity):
     date = Required(date)
     detail = Optional(str)
 
-    class TYPE:
+    class TYPE(DB_ROW_TYPE):
         REVENUE = 0  # GELİR
         EXPENSE = 1  # GİDER
 
@@ -1089,6 +1107,184 @@ class WebsiteTransaction(db.Entity):
                 return "-"
         else:
             return self.web_user_ref.name_surname if self.web_user_ref else self.payer
+
+
+class Form(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    id_str = Required(str, unique=True)
+    name = Required(str)
+    logs_set = Set(Log)
+    sandiks_set = Set(Sandik)
+    type = Required(int)
+    is_active = Required(bool, default=True)
+    is_timed = Required(bool, default=True)
+    start_time = Optional(datetime)
+    end_time = Optional(datetime)
+    completed_message = Optional(str, 2500)
+    image_url = Optional(str, 1000)
+    responses_capacity = Required(int, default=0)
+    overcapacity_message = Optional(str, 1000)
+    fq_connections_set = Set('FQ_Connection')
+    form_participations_set = Set('FormParticipation')
+    form_responses_set = Set('FormResponse')
+
+    class TYPE(DB_ROW_TYPE):
+        OTHER = 0
+        MEMBERSHIP_APPLICATION = 1
+
+        strings = {OTHER: "Diğer", MEMBERSHIP_APPLICATION: "Üyelik başvurusu"}
+
+    def get_type_str(self):
+        return self.TYPE.get_type_str(self.type)
+
+    def before_insert(self):
+        if not self.id_str:
+            id_str = "".join(random.sample(ascii_lowercase, 15))
+        else:
+            id_str = self.id_str
+
+        while Form.get(id_str=id_str):
+            id_str = "".join(random.sample(ascii_lowercase, 15))
+        self.id_str = id_str
+
+    @property
+    def is_waiting(self):
+        return self.is_timed and self.start_time and self.start_time > datetime.now()
+
+    @property
+    def is_expired(self):
+        return self.is_timed and self.end_time and self.end_time < datetime.now()
+
+    def is_active_by_time(self):
+        if self.is_active and not self.is_waiting and not self.is_expired:
+            return True
+        return False
+
+    def get_status(self):
+        if not self.is_active:
+            return False, "Pasif"
+        elif self.is_expired:
+            return False, "Süresi dolmuş"
+        elif self.is_waiting:
+            return False, "Beklemede"
+        elif self.is_capacity_full():
+            return False, "Yanıt sınırı dolmuş"
+        elif self.end_time:
+            return True, "Aktif (süreli)"
+        else:
+            return True, "Aktif"
+
+    def valid_responses(self):
+        return self.form_responses_set.filter(lambda fr: fr.is_valid())
+
+    def is_capacity_full(self):
+        return 0 < self.responses_capacity <= self.valid_responses().count()
+
+
+class FQ_Connection(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    question_order = Required(int)
+    text = Optional(str, 2500)
+    is_required = Required(bool, default=False)
+    is_unique = Required(bool, default=False)
+    form_question_ref = Required('FormQuestion')
+    answers_set = Set('FormQuestionAnswer')
+    form_ref = Required(Form)
+
+    def primary_text(self, text_type=None):
+        plain_to_html = {
+            ord('\r'): '',
+            ord('\n'): '<br>',
+        }
+        if text_type == "html":
+            return (self.text or self.form_question_ref.text).translate(plain_to_html)
+        return self.text or self.form_question_ref.text
+
+    def select_answer_texts(self):
+        return select(a.text for a in self.answers_set if a.form_response_ref.is_valid())
+
+
+class FormResponse(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    web_user_ref = Optional(WebUser)
+    form_ref = Required(Form)
+    logs_set = Set(Log)
+    answers_set = Set('FormQuestionAnswer')
+    is_unique = Required(bool, default=True)
+    is_multi_click = Required(bool, default=False)
+
+    def is_valid(self):
+        return self.is_unique and not self.is_multi_click
+
+
+class FormQuestion(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    text = Required(str, 2500)
+    type = Required(int)
+    is_public = Optional(bool, default=False)
+    fq_connections_set = Set(FQ_Connection)
+    options_set = Set('FormQuestionOption')
+
+    class TYPE:
+        SHORT_ANSWER = 1
+        LONG_ANSWER = 2
+        MULTIPLE_CHOICES = 3
+        CHECKBOX = 4
+        SCORING = 5
+        DATE = 6
+        TIME = 7
+        DATETIME = 8
+        CONTENT = 9
+        EMAIL = 10
+        PHONE_NUMBER = 11
+        DROPDOWN = 12
+        IMAGE = 13
+        STRING_TYPES = [SHORT_ANSWER, LONG_ANSWER, DATE, TIME, DATETIME, EMAIL, PHONE_NUMBER]
+        OPTION_TYPES = [MULTIPLE_CHOICES, CHECKBOX, SCORING, DROPDOWN]
+        CONTENT_TYPES = [CONTENT, IMAGE]
+
+    def has_other_option(self):
+        return bool(self.options_set.filter(lambda o: o.is_other).count())
+
+    def get_options(self):
+        return self.options_set.filter(lambda o: not o.is_other)
+
+
+class FormQuestionAnswer(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    fq_connection_ref = Required(FQ_Connection)
+    form_response_ref = Required(FormResponse)
+    selected_options_set = Set('FormQuestionOption')
+    text = Optional(str, 2500)
+
+    @property
+    def answer_str(self):
+        if self.fq_connection_ref.form_question_ref.type in FormQuestion.TYPE.STRING_TYPES:
+            return self.text
+        elif self.fq_connection_ref.form_question_ref.type in FormQuestion.TYPE.OPTION_TYPES:
+            options = select(o.text for o in self.selected_options_set)[:][:]
+            if self.text:
+                options.append(self.text)
+            return ", ".join(options)
+
+
+class FormQuestionOption(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    text = Required(str, 2500)
+    order = Required(int)
+    question_ref = Required(FormQuestion)
+    answers_set = Set(FormQuestionAnswer)
+
+    @property
+    def is_other(self):
+        return self.text == "Diğer seçeneği"
+
+
+class FormParticipation(db.Entity):
+    web_users = Required(WebUser)
+    forms = Required(Form)
+    time_to_fill = Optional(datetime)
+    PrimaryKey(web_users, forms)
 
 
 DATABASE_PROVIDER = os.getenv("DATABASE_PROVIDER")

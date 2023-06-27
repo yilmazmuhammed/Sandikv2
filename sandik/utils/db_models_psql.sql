@@ -1,3 +1,54 @@
+CREATE TABLE "form" (
+  "id" SERIAL PRIMARY KEY,
+  "id_str" TEXT UNIQUE NOT NULL,
+  "name" TEXT NOT NULL,
+  "type" INTEGER NOT NULL,
+  "is_active" BOOLEAN NOT NULL,
+  "is_timed" BOOLEAN NOT NULL,
+  "start_time" TIMESTAMP,
+  "end_time" TIMESTAMP,
+  "completed_message" VARCHAR(2500) NOT NULL,
+  "image_url" VARCHAR(1000) NOT NULL,
+  "responses_capacity" INTEGER NOT NULL,
+  "overcapacity_message" VARCHAR(1000) NOT NULL
+);
+
+CREATE TABLE "formquestion" (
+  "id" SERIAL PRIMARY KEY,
+  "text" VARCHAR(2500) NOT NULL,
+  "type" INTEGER NOT NULL,
+  "is_public" BOOLEAN
+);
+
+CREATE TABLE "formquestionoption" (
+  "id" SERIAL PRIMARY KEY,
+  "text" VARCHAR(2500) NOT NULL,
+  "order" INTEGER NOT NULL,
+  "question_ref" INTEGER NOT NULL
+);
+
+CREATE INDEX "idx_formquestionoption__question_ref" ON "formquestionoption" ("question_ref");
+
+ALTER TABLE "formquestionoption" ADD CONSTRAINT "fk_formquestionoption__question_ref" FOREIGN KEY ("question_ref") REFERENCES "formquestion" ("id") ON DELETE CASCADE;
+
+CREATE TABLE "fq_connection" (
+  "id" SERIAL PRIMARY KEY,
+  "question_order" INTEGER NOT NULL,
+  "text" VARCHAR(2500) NOT NULL,
+  "is_required" BOOLEAN NOT NULL,
+  "is_unique" BOOLEAN NOT NULL,
+  "form_question_ref" INTEGER NOT NULL,
+  "form_ref" INTEGER NOT NULL
+);
+
+CREATE INDEX "idx_fq_connection__form_question_ref" ON "fq_connection" ("form_question_ref");
+
+CREATE INDEX "idx_fq_connection__form_ref" ON "fq_connection" ("form_ref");
+
+ALTER TABLE "fq_connection" ADD CONSTRAINT "fk_fq_connection__form_question_ref" FOREIGN KEY ("form_question_ref") REFERENCES "formquestion" ("id") ON DELETE CASCADE;
+
+ALTER TABLE "fq_connection" ADD CONSTRAINT "fk_fq_connection__form_ref" FOREIGN KEY ("form_ref") REFERENCES "form" ("id") ON DELETE CASCADE;
+
 CREATE TABLE "sandik" (
   "id" SERIAL PRIMARY KEY,
   "name" TEXT NOT NULL,
@@ -78,6 +129,49 @@ CREATE INDEX "idx_bankaccount__web_user_ref" ON "bankaccount" ("web_user_ref");
 ALTER TABLE "bankaccount" ADD CONSTRAINT "fk_bankaccount__sandik_ref" FOREIGN KEY ("sandik_ref") REFERENCES "sandik" ("id") ON DELETE SET NULL;
 
 ALTER TABLE "bankaccount" ADD CONSTRAINT "fk_bankaccount__web_user_ref" FOREIGN KEY ("web_user_ref") REFERENCES "webuser" ("id") ON DELETE SET NULL;
+
+CREATE TABLE "formresponse" (
+  "id" SERIAL PRIMARY KEY,
+  "web_user_ref" INTEGER,
+  "form_ref" INTEGER NOT NULL,
+  "is_unique" BOOLEAN NOT NULL,
+  "is_multi_click" BOOLEAN NOT NULL
+);
+
+CREATE INDEX "idx_formresponse__form_ref" ON "formresponse" ("form_ref");
+
+CREATE INDEX "idx_formresponse__web_user_ref" ON "formresponse" ("web_user_ref");
+
+ALTER TABLE "formresponse" ADD CONSTRAINT "fk_formresponse__form_ref" FOREIGN KEY ("form_ref") REFERENCES "form" ("id") ON DELETE CASCADE;
+
+ALTER TABLE "formresponse" ADD CONSTRAINT "fk_formresponse__web_user_ref" FOREIGN KEY ("web_user_ref") REFERENCES "webuser" ("id") ON DELETE SET NULL;
+
+CREATE TABLE "formquestionanswer" (
+  "id" SERIAL PRIMARY KEY,
+  "fq_connection_ref" INTEGER NOT NULL,
+  "form_response_ref" INTEGER NOT NULL,
+  "text" TEXT NOT NULL
+);
+
+CREATE INDEX "idx_formquestionanswer__form_response_ref" ON "formquestionanswer" ("form_response_ref");
+
+CREATE INDEX "idx_formquestionanswer__fq_connection_ref" ON "formquestionanswer" ("fq_connection_ref");
+
+ALTER TABLE "formquestionanswer" ADD CONSTRAINT "fk_formquestionanswer__form_response_ref" FOREIGN KEY ("form_response_ref") REFERENCES "formresponse" ("id") ON DELETE CASCADE;
+
+ALTER TABLE "formquestionanswer" ADD CONSTRAINT "fk_formquestionanswer__fq_connection_ref" FOREIGN KEY ("fq_connection_ref") REFERENCES "fq_connection" ("id") ON DELETE CASCADE;
+
+CREATE TABLE "formquestionanswer_formquestionoption" (
+  "formquestionanswer" INTEGER NOT NULL,
+  "formquestionoption" INTEGER NOT NULL,
+  PRIMARY KEY ("formquestionanswer", "formquestionoption")
+);
+
+CREATE INDEX "idx_formquestionanswer_formquestionoption" ON "formquestionanswer_formquestionoption" ("formquestionoption");
+
+ALTER TABLE "formquestionanswer_formquestionoption" ADD CONSTRAINT "fk_formquestionanswer_formquestionoption__formquestionanswer" FOREIGN KEY ("formquestionanswer") REFERENCES "formquestionanswer" ("id");
+
+ALTER TABLE "formquestionanswer_formquestionoption" ADD CONSTRAINT "fk_formquestionanswer_formquestionoption__formquestionoption" FOREIGN KEY ("formquestionoption") REFERENCES "formquestionoption" ("id");
 
 CREATE TABLE "member" (
   "id" SERIAL PRIMARY KEY,
@@ -223,11 +317,11 @@ ALTER TABLE "trustrelationship" ADD CONSTRAINT "fk_trustrelationship__requester_
 CREATE TABLE "websitetransaction" (
   "id" SERIAL PRIMARY KEY,
   "payer" TEXT NOT NULL,
+  "web_user_ref" INTEGER,
+  "date" DATE NOT NULL,
   "amount" DECIMAL(12, 2) NOT NULL,
   "type" INTEGER NOT NULL,
   "category" TEXT NOT NULL,
-  "web_user_ref" INTEGER,
-  "date" DATE NOT NULL,
   "detail" TEXT NOT NULL
 );
 
@@ -313,7 +407,9 @@ CREATE TABLE "log" (
   "logged_web_user_ref" INTEGER,
   "logged_sandik_authority_type_ref" INTEGER,
   "logged_sandik_rule_ref" INTEGER,
-  "logged_trust_relationship_ref" INTEGER
+  "logged_trust_relationship_ref" INTEGER,
+  "logged_form_response_ref" INTEGER,
+  "logged_form_ref" INTEGER
 );
 
 CREATE INDEX "idx_log__logged_bank_account_ref" ON "log" ("logged_bank_account_ref");
@@ -323,6 +419,10 @@ CREATE INDEX "idx_log__logged_bank_transaction_ref" ON "log" ("logged_bank_trans
 CREATE INDEX "idx_log__logged_contribution_ref" ON "log" ("logged_contribution_ref");
 
 CREATE INDEX "idx_log__logged_debt_ref" ON "log" ("logged_debt_ref");
+
+CREATE INDEX "idx_log__logged_form_ref" ON "log" ("logged_form_ref");
+
+CREATE INDEX "idx_log__logged_form_response_ref" ON "log" ("logged_form_response_ref");
 
 CREATE INDEX "idx_log__logged_installment_ref" ON "log" ("logged_installment_ref");
 
@@ -359,6 +459,10 @@ ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_bank_account_ref" FOREIGN KEY (
 ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_bank_transaction_ref" FOREIGN KEY ("logged_bank_transaction_ref") REFERENCES "banktransaction" ("id") ON DELETE SET NULL;
 
 ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_contribution_ref" FOREIGN KEY ("logged_contribution_ref") REFERENCES "contribution" ("id") ON DELETE SET NULL;
+
+ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_form_ref" FOREIGN KEY ("logged_form_ref") REFERENCES "form" ("id") ON DELETE SET NULL;
+
+ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_form_response_ref" FOREIGN KEY ("logged_form_response_ref") REFERENCES "formresponse" ("id") ON DELETE SET NULL;
 
 ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_member_ref" FOREIGN KEY ("logged_member_ref") REFERENCES "member" ("id") ON DELETE SET NULL;
 
@@ -420,8 +524,8 @@ ALTER TABLE "debt" ADD CONSTRAINT "fk_debt__share_ref" FOREIGN KEY ("share_ref")
 
 ALTER TABLE "debt" ADD CONSTRAINT "fk_debt__sub_receipt_ref" FOREIGN KEY ("sub_receipt_ref") REFERENCES "subreceipt" ("id");
 
+ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_debt_ref" FOREIGN KEY ("logged_debt_ref") REFERENCES "debt" ("id") ON DELETE SET NULL;
+
 ALTER TABLE "pieceofdebt" ADD CONSTRAINT "fk_pieceofdebt__debt_ref" FOREIGN KEY ("debt_ref") REFERENCES "debt" ("id") ON DELETE CASCADE;
 
-ALTER TABLE "installment" ADD CONSTRAINT "fk_installment__debt_ref" FOREIGN KEY ("debt_ref") REFERENCES "debt" ("id") ON DELETE CASCADE;
-
-ALTER TABLE "log" ADD CONSTRAINT "fk_log__logged_debt_ref" FOREIGN KEY ("logged_debt_ref") REFERENCES "debt" ("id") ON DELETE SET NULL
+ALTER TABLE "installment" ADD CONSTRAINT "fk_installment__debt_ref" FOREIGN KEY ("debt_ref") REFERENCES "debt" ("id") ON DELETE CASCADE
