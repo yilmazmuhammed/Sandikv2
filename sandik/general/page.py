@@ -40,7 +40,7 @@ def index_page():
 @general_page_bp.route("/ana-sayfa")
 @login_required
 def home_page():
-    return render_template("utils/layout.html", page_info=LayoutPI(title="Ana sayfa"))
+    return render_template("general/home_page.html", page_info=LayoutPI(title="Ana sayfa"))
 
 
 @general_page_bp.route("/banka-hesaplarim")
