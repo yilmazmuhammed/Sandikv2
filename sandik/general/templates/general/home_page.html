@@ -1,0 +1,42 @@
+{% extends "utils/layout.html" %}
+{% import "utils/parts/macros.html" as macros%}
+
+{% block content_block %}
+  {{ macros.page_header(page_info.title) }}
+  <div class="wrapper-md">
+
+    <div class="row">
+
+      {% for sandik in current_user.my_sandiks() %}
+        <!-- Sandık kısayolları -->
+        <div class="col-md-3 col-md-6">
+          <div class="panel panel-default">
+            <div class="panel-heading font-bold">
+              <span>{{ sandik.name }}</span>
+              <span class="pull-right">
+                {{ macros.button(url='#', icon='fas fa-angle-up', type='default', size='sm', title='Göster/Gizle') }}
+              </span>
+            </div>
+            <div class="panel-body">
+              <span class="font-bold">Üye işlemleri</span>
+              <ul>
+                <li><a href="{{ url_for("sandik_page_bp.sandik_summary_for_member_page", sandik_id=sandik.id) }}">Özet</a></li>
+                <li><a href="{{ url_for("sandik_page_bp.sandik_detail_page", sandik_id=sandik.id) }}">Detay</a></li>
+              </ul>
+              <hr/>
+              <span class="font-bold">Yönetici işlemleri</span>
+              <ul>
+                <li><a href="{{ url_for("transaction_page_bp.add_money_transaction_by_manager_page", sandik_id=sandik.id) }}">İşlem ekle</a></li>
+                <li><a href="{{ url_for("transaction_page_bp.money_transactions_of_sandik_page", sandik_id=sandik.id) }}">Para giriş çıkışları</a></li>
+                <li><a href="{{ url_for("transaction_page_bp.payments_of_sandik_page", sandik_id=sandik.id) }}">Ödemeler</a></li>
+                <li><a href="{{ url_for("sandik_page_bp.members_of_sandik_with_detail_page", sandik_id=sandik.id) }}">Detaylı üte listesi</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+
+    </div>
+
+  </div>
+{% endblock %}
