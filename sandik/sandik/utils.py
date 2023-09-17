@@ -100,6 +100,13 @@ def update_sandik_type(sandik, sandik_type: int, updated_by):
     db.update_sandik(sandik=sandik, type=sandik_type, updated_by=updated_by)
 
 
+def update_sandik(sandik: Sandik, updated_by, contribution_amount, **kwargs):
+    if sandik.contribution_amount != contribution_amount:
+        for member in sandik.get_active_members():
+            update_member_of_sandik(member=member, updated_by=updated_by, contribution_amount=contribution_amount)
+    return db.update_sandik(sandik=sandik, updated_by=updated_by, contribution_amount=contribution_amount, **kwargs)
+
+
 def confirm_membership_application(sandik, web_user, confirmed_by):
     member = db.create_member(sandik=sandik, web_user=web_user, confirmed_by=confirmed_by,
                               contribution_amount=sandik.contribution_amount)
@@ -347,7 +354,8 @@ def add_sandik_rule_to_sandik(condition_formula, value_formula, type, sandik, **
     return db.create_sandik_rule(condition_formula=condition_formula, value_formula=value_formula, type=type,
                                  order=order, sandik=sandik, **kwargs)
 
-def validate_whose_of_sandik(sandik, share_id:int=None, member_id:int=None):
+
+def validate_whose_of_sandik(sandik, share_id: int = None, member_id: int = None):
     member = share = None
     share_kwargs = {}
     if member_id is not None:

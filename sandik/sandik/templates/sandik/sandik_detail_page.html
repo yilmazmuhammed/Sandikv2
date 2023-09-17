@@ -88,7 +88,7 @@
           <div class="panel-heading font-bold">
             <span>Sandik bilgileri</span>
             <span class="pull-right">
-              {{ macros.button("#", "glyphicon glyphicon-pencil") }}
+              {{ macros.button(url=url_for("sandik_page_bp.update_sandik_page", sandik_id=g.sandik.id), icon="glyphicon glyphicon-pencil") }}
             </span>
           </div>
           <div>
