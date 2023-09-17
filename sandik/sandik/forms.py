@@ -55,7 +55,22 @@ class SandikForm(CustomFlaskForm):
 
     def __init__(self, form_title='Kayıt formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
-        self.type.choices += list(Sandik.TYPE.strings.items())
+        if self.type:
+            self.type.choices += list(Sandik.TYPE.strings.items())
+
+    def fill_values_with_sandik(self, sandik):
+        self.name.data = sandik.name
+        if self.type:
+            self.type.data = str(sandik.type)
+        self.contribution_amount.data = int(sandik.contribution_amount)
+        self.detail.data = sandik.detail
+
+
+class UpdateSandikForm(SandikForm):
+    type = None
+
+    def __init__(self, form_title='Sandık bilgielri formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
 
 
 class SandikTypeForm(CustomFlaskForm):

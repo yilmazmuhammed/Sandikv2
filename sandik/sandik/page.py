@@ -46,6 +46,24 @@ def create_sandik_page():
                            page_info=FormPI(title="Sandık oluştur", form=form, active_dropdown='sandik'))
 
 
+@sandik_page_bp.route("/<int:sandik_id>/guncelle", methods=["GET", "POST"])
+@sandik_authorization_required(permission="write")
+def update_sandik_page(sandik_id):
+    form = forms.UpdateSandikForm()
+
+    if form.validate_on_submit():
+        form_data = flask_form_to_dict(request_form=request.form, with_empty_fields=True)
+        utils.update_sandik(sandik=g.sandik, updated_by=current_user, **form_data)
+
+        return redirect(url_for("sandik_page_bp.sandik_detail_page", sandik_id=sandik_id))
+
+    if not form.is_submitted():
+        form.fill_values_with_sandik(sandik=g.sandik)
+
+    return render_template("utils/form_layout.html",
+                           page_info=FormPI(title="Sandık bilgilerini güncelle", form=form, active_dropdown='sandik'))
+
+
 @sandik_page_bp.route("/<int:sandik_id>/detay")
 @to_be_member_or_manager_of_sandik_required
 def sandik_detail_page(sandik_id):
