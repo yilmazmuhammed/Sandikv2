@@ -39,7 +39,12 @@ jQuery(function($){
       {
         "id": `<span title='ID: {{ d.id }}'>{{ loop.revindex }}</span>`,
         "date": "{{ d.sub_receipt_ref.money_transaction_ref.date.strftime("%Y-%m-%d") }}",
-        "name_surname": "{{ d.member_ref.web_user_ref.name_surname }}",
+        "name_surname": `
+          {% if g.type == "management"%}
+            <a href="{{ url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=g.sandik.id, member_id=d.member_ref.id) }}" title="Üye özeti için tıklayınız..." class="font-bold text-primary">{{ d.share_ref.name_surname_share }}</a>
+          {% else %}
+            {{ d.share_ref.name_surname_share }}
+          {% endif %}`,
         "amount": "{{ d.amount }} ₺",
         "status": `<span class="text-{{ "danger" if d.get_unpaid_amount() else "success" }}">{{ "Ödenmedi" if d.get_unpaid_amount() else "Ödendi" }}</span>`,
         "unpaid_amount": `<span class="text-{{ "danger" if d.get_unpaid_amount() else "success" }}">{{ d.get_unpaid_amount() }} ₺</span>`,
@@ -117,7 +122,12 @@ jQuery(function($){
       {
         "id": `<span title='ID: {{ d.id }}'>{{ loop.revindex }}</span>`,
         "date": "{{ d.sub_receipt_ref.money_transaction_ref.date.strftime("%Y-%m-%d") }}",
-        "name_surname": "{{ d.member_ref.web_user_ref.name_surname }}",
+        "name_surname": `
+          {% if g.type == "management"%}
+            <a href="{{ url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=g.sandik.id, member_id=d.member_ref.id) }}" title="Üye özeti için tıklayınız..." class="font-bold text-primary">{{ d.share_ref.name_surname_share }}</a>
+          {% else %}
+            {{ d.share_ref.name_surname_share }}
+          {% endif %}`,
         "amount": "{{ d.amount }} ₺",
         "status": `<span class="text-{{ "danger" if d.get_unpaid_amount() else "success" }}">{{ "Ödenmedi" if d.get_unpaid_amount() else "Ödendi" }}</span>`,
         "unpaid_amount": `<span class="text-{{ "danger" if d.get_unpaid_amount() else "success" }}">{{ d.get_unpaid_amount() }} ₺</span>`,

@@ -96,6 +96,13 @@ class Share(db.Entity):
     def name_surname(self):
         return self.web_user_ref.name_surname
 
+    @property
+    def name_surname_share(self):
+        if self.member_ref.shares_count() > 1:
+            return f"{self.name_surname} - {self.share_order_of_member}"
+        else:
+            return self.name_surname
+
     def sum_of_paid_contributions(self):
         return select(
             sr.amount for sr in self.sub_receipts_set
@@ -789,6 +796,7 @@ class Debt(db.Entity):
         ret = self.to_dict(**kwargs)
         ret["paid_amount"] = self.get_paid_amount()
         ret["unpaid_amount"] = self.get_unpaid_amount()
+        ret["share_order_of_member"] = self.share_ref.share_order_of_member
         return ret
 
 
