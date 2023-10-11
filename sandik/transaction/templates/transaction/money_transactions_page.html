@@ -43,15 +43,15 @@ jQuery(function($){
     "rows": [
     {% for mt in g.money_transactions %}
       {
-        "id": "<span title='ID: {{ mt.id }}'>{{ g.first_index - loop.index + 1 }}</span>",
-        "date": "{{ mt.date.strftime("%Y-%m-%d") }}",
-        "amount": "{{ mt.amount }} ₺",
+        "id": `<span title='ID: {{ mt.id }}'>{{ g.first_index - loop.index + 1 }}</span>`,
+        "date": `{{ mt.date.strftime("%Y-%m-%d") }}`,
+        "amount": `{{ mt.amount }} ₺`,
         "name_surname": `{% if g.type == "management"%}<a href="{{ url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=g.sandik.id, member_id=mt.member_ref.id) }}" title="Üye özeti için tıklayınız..." class="font-bold text-primary">{{ mt.member_ref.web_user_ref.name_surname }}</a>{% else %}{{ mt.member_ref.web_user_ref.name_surname }}{% endif %}`,
-        "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}"Para girişi"{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}"Para çıkışı"{% else %}"---"{% endif %},
-        "detail": "{{ mt.detail }}",
-        "is_fully_distributed": "{{ "Evet" if mt.is_fully_distributed else "Hayır" }}",
+        "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}`Para girişi`{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}`Para çıkışı`{% else %}`---`{% endif %},
+        "detail": `{{ mt.detail | replace("\n", "<br>") | safe  }}`,
+        "is_fully_distributed": `{{ "Evet" if mt.is_fully_distributed else "Hayır" }}`,
         "creation_type": {% if mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}"Manuel"{% elif mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}"Otomatik"{% else %}"---"{% endif %},
-        "bank_transaction": "{{ "Var" if mt.bank_transaction_ref else "Yok" }}",
+        "bank_transaction": `{{ "Var" if mt.bank_transaction_ref else "Yok" }}`,
         "sub_receipts": `
           {% if mt.sub_receipts_set.count() == 0 %}
           İşlem yok<br><span class="font-bold">Para girişinin {{ mt.get_undistributed_amount() }} ₺'si işleme sokulmamış.</span>

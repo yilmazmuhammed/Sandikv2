@@ -39,11 +39,11 @@
           {% endif %}
           {
             "id": `<span title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.index }}</span>`,
-            "term": "{{ p.term }}",
+            "term": `{{ p.term }}`,
             "transaction_type": `{{ transaction_type }}`,
             "amount": `<span title="Toplam miktar:\t{{ p.amount }} \nKalan miktar:\t{{ p.get_unpaid_amount() }}">{{ p.get_unpaid_amount() }} ₺</span>`,
             "is_fully_paid": `{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
-            "detail": "{{ detail }}",
+            "detail": `{{ detail | replace("\n", "<br>")| safe }}`,
           },
         {% endfor %}
         ]
@@ -68,14 +68,14 @@
         "rows": [
           {% for mt in g.summary_data.my_latest_money_transactions %}
             {
-              "id": "<span title='ID: {{ mt.id }}'>{{ loop.index }}</span>",
-              "date": "{{ mt.date.strftime("%Y-%m-%d") }}",
-              "amount": "{{ mt.amount }} ₺",
-              "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}"Para girişi"{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}"Para çıkışı"{% else %}"---"{% endif %},
-              "detail": "{{ mt.detail }}",
-              "is_fully_distributed": "{{ "Evet" if mt.is_fully_distributed else "Hayır" }}",
-              "creation_type": {% if mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}"Manuel"{% elif mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}"Otomatik"{% else %}"---"{% endif %},
-              "bank_transaction": "{{ "Var" if mt.bank_transaction_ref else "Yok" }}",
+              "id": `<span title='ID: {{ mt.id }}'>{{ loop.index }}</span>`,
+              "date": `{{ mt.date.strftime("%Y-%m-%d") }}`,
+              "amount": `{{ mt.amount }} ₺`,
+              "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}`Para girişi`{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}`Para çıkışı`{% else %}`---`{% endif %},
+              "detail": `{{ mt.detail | replace("\n", "<br>")| safe }}`,
+              "is_fully_distributed": `{{ "Evet" if mt.is_fully_distributed else "Hayır" }}`,
+              "creation_type": {% if mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}`Manuel`{% elif mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}`Otomatik`{% else %}`---`{% endif %},
+              "bank_transaction": `{{ "Var" if mt.bank_transaction_ref else "Yok" }}`,
             },
           {% endfor %}
         ]
