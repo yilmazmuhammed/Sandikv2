@@ -331,6 +331,21 @@ class AddShareForm(CustomFlaskForm):
         super().__init__(form_title=form_title, *args, **kwargs)
 
 
+class MemberPreferencesForm(CustomFlaskForm):
+    pay_at_beginning_of_month = BooleanField(
+        label="Ay başında ödemeler işleme konmamış paradan ödensin mi?",
+        default=True
+    )
+
+    submit = SubmitField(label="Kaydet")
+
+    def __init__(self, form_title='Hisse ekleme formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
+
+    def fill_values(self, preferences):
+        self.pay_at_beginning_of_month.data = preferences.get("pay_at_beginning_of_month", True)
+
+
 class SendSmsForm(CustomFlaskForm):
     sms_type = SelectField(
         label="Sms türü:",
