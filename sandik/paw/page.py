@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template, g
+from flask import Blueprint, render_template
 
 from sandik.auth.requirement import admin_required
 from sandik.utils import LayoutPI

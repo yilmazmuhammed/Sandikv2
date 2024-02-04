@@ -30,7 +30,7 @@
         <!-- / buttons -->
 
         {% if current_user.is_authenticated %}
-        <!-- link and dropdown -->
+        <!-- Sandıklarım menüsü -->
         <ul class="nav navbar-nav hidden-sm">
           <li class="dropdown" id="my-sandik-dropdown">
             <a href="#" data-toggle="dropdown" class="dropdown-toggle">
@@ -111,6 +111,10 @@
               </li>
               <li><a href="{{ url_for('general_page_bp.bank_accounts_page') }}">Banka hesaplarım</a></li>
               <li class="divider"></li>
+              {% if g.sandik %}
+              <li><a href="{{ url_for('sandik_page_bp.update_member_preferences_page', sandik_id=g.sandik.id) }}">Sandık tercihlerim</a></li>
+              <li class="divider"></li>
+              {% endif %}
               <li>
                 <a href="{{ url_for('auth_page_bp.logout_page') }}">Çıkış</a>
               </li>

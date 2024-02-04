@@ -174,6 +174,7 @@ class Member(db.Entity):
     received_trust_relationships_set = Set('TrustRelationship', reverse='receiver_member_ref')
     shares_set = Set(Share)
     piece_of_debts_set = Set('PieceOfDebt')
+    preferences = Required(Json, default={"pay_at_beginning_of_month": True})
     composite_key(sandik_ref, web_user_ref)
 
     def get_balance(self):
@@ -525,6 +526,7 @@ class Log(db.Entity):
             first, last = 1300, 1399
             CREATE = first + 1
             UPDATE = first + 2
+            UPDATE_PREFERENCES = first + 11
 
         class SMS_PACKAGE:
             first, last = 1400, 1499
@@ -1126,9 +1128,7 @@ db.generate_mapping(create_tables=True)
 
 def get_updated_fields(new_values, db_object):
     ret = {}
-    print("get_updated_fields .... new_values:", new_values)
     old_values = db_object.to_dict()
-    print("get_updated_fields .... old_values:", old_values)
     for key, value in new_values.items():
         if key in old_values.keys() and value != old_values[key]:
             ret[key] = {"new": value, "old": old_values[key]}

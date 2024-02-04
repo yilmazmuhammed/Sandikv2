@@ -177,6 +177,21 @@ def shares_of_member_form_choices(member, only_active=True):
     return choices
 
 
+def update_member_preferences(member: Member, updated_by, preferences: dict) -> Member:
+    updated_fields = {}
+    for key, value in preferences.items():
+        if key not in member.preferences.keys():
+            updated_fields[f"preferences.{key}"] = {"new": value}
+        elif value != member.preferences[key]:
+            updated_fields[f"preferences.{key}"] = {"new": value, "old": member.preferences[key]}
+
+    Log(web_user_ref=updated_by, type=Log.TYPE.MEMBER.UPDATE_PREFERENCES, logged_member_ref=member,
+        detail=str(updated_fields))
+
+    member.preferences.update(preferences)
+    return member
+
+
 """
 ########################################################################################################################
 ##############################################  Güven bağı fonksiyonları  ##############################################

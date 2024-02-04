@@ -244,9 +244,6 @@ def create_due_contributions_for_member(member: Member, created_by, created_from
     print(f"START: Creating contributions for '{member}'...")
     for share in member.get_active_shares():
         create_due_contributions_for_share(share=share, created_by=created_by, created_from=created_from)
-
-    pay_unpaid_payments_from_untreated_amount_for_member(member=member, pay_future_payments=False,
-                                                         created_by=created_by)
     print(f"FINISH: Creating contributions for '{member}'...")
 
 
@@ -254,6 +251,9 @@ def create_due_contributions_for_sandik(sandik, created_by, created_from=""):
     print(f"START: Creating contributions for '{sandik}'...")
     for member in sandik.get_active_members():
         create_due_contributions_for_member(member=member, created_by=created_by, created_from=created_from)
+        if member.preferences.get("pay_at_beginning_of_month", True):
+            pay_unpaid_payments_from_untreated_amount_for_member(member=member, pay_future_payments=False,
+                                                                 created_by=created_by)
     print(f"FINISH: Creating contributions for '{sandik}'...")
 
 

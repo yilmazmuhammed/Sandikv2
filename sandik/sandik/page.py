@@ -401,6 +401,23 @@ def remove_share_from_member_page(sandik_id, member_id, share_id):
                                                 sandik_id=sandik_id, member_id=member_id))
 
 
+@sandik_page_bp.route("/<int:sandik_id>/tercihlerim", methods=["GET", "POST"])
+@to_be_member_of_sandik_required
+def update_member_preferences_page(sandik_id):
+    form = forms.MemberPreferencesForm()
+
+    if form.validate_on_submit():
+        form_data = flask_form_to_dict(request_form=request.form, boolean_fields=["pay_at_beginning_of_month"])
+        db.update_member_preferences(member=g.member, updated_by=current_user, preferences=form_data)
+        return redirect(url_for("sandik_page_bp.update_member_preferences_page", sandik_id=sandik_id))
+
+    if not form.is_submitted():
+        form.fill_values(preferences=g.member.preferences)
+
+    return render_template("utils/form_layout.html",
+                           page_info=FormPI(title="Üye tercihlerini güncelle", form=form, active_dropdown='members'))
+
+
 """
 ########################################################################################################################
 #############################################  Sandık yetkileri sayfaları  #############################################
