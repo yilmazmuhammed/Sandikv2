@@ -1,12 +1,16 @@
 {% extends "utils/form_layout.html" %}
 
 {% block js_block2 %}
-{{ JSGlue.include() }}
 <script>
   function fill_debt_options() {
-    if($("#member").val()){
+    let member_id = $("#member").val();
+
+    if(member_id){
+      let url = new URL('{{ url_for("transaction_api_bp.get_unpaid_debts_of_member_api", sandik_id=g.sandik.id, _external=True)}}');
+      url.searchParams.set("member", member_id);
+
       jQuery.ajax({
-        url: Flask.url_for("transaction_api_bp.get_unpaid_debts_of_member_api", {sandik_id: {{ g.sandik.id }},member: $("#member").val()}),
+        url: url.href,
         success: function (data) {
           console.log(data);
           $('#debt')

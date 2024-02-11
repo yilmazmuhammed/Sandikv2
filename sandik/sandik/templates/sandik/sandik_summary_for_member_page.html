@@ -2,7 +2,6 @@
 {% import "utils/parts/macros.html" as macros%}
 
 {% block js_block %}
-  {{ JSGlue.include() }}
   <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
 
   <script>
@@ -187,8 +186,10 @@
         return;
       }
 
+      let url = new URL('{{ url_for("transaction_api_bp.get_debt_distribution_api", sandik_id=g.sandik.id, member_id=g.member.id, _external=True)}}');
+      url.searchParams.set("amount", amount);
       jQuery.ajax({
-        url: Flask.url_for("transaction_api_bp.get_debt_distribution_api", {sandik_id: {{ g.sandik.id }}, member_id: {{ g.member.id }}, amount: amount}),
+        url: url.href,
         error: function (xhr, ajaxOptions, thrownError) {
           detailed_debts_table.html(xhr.responseText);
           detailed_debts_table.show();

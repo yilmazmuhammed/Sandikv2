@@ -2,7 +2,6 @@ import os
 from datetime import datetime
 
 from flask import Flask
-from flask_jsglue import JSGlue
 from pony.flask import Pony
 
 from sandik.auth.page import auth_page_bp
@@ -40,10 +39,6 @@ def initialize_database(flask_app):
 
 def initialize_login_manager(flask_app):
     return setup_login_manager(flask_app)
-
-
-def initialize_flask_js_glue(flask_app):
-    return JSGlue(flask_app)
 
 
 def register_blueprints(flask_app):
@@ -85,7 +80,6 @@ def create_app() -> Flask:
     flask_app = initialize_flask()
     initialize_database(flask_app)
     initialize_login_manager(flask_app)
-    initialize_flask_js_glue(flask_app)
     jinja2_integration(flask_app)
     register_blueprints(flask_app)
     return flask_app

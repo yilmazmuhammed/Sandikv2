@@ -1,7 +1,6 @@
 {% extends "utils/form_layout.html" %}
 
 {% block js_block2 %}
-  {{ JSGlue.include() }}
   <script src="{{ url_for('static', filename='my_custom/js/custom.js') }}"></script>
   <script>
   function linked_field(value, field){
