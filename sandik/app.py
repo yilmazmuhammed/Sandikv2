@@ -23,6 +23,7 @@ from sandik.website_transaction.page import website_transaction_page_bp
 os.environ["DATETIME_STR_FORMAT"] = "%Y-%m-%d %H:%M:%S.%f"
 os.environ["RUN_TIME"] = datetime.now().strftime(os.getenv("DATETIME_STR_FORMAT"))
 
+
 def initialize_flask() -> Flask:
     flask_app = Flask(
         __name__, instance_relative_config=True,

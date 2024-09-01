@@ -540,10 +540,14 @@
             {% endif %}
           </div>
 
-          {% if g.sandik.is_type_with_trust_relationship() %}
           <div>
             <table id="from-me-status" class="table">
               <tbody>
+              <tr class="row">
+                <th>Sandık puanı:</th>
+                <td>{{ g.member.calculate_sandik_point() }}</td>
+              </tr>
+              {% if g.sandik.is_type_with_trust_relationship() %}
               <tr class="row">
                 <th>Verilen borç:</th>
                 <td>{{ g.member.get_loaned_amount() }} ₺</td>
@@ -558,11 +562,11 @@
                   <td>{{ g.member.get_balance() }} ₺</td>
                 </tr>
               {% endif %}
+              {% endif %}
               </tbody>
             </table>
           </div>
         </div>
-        {% endif %}
 
       </div>
 

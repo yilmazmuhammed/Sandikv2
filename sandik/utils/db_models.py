@@ -333,6 +333,17 @@ class Member(db.Entity):
     def get_unpaid_contributions(self):
         return select(c for c in Contribution if c.member_ref == self and c.get_unpaid_amount() > 0)
 
+    def calculate_sandik_point(self):
+        total = 0
+        for mt in self.money_transactions_set:
+            if mt.type == MoneyTransaction.TYPE.REVENUE:
+                total += mt.amount
+            elif mt.type == MoneyTransaction.TYPE.EXPENSE:
+                total -= mt.amount
+            else:
+                raise Exception("Ne alaka şimdi")
+        return int(total)
+
 
 class WebUser(db.Entity, UserMixin):
     id = PrimaryKey(int, auto=True)
