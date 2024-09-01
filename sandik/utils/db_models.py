@@ -337,12 +337,12 @@ class Member(db.Entity):
         total = 0
         for mt in self.money_transactions_set:
             if mt.type == MoneyTransaction.TYPE.REVENUE:
-                total += mt.amount
+                total += mt.amount * (date.today() - mt.date).days
             elif mt.type == MoneyTransaction.TYPE.EXPENSE:
-                total -= mt.amount
+                total -= mt.amount * (date.today() - mt.date).days
             else:
                 raise Exception("Ne alaka şimdi")
-        return int(total)
+        return int(total / 1000)
 
 
 class WebUser(db.Entity, UserMixin):
