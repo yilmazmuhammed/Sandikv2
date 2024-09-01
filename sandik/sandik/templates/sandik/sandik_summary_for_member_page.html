@@ -544,7 +544,7 @@
             <table id="from-me-status" class="table">
               <tbody>
               <tr class="row">
-                <th>Sandık puanı:</th>
+                <th>Sandık puanı: <i class='fa-solid fa-circle-info' title='Sandık puanı, sandıkta bulunan bakiyenin, içeride durduğu gün ile çarpılması ile elde edilen puandır. Örneğin bir kişi 1000₺ aidat ödemiş ve 30 gün sonra 750₺ borç almış ise, borç aldıktan 15 gün sonra puanı şu şekilde hesaplanır: 1000₺ * (30+15)gün - 750₺ * 15gün = 33750 puan'></i></th>
                 <td>{{ g.member.calculate_sandik_point() }}</td>
               </tr>
               {% if g.sandik.is_type_with_trust_relationship() %}
