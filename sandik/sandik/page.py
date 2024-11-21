@@ -418,6 +418,14 @@ def update_member_preferences_page(sandik_id):
                            page_info=FormPI(title="Üye tercihlerini güncelle", form=form, active_dropdown='members'))
 
 
+@sandik_page_bp.route("/<int:sandik_id>/borclanma_onceligi")
+@sandik_authorization_required(permission="read")
+def calculate_borrowing_priority(sandik_id):
+    g.ordered_shares = utils.get_borrowing_priority(sandik=g.sandik)
+    return render_template("sandik/borrowing_priority_page.html",
+                           page_info=LayoutPI(title="Borçlanma önceliği", active_dropdown="members"))
+
+
 """
 ########################################################################################################################
 #############################################  Sandık yetkileri sayfaları  #############################################

@@ -392,6 +392,22 @@ def get_debts(whose, only_unpaid=False):
     return debts
 
 
+def get_sub_receipts(whose):
+    filter_str = "lambda sr: "
+    if isinstance(whose, Sandik):
+        filter_str += f" sr.sandik_ref == {whose}"
+    elif isinstance(whose, Member):
+        filter_str += f" sr.member_ref == {whose}"
+    elif isinstance(whose, Share):
+        filter_str += f" sr.share_ref == {whose} or (sr.debt_ref and sr.debt_ref.share_ref == {whose})"
+    else:
+        raise InvalidWhoseType("whose 'Sandik', 'Member' veya 'Share' olmalıdır", errcode=3, create_log=True)
+
+    sub_receipts = db.select_sub_receipts(filter_str).order_by(lambda sr: (sr.creation_time, sr.id))
+
+    return sub_receipts
+
+
 def get_latest_money_transactions(whose, periods_count: int = 0):
     filter_str = "lambda mt: mt"
     order_str = "lambda mt: (desc(mt.date), desc(mt.id))"

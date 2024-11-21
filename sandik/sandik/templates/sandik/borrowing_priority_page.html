@@ -1,0 +1,21 @@
+{% extends "utils/layout.html" %}
+{% import "utils/parts/macros.html" as macros%}
+
+
+{% block content_block %}
+  {{ macros.page_header(page_info.title) }}
+  <div class="wrapper-md">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        {{ page_info.title }}
+      </div>
+      <div class="table table-responsive">
+        <ol>
+          {% for share in g.ordered_shares %}
+          <li>{{ share.name_surname_share }}</li>
+          {% endfor %}
+        </ol>
+      </div>
+    </div>
+  </div>
+{% endblock %}

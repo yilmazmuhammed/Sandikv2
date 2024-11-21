@@ -370,3 +370,35 @@ def validate_whose_of_sandik(sandik, share_id: int = None, member_id: int = None
             raise ThereIsNoShare("Hisse, üye seçildikten sonra gelen listeden seçilmelidir.")
 
     return member, share
+
+
+def get_borrowing_priority(sandik):
+    shares = sandik.get_shares(all_shares=False, is_active=True)
+    ordered_shares: list = shares.order_by(lambda s: s.date_of_opening)[:][:]
+
+    sub_receipts = transaction_utils.get_sub_receipts(whose=sandik)[:]
+
+    last_status = {share: {"contributions": 0, "unpaid_debts": 0} for share in ordered_shares}
+
+    siralama_degistiren_islemler = [(datetime.combine(s.date_of_opening, datetime.min.time()), s) for s in
+                                    ordered_shares]
+
+    for sr in sub_receipts:
+        share = sr.share_ref or sr.debt_ref.share_ref
+        if last_status.get(share):
+            if sr.contribution_ref is not None:
+                last_status[share]["contributions"] += sr.amount
+            elif sr.debt_ref is not None:
+                last_status[share]["unpaid_debts"] += sr.amount
+                if last_status[share]["unpaid_debts"] > last_status[share]["contributions"]:
+                    siralama_degistiren_islemler.append((sr.creation_time, share))
+            elif sr.installment_ref is not None:
+                last_status[share]["unpaid_debts"] -= sr.amount
+
+    siralama_degistiren_islemler = sorted(siralama_degistiren_islemler, key=lambda i: i[0])
+
+    for d, share in siralama_degistiren_islemler:
+        ordered_shares.remove(share)
+        ordered_shares.append(share)
+
+    return ordered_shares
