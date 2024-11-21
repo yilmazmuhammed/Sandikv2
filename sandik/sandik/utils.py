@@ -384,7 +384,13 @@ def get_borrowing_priority(sandik):
                                     ordered_shares]
 
     for sr in sub_receipts:
-        share = sr.share_ref or sr.debt_ref.share_ref
+        if sr.share_ref:
+            share = sr.share_ref
+        elif sr.debt_ref:
+            share = sr.debt_ref.share_ref
+        else:
+            continue
+
         if last_status.get(share):
             if sr.contribution_ref is not None:
                 last_status[share]["contributions"] += sr.amount
