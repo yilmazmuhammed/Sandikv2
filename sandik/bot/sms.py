@@ -6,16 +6,16 @@ from sandik.utils.db_models import SmsPackage
 
 class SmsBot:
     def __init__(self):
-        if not os.getenv("SMS_BOT_PROVIDER"):
-            raise Exception("'SMS_BOT_PROVIDER' is unspecified")
-        elif os.getenv("SMS_BOT_PROVIDER") == "NETGSM":
+        if not os.getenv("SANDIKv2_SMS_BOT_PROVIDER"):
+            raise Exception("'SANDIKv2_SMS_BOT_PROVIDER' is unspecified")
+        elif os.getenv("SANDIKv2_SMS_BOT_PROVIDER") == "NETGSM":
             self.api_provider = NetGsmApi(
-                usercode=os.getenv("SMS_BOT_USERCODE"),
-                password=os.getenv("SMS_BOT_PASSWORD"),
-                default_message_header=os.getenv("SMS_BOT_DEFAULT_MESSAGE_HEADER")
+                usercode=os.getenv("SANDIKv2_SMS_BOT_USERCODE"),
+                password=os.getenv("SANDIKv2_SMS_BOT_PASSWORD"),
+                default_message_header=os.getenv("SANDIKv2_SMS_BOT_DEFAULT_MESSAGE_HEADER")
             )
         else:
-            raise Exception("'SMS_BOT_PROVIDER' is not valid")
+            raise Exception("'SANDIKv2_SMS_BOT_PROVIDER' is not valid")
 
     def send_sms_package(self, sms_package: SmsPackage):
         kwargs = {"message_header": sms_package.header}

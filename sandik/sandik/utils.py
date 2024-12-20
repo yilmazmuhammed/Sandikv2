@@ -129,7 +129,7 @@ def send_sms_from_sandik(sandik, sms_type, created_by):
                 web_users.append(member.web_user_ref)
     else:
         raise InvalidSmsType("Geçersiz sms türü girildi. Lütfen sms türünü listeden seçiniz.")
-    sms_package = db.create_sms_package(text=text, header=os.getenv("SMS_BOT_DEFAULT_MESSAGE_HEADER"),
+    sms_package = db.create_sms_package(text=text, header=os.getenv("SANDIKv2_SMS_BOT_DEFAULT_MESSAGE_HEADER"),
                                         sandik_ref=sandik, web_users_set=web_users,
                                         type=sms_type, created_by=created_by)
     sms_bot = SmsBot()

@@ -40,9 +40,9 @@ class NetGsmHttpGetApi:
 
 
 if __name__ == '__main__':
-    netgsm = NetGsmHttpGetApi(usercode=os.getenv("SMS_BOT_USERCODE"),
-                              password=os.getenv("SMS_BOT_PASSWORD"),
-                              default_message_header=os.getenv("SMS_BOT_DEFAULT_MESSAGE_HEADER"))
+    netgsm = NetGsmHttpGetApi(usercode=os.getenv("SANDIKv2_SMS_BOT_USERCODE"),
+                              password=os.getenv("SANDIKv2_SMS_BOT_PASSWORD"),
+                              default_message_header=os.getenv("SANDIKv2_SMS_BOT_DEFAULT_MESSAGE_HEADER"))
     response = netgsm.send_sms("mesaj \n1", phone_numbers=["905392024175"])
     print("Response:", response)
     print("R text:", response.text)

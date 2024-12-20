@@ -20,10 +20,10 @@ def update_source_code_api():
 def reload_webapp_api():
     domain = request.host
     api_token = os.getenv("API_TOKEN")
-    username = os.getenv("PYTHON_ANYWHERE_USERNAME")
+    username = os.getenv("SANDIKv2_PYTHON_ANYWHERE_USERNAME")
 
     if username is None:
-        return jsonify(result=False, msg="'PYTHON_ANYWHERE_USERNAME' çevresel değişkeni bulunamadı")
+        return jsonify(result=False, msg="'SANDIKv2_PYTHON_ANYWHERE_USERNAME' çevresel değişkeni bulunamadı")
     if api_token is None:
         return jsonify(result=False, msg="'API_TOKEN' çevresel değişkeni bulunamadı")
 

@@ -29,7 +29,7 @@ def initialize_flask() -> Flask:
         __name__, instance_relative_config=True,
         template_folder='utils/templates', static_folder='utils/static', static_url_path='/assets'
     )
-    flask_app.secret_key = os.getenv("SECRET_KEY")
+    flask_app.secret_key = os.getenv("SANDIKv2_SECRET_KEY")
     flask_app.json_encoder = CustomJSONEncoder
     return flask_app
 

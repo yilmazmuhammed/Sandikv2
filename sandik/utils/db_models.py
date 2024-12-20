@@ -374,7 +374,7 @@ class WebUser(db.Entity, UserMixin):
         return self.id
 
     def is_admin(self):
-        return self.email_address == os.getenv("ADMIN_EMAIL_ADDRESS")
+        return self.email_address == os.getenv("SANDIKv2_ADMIN_EMAIL_ADDRESS")
 
     @property
     def name_surname(self):
@@ -1120,16 +1120,16 @@ class WebsiteTransaction(db.Entity):
             return self.web_user_ref.name_surname if self.web_user_ref else self.payer
 
 
-DATABASE_PROVIDER = os.getenv("DATABASE_PROVIDER")
+DATABASE_PROVIDER = os.getenv("SANDIKv2_DATABASE_PROVIDER")
 
 if DATABASE_PROVIDER == "postgres":
-    DATABASE_URL = os.getenv("DATABASE_URL")
+    DATABASE_URL = os.getenv("SANDIKv2_DATABASE_URL")
     db.bind(provider="postgres", dsn=DATABASE_URL)
 elif DATABASE_PROVIDER == "mysql":
-    DATABASE_HOST = os.getenv("DATABASE_HOST")
-    DATABASE_USER = os.getenv("DATABASE_USER")
-    DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
-    DATABASE_DB = os.getenv("DATABASE_DB")
+    DATABASE_HOST = os.getenv("SANDIKv2_DATABASE_HOST")
+    DATABASE_USER = os.getenv("SANDIKv2_DATABASE_USER")
+    DATABASE_PASSWORD = os.getenv("SANDIKv2_DATABASE_PASSWORD")
+    DATABASE_DB = os.getenv("SANDIKv2_DATABASE_DB")
     db.bind(provider="mysql", host=DATABASE_HOST, user=DATABASE_USER, passwd=DATABASE_PASSWORD, db=DATABASE_DB)
 else:
     db.bind(provider="sqlite", filename='database.sqlite', create_db=True)

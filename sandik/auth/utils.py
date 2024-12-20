@@ -64,9 +64,9 @@ def send_renew_password_email(web_user):
     """
     print(email_body)
 
-    email_bot = EmailBot(email_address=os.getenv("EMAIL_BOT_EMAIL_ADDRESS"), password=os.getenv("EMAIL_BOT_PASSWORD"),
-                         smtp_server=os.getenv("EMAIL_BOT_SMTP_SERVER"),
-                         display_name=os.getenv("EMAIL_BOT_DISPLAY_NAME"))
+    email_bot = EmailBot(email_address=os.getenv("SANDIKv2_EMAIL_BOT_EMAIL_ADDRESS"), password=os.getenv("SANDIKv2_EMAIL_BOT_PASSWORD"),
+                         smtp_server=os.getenv("SANDIKv2_EMAIL_BOT_SMTP_SERVER"),
+                         display_name=os.getenv("SANDIKv2_EMAIL_BOT_DISPLAY_NAME"))
     email_bot.connect_server()
     msg = email_bot.create_email_message(to_addresses=web_user.email_address, subject="Parola sıfırlama",
                                          message=email_body, message_type="html")
