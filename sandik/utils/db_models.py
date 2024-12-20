@@ -601,10 +601,13 @@ class Sandik(db.Entity):
     def get_active_members(self):
         return self.members_set.filter(lambda m: m.is_active)
 
-    def shares_count(self, all_shares=False, is_active=True):
+    def get_shares(self, all_shares=False, is_active=True):
         if all_shares:
-            return select(s for s in Share if s.member_ref.sandik_ref == self).count()
-        return select(s for s in Share if s.is_active == is_active and s.member_ref.sandik_ref == self).count()
+            return select(s for s in Share if s.member_ref.sandik_ref == self)
+        return select(s for s in Share if s.is_active == is_active and s.member_ref.sandik_ref == self)
+
+    def shares_count(self, all_shares=False, is_active=True):
+        return self.get_shares(all_shares=all_shares, is_active=is_active).count()
 
     def transactions_count(self):
         contribution_count = select(c for c in Contribution if c.share_ref.member_ref.sandik_ref == self).count()
@@ -875,6 +878,10 @@ class SubReceipt(db.Entity):
     @property
     def member_ref(self):
         return self.money_transaction_ref.member_ref
+
+    @property
+    def sandik_ref(self):
+        return self.member_ref.sandik_ref
 
     def before_insert(self):
         # TODO test et
