@@ -11,7 +11,7 @@ from sandik.bot.email_bot import EmailBot
 from sandik.general import db as general_db
 
 
-def setup_login_manager(app):
+def setup_login_manager(app, login_view=None):
     lm = LoginManager()
 
     @lm.user_loader
@@ -21,7 +21,7 @@ def setup_login_manager(app):
     lm.init_app(app)
     lm.login_message_category = 'danger'
     lm.login_message = u"Lütfen giriş yapınız."
-    lm.login_view = "/giris"
+    lm.login_view = login_view or "/giris"
     return lm
 
 
@@ -64,7 +64,8 @@ def send_renew_password_email(web_user):
     """
     print(email_body)
 
-    email_bot = EmailBot(email_address=os.getenv("SANDIKv2_EMAIL_BOT_EMAIL_ADDRESS"), password=os.getenv("SANDIKv2_EMAIL_BOT_PASSWORD"),
+    email_bot = EmailBot(email_address=os.getenv("SANDIKv2_EMAIL_BOT_EMAIL_ADDRESS"),
+                         password=os.getenv("SANDIKv2_EMAIL_BOT_PASSWORD"),
                          smtp_server=os.getenv("SANDIKv2_EMAIL_BOT_SMTP_SERVER"),
                          display_name=os.getenv("SANDIKv2_EMAIL_BOT_DISPLAY_NAME"))
     email_bot.connect_server()
@@ -80,7 +81,7 @@ def get_web_user_from_password_reset_token(token):
 
     if datetime.now() > datetime(**data.get("expiration_time")):
         raise AuthException("Parola sıfırlama bağlantısının süresi dolmuş. "
-                                "Lütfen tekrar parola sıfırlama isteği gönderiniz.")
+                            "Lütfen tekrar parola sıfırlama isteği gönderiniz.")
 
     web_user = db.get_web_user(email_address=data.get("email_address"))
     if not web_user:

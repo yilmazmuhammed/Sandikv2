@@ -39,7 +39,7 @@ def initialize_database(flask_app):
 
 
 def initialize_login_manager(flask_app):
-    return setup_login_manager(flask_app)
+    return setup_login_manager(flask_app, login_view="auth_page_bp.login_page")
 
 
 def register_blueprints(flask_app):
