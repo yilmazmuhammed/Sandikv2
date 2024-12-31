@@ -62,7 +62,6 @@ def create_sandik_from_sandikv1_data(data, created_by):
     # Kullanıcıları oluştur
     web_users = {}
     for web_user in data["web_users"]:
-        print("web_user:", web_user)
         if not web_user.get("email_address", None):
             web_user["email_address"] = f"{web_user['username']}@sandik.com"
         new_web_user = auth_db.get_web_user(email_address=web_user["email_address"])
@@ -76,7 +75,6 @@ def create_sandik_from_sandikv1_data(data, created_by):
     # Sandık üyelerini oluştur
     members = {}
     for member in data["members"]:
-        print("member:", member)
         new_member = sandik_utils.add_member_to_sandik(
             sandik=sandik, web_user=web_users[member["username"]], added_by=created_by,
             date_of_membership=datetime.strptime(member["date_of_membership"], "%Y-%m-%d").date(),
@@ -87,7 +85,6 @@ def create_sandik_from_sandikv1_data(data, created_by):
     # Hisseler oluşturulur
     shares = {}
     for share in data["shares"]:
-        print("share:", share)
         new_share = sandik_utils.add_share_to_member(
             member=members[share["member_id"]], added_by=created_by, create_contributions=False,
             date_of_opening=datetime.strptime(share["date_of_membership"], "%Y-%m-%d").date(),
@@ -97,7 +94,6 @@ def create_sandik_from_sandikv1_data(data, created_by):
 
     # Aidatlar ve para girişlerini oluşturulur
     for contribution in data["contributions"]:
-        print("contribution:", contribution)
         share = shares[contribution["share_id"]]
         amount = contribution["amount"]
         contribution_created_by = web_users[contribution["created_by"]]
@@ -122,7 +118,6 @@ def create_sandik_from_sandikv1_data(data, created_by):
     money_transactions_of_debts = {}
     # Borçları ve para çıkışlarını oluşturulur
     for debt in data["debts"]:
-        print("debt:", debt)
         share = shares[debt["share_id"]]
         amount = debt["amount"]
         debt_created_by = web_users[debt["created_by"]]
@@ -137,7 +132,6 @@ def create_sandik_from_sandikv1_data(data, created_by):
 
     # Ödemeler ve para girişlerini oluşturulur
     for payment in data["payments"]:
-        print("payment:", payment)
         share = shares[payment["share_id"]]
         amount = payment["amount"]
         payment_created_by = web_users[payment["created_by"]]
@@ -154,7 +148,6 @@ def create_sandik_from_sandikv1_data(data, created_by):
 
     # Ödemeler ve para girişlerini oluşturulur
     for other in data["others"]:
-        print("other:", other)
         share = shares[other["share_id"]]
         amount = other["amount"]
         other_created_by = web_users[other["created_by"]]
@@ -172,7 +165,6 @@ def create_sandik_from_sandikv1_data(data, created_by):
 
     # Hissesi olmayan üyeler silinir
     for member in sandik.members_set:
-        print(member.web_user_ref.name_surname, member.get_active_shares().count())
         if member.get_active_shares().count() == 0:
             sandik_utils.remove_member_from_sandik(member=member, removed_by=created_by)
 

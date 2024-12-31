@@ -52,7 +52,6 @@ def restore_table(table, rows):
             else:
                 pass
 
-        print(table, row)
         table(**row)
 
 
