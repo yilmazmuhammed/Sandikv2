@@ -50,7 +50,7 @@ def login_page():
         if web_user:
             if login_user(web_user, remember=remember_me):
                 flash("Giriş yapıldı", 'success')
-                next_page = request.args.get("next", "/")
+                next_page = get_next_url(request.args, default_url=url_for("general_page_bp.index_page"))
                 return redirect(next_page)
             else:
                 flash("Kullanıcınız henüz onaylanmamış.", 'danger')
