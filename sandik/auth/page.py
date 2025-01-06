@@ -27,8 +27,9 @@ def register_page():
         else:
             try:
                 form_data = flask_form_to_dict(request_form=request.form, exclude=['password_verification'])
-                registered_web_user = db.add_web_user(is_active_=True, **form_data)
-                Notification.WebUserAuth.send_register_web_user_notification(registered_web_user=registered_web_user)
+                web_user = db.add_web_user(is_active_=True, **form_data)
+                Notification.WebUserAuth.send_register_web_user_notification(registered_web_user=web_user)
+
                 flash("Hesap oluşturuldu.", 'success')
                 return redirect(url_for("auth_page_bp.login_page"))
             except RegisterException as ex:
@@ -54,7 +55,7 @@ def login_page():
                 return redirect(next_page)
             else:
                 flash("Kullanıcınız henüz onaylanmamış.", 'danger')
-        else:
+        else:  # If password or username is incorrect
             flash("E-posta adresi veya parola doğru değil", 'danger')
     return render_template("auth/login_page.html", page_info=FormPI(form=form, title="Giriş yap"))
 
@@ -65,6 +66,39 @@ def logout_page():
     logout_user()
     flash("Güvenli çıkış yapıldı", 'success')
     return redirect(url_for("general_page_bp.index_page"))
+
+
+@auth_page_bp.route("/parola-sifirla", methods=['GET', 'POST'])
+def forgotten_password_page():
+    form = forms.ForgottenPasswordForm()
+
+    if form.validate_on_submit():
+        web_user = db.get_web_user(email_address=form.email_address.data)
+        if web_user:
+            utils.send_renew_password_email(web_user=web_user)
+            flash("Parola sıfırlama bağlantısı e-posta adresinize gönderildi.", "success")
+            form = None
+        else:
+            flash("Kullanıcı bulunamadı.", "success")
+
+    return render_template("auth/register_page.html",
+                           page_info=FormPI(title="Parola sıfırlama isteği", form=form))
+
+
+@auth_page_bp.route("/parola-sifirla/<string:token>", methods=['GET', 'POST'])
+def password_reset_page(token):
+    form = forms.PasswordResetForm()
+
+    try:
+        web_user = utils.get_web_user_from_password_reset_token(token=token)
+        if form.validate_on_submit():
+            db.password_reset(web_user=web_user, new_password=form.new_password.data)
+            return redirect(url_for("auth_page_bp.login_page"))
+    except AuthException as e:
+        flash(f"{e}", "danger")
+        form = None
+
+    return render_template("auth/auth_forms.html", page_info=FormPI(title="Parola sıfırlama", form=form))
 
 
 @auth_page_bp.route("/kullanicilar")
@@ -138,36 +172,3 @@ def update_password_page():
     return render_template("utils/form_layout.html",
                            page_info=FormPI(title="Kullanıcı parolasını güncelle", form=form,
                                             active_dropdown="web-users"))
-
-
-@auth_page_bp.route("/parola-sifirla", methods=['GET', 'POST'])
-def forgotten_password_page():
-    form = forms.ForgottenPasswordForm()
-
-    if form.validate_on_submit():
-        web_user = db.get_web_user(email_address=form.email_address.data)
-        if web_user:
-            utils.send_renew_password_email(web_user=web_user)
-            flash("Parola sıfırlama bağlantısı e-posta adresinize gönderildi.", "success")
-            form = None
-        else:
-            flash("Kullanıcı bulunamadı.", "success")
-
-    return render_template("auth/register_page.html",
-                           page_info=FormPI(title="Parola sıfırlama isteği", form=form))
-
-
-@auth_page_bp.route("/parola-sifirla/<string:token>", methods=['GET', 'POST'])
-def password_reset_page(token):
-    form = forms.PasswordResetForm()
-
-    try:
-        web_user = utils.get_web_user_from_password_reset_token(token=token)
-        if form.validate_on_submit():
-            db.password_reset(web_user=web_user, new_password=form.new_password.data)
-            return redirect(url_for("auth_page_bp.login_page"))
-    except AuthException as e:
-        flash(f"{e}", "danger")
-        form = None
-
-    return render_template("auth/auth_forms.html", page_info=FormPI(title="Parola sıfırlama", form=form))

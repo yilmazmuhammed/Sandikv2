@@ -1,3 +1,4 @@
+from datetime import datetime
 from json.decoder import JSONDecodeError
 
 from flask import json
@@ -114,13 +115,12 @@ def flask_form_to_dict(request_form: MultiDict, exclude=None, boolean_fields=Non
             try:
                 result[i] = json.loads(result[i])
             except JSONDecodeError as e:
-                print(type(e), "::", str(e))
                 result[i] = json_loads(result[i])
 
     return result
 
 
-class PhoneNumberValidator:
+class PhoneNumberValidator(object):
     """
     Validates an phone number. Requires phonenumbers package to be
     installed. For ex: pip install phonenumbers.
@@ -183,6 +183,15 @@ class IbanValidator:
             int(data)
         except ValueError:
             raise ValidationError(self.message)
+
+
+def combine_date_and_time_from_form_data(form_data, field_names: list):
+    for i in field_names:
+        if form_data.get(i + '_date') or form_data.get(i + '_time'):
+            d = form_data.pop(i + '_date', "0001-01-01") or "0001-01-01"
+            t = form_data.pop(i + '_time', '00:00') or "00:00"
+            form_data[i + '_time'] = datetime.strptime(f"{d} {t}", "%Y-%m-%d %H:%M")
+    return form_data
 
 
 def input_required_validator(field):

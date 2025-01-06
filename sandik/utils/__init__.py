@@ -1,6 +1,5 @@
 import os
-from datetime import date, time, datetime, timedelta
-
+from datetime import date, datetime, time, timedelta
 from json import JSONEncoder
 
 from flask import g
@@ -35,6 +34,11 @@ class CustomJSONEncoder(JSONEncoder):
         else:
             return list(iterable)
         return JSONEncoder.default(self, obj)
+
+
+def tz_to_tr(coming_time, tz="utc"):
+    if tz.lower() == "utc":
+        return coming_time + timedelta(hours=3)
 
 
 def add_parameters_to_url(url, parameters):
@@ -74,8 +78,3 @@ def get_next_url(args, parameters=None, default_url=""):
     if next_url:
         next_url = add_parameters_to_url(next_url, parameters)
     return next_url
-
-
-def tz_to_tr(coming_time, tz="utc"):
-    if tz.lower() == "utc":
-        return coming_time + timedelta(hours=3)

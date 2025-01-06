@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pony.orm import Set, Optional, Required
 from pony.orm.core import EntityMeta, flush
 
@@ -5,6 +7,7 @@ from sandik.utils.db_models import Sandik, SandikAuthorityType, SandikRule, SmsP
     MoneyTransaction, BankTransaction, Notification, Share, Contribution, TrustRelationship, SubReceipt, Retracted, \
     PieceOfDebt, Log, Installment, Debt, WebsiteTransaction
 
+# DATABASE_TABLES_TO_BACKUP_WITH_ORDER liste sıralaması önemlidir
 DATABASE_TABLES_TO_BACKUP_WITH_ORDER = [
     Sandik, SandikAuthorityType, SandikRule, SmsPackage, WebUser, BankAccount, Member, MoneyTransaction,
     BankTransaction, Notification, Share, Contribution, TrustRelationship, SubReceipt, Debt, Installment, Retracted,
@@ -23,7 +26,7 @@ EXCLUDED_RELATIONS = {
 
 def backup_table(db_table, included_relation_sets):
     rows = []
-    for row in db_table.select().order_by(lambda r: r.id):
+    for row in db_table.select().order_by(db_table._pk_):
 
         with_collections = False
         if db_table in included_relation_sets:
@@ -49,9 +52,15 @@ def restore_table(table, rows):
             elif row[column] is not None and isinstance(column_attr, (Optional, Required)):
                 if isinstance(column_attr.py_type, EntityMeta):
                     row[column] = column_attr.py_type[row[column]]
+                elif column_attr.py_type is datetime:
+                    try:
+                        row[column] = datetime.strptime(row[column], "%a, %d %b %Y %H:%M:%S %Z")
+                    except ValueError:
+                        pass
             else:
-                pass
-
+                if row[column] is not None:
+                    # Buraya girmesi beklenmiyor
+                    pass
         table(**row)
 
 

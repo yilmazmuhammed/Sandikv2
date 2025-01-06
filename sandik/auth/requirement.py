@@ -1,7 +1,7 @@
 from functools import wraps
 
 from flask import abort, g
-from flask_login import current_user, login_required
+from flask_login import login_required, current_user
 
 from sandik.auth import db
 
@@ -11,7 +11,7 @@ def admin_required(func):
     @login_required
     def decorated_view(*args, **kwargs):
         if not current_user.is_admin():
-            abort(401)
+            abort(403, "Bu işlem için yetkiniz bulunmamaktadır. Yönetici yetkisi gerekmektedir.")
         return func(*args, **kwargs)
 
     return decorated_view

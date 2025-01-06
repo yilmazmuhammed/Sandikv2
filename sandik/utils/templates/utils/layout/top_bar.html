@@ -122,14 +122,13 @@
             <!-- / dropdown -->
           </li>
         </ul>
-        <!-- / navbar right -->
         {% else %}
           <ul class="nav navbar-nav navbar-right m-r-md">
             <li><a href="{{ url_for('auth_page_bp.login_page') }}">Giriş yap</a></li>
             <li><a href="{{ url_for('auth_page_bp.register_page') }}">Kayıt ol</a></li>
           </ul>
         {% endif %}
-
+        <!-- / navbar right -->
       </div>
       <!-- / navbar collapse -->
   </header>

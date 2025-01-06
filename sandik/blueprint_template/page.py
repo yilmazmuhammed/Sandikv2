@@ -1,6 +1,8 @@
-from flask import Blueprint, request, render_template, g
+from flask import Blueprint, request, render_template, g, redirect, url_for
 
+from sandik.blueprint_template import forms
 from sandik.utils import LayoutPI
+from sandik.utils.forms import flask_form_to_dict, FormPI
 
 blueprint_template_page_bp = Blueprint(
     'blueprint_template_page_bp', __name__,
@@ -20,3 +22,14 @@ def example_page():
     g.arg0 = request.args.get('arg0')
     g.args = request.args
     return render_template("blueprint_template/example_page.html", page_info=LayoutPI(title="Page title"))
+
+
+@blueprint_template_page_bp.route('/example_form')
+def example_form_page():
+    form = forms.ExampleForm(form_title="Example form")
+
+    if form.validate_on_submit():
+        form_data = flask_form_to_dict(request_form=request.form, exclude=[], boolean_fields=[])
+        g.args = form_data
+        return redirect(url_for("blueprint_template_page_bp.example_form_page"))
+    return render_template("utils/form_layout.html", page_info=FormPI(title="Form page title", form=form))

@@ -17,6 +17,7 @@ backup_page_bp = Blueprint(
 @admin_required
 def restore_backup_page():
     form = forms.RestoreBackupForm()
+
     if form.validate_on_submit():
         try:
             if not form.backup_file.data:

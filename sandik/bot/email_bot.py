@@ -98,8 +98,11 @@ class EmailBot:
 
 
 if __name__ == '__main__':
-    email_bot = EmailBot(email_address="mail1@itu.edu.tr", password="password.", display_name="Görünen isim")
-    msg = email_bot.create_email_message(to_addresses=["mail2@hotmail.com"], subject="Konu",
+    sender_email = ""
+    sender_password = ""
+    to_email = ""
+    email_bot = EmailBot(email_address=sender_email, password=sender_password, display_name="Görünen isim")
+    msg = email_bot.create_email_message(to_addresses=[to_email], subject="Konu",
                                          message="<h1>sa</h1>", message_type="html")
-    email_bot.send_email(["mail2@hotmail.com"], msg=msg)
+    email_bot.send_email([to_email], msg=msg)
     email_bot.disconnect_server()

@@ -5,7 +5,7 @@ Flask-WTF==1.2.1
 Flask==3.0.3
 GitPython==3.1.43
 Jinja2==3.1.4
-passlib~=1.7.4
+passlib==1.7.4
 phonenumbers==8.13.48
 pony==0.7.19
 psycopg2-binary==2.9.10

@@ -41,10 +41,10 @@ jQuery(function($){
 		"rows": [
     {% for web_user in g.web_users %}
       {
-        "id": "<span title='ID: {{ web_user.id }}'>{{ loop.index }}</span>",
-        "email_address": "{{ web_user.email_address }}",
-        "name_surname": "{{ web_user.name_surname }}",
-        "is_active": "{{ "Onaylı" if web_user.is_active else "Onaysız" }}",
+        "id": `<span title='ID: {{ web_user.id }}'>{{ loop.index }}</span>`,
+        "email_address": `{{ web_user.email_address }}`,
+        "name_surname": `{{ web_user.name_surname }}`,
+        "is_active": `{{ "Onaylı" if web_user.is_active else "Onaysız" }}`,
         "change_active":`
           {% if web_user.is_active %}
             {{ macros.switch_button(is_checked=True, confirm_msg="Kullanıcıyı engellemek istediğinizden emin misiniz?", url=url_for("auth_page_bp.block_web_user_page", web_user_id=web_user.id)) }}

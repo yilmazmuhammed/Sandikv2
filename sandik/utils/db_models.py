@@ -380,6 +380,12 @@ class WebUser(db.Entity, UserMixin):
     def name_surname(self):
         return f"{self.name} {self.surname}"
 
+    def display_name(self, both=True):
+        if both:
+            return f"{self.name_surname} <{self.email_address}>"
+        else:
+            return self.name_surname
+
     def my_sandiks(self):
         query1 = select(member.sandik_ref for member in self.members_set)
         query2 = select(sat.sandik_ref for sat in self.sandik_authority_types_set)

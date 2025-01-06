@@ -13,25 +13,21 @@ def get_web_user(password=None, web_user=None, **kwargs) -> WebUser:
     return web_user
 
 
-def get_or_create_bot_user(which):
-    bot_user = WebUser.get(email_address=f'{which}@sandik.com')
-    if not bot_user:
-        bot_user = create_web_user(email_address=f'{which}@sandik.com', password_hash=hasher.hash(f'{which}pw'),
-                                   name=which, surname=which)
-        flush()
-    return bot_user
-
-
 def get_admin_web_users():
     return select_web_users(lambda wu: wu.is_admin())
 
 
-def add_web_user(email_address, password, **kwargs) -> WebUser:
+def add_web_user(email_address, password=None, **kwargs) -> WebUser:
     if get_web_user(email_address=email_address):
         raise EmailAlreadyExist('Bu e-posta adresiyle daha önce kaydolunmuş.')
+    if password is None and not kwargs.get("password_hash"):
+        raise Exception('add_web_user fonksiyonuna \"password\" veya \"password_hash\" verilmek zorundadır')
 
-    return create_web_user(created_by=get_or_create_bot_user(which="anonymous"), log_type=Log.TYPE.WEB_USER.REGISTER,
-                           email_address=email_address, password_hash=hasher.hash(password), **kwargs)
+    password_hash = kwargs.pop("password_hash", None) or hasher.hash(password)
+    web_user = create_web_user(created_by=get_or_create_bot_user(which="anonymous"),
+                               log_type=Log.TYPE.WEB_USER.REGISTER,
+                               email_address=email_address, password_hash=password_hash, **kwargs)
+    return web_user
 
 
 def create_web_user(created_by=None, log_type=Log.TYPE.CREATE, **kwargs) -> WebUser:
@@ -49,9 +45,20 @@ def update_web_user(web_user, updated_by, email_address=None, log_type=Log.TYPE.
         kwargs["password_hash"] = hasher.hash(kwargs.pop("password"))
 
     updated_fields = get_updated_fields(new_values=kwargs, db_object=web_user)
-    Log(web_user_ref=updated_by, type=log_type, logged_web_user_ref=web_user, detail=str(updated_fields))
+    if updated_by:
+        Log(web_user_ref=updated_by, type=log_type, logged_web_user_ref=web_user, detail=str(updated_fields))
     web_user.set(**kwargs)
     return web_user
+
+
+def get_or_create_bot_user(which):
+    domain = "sandik.com"
+    bot_user = WebUser.get(email_address=f'{which}@{domain}')
+    if not bot_user:
+        bot_user = create_web_user(email_address=f'{which}@{domain}', password_hash=hasher.hash(f'{which}pw'),
+                                   name=which, surname=which)
+        flush()
+    return bot_user
 
 
 def password_reset(web_user, new_password):
@@ -84,9 +91,8 @@ def web_users_form_choices(exclusions=None, only_active_user=False):
     if exclusions is None:
         exclusions = []
     choices = [
-        (wu.id, f"{wu.name_surname} <{wu.email_address}>")
-        for wu in WebUser.select(
-            lambda wu: wu not in exclusions and only_active_user <= wu.is_active
-        ).order_by(lambda wu: wu.name_surname.lower())
+        (wu.id, wu.display_name())
+        for wu in WebUser.select(lambda wu: wu not in exclusions and only_active_user <= wu.is_active).order_by(
+            lambda wu: wu.name_surname.lower())
     ]
     return choices

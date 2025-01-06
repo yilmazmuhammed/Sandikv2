@@ -6,7 +6,6 @@ from sandik.utils.forms import CustomFlaskForm
 
 
 class RestoreBackupForm(CustomFlaskForm):
-
     backup_file = FileField(
         "Yedek dosyası (json):",
         validators=[
