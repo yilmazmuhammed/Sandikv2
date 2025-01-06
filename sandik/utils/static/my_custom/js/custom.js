@@ -28,6 +28,26 @@ function setUrlVars(key, value)
   return root_url;
 }
 
+/**
+ * URL şablonunu dinamik değişkenlerle doldurur.
+ * @param {string} template - Flask'ten gelen URL şablonu (örneğin, "/example/<var1>/details/<var2>").
+ * @param {Object} variables - Yer tutucuları doldurmak için gereken değerleri içeren bir nesne.
+ * @returns {string} - Dinamik değişkenlerle tamamlanmış URL.
+ *
+ * Example usage: flask_url_for("{{ url_for('example', var1='<var1>', var2='<var2>') }}", { var1: "dynamicValue1", var2: 42 });
+ */
+function flask_url_for(template, variables) {
+  let filledUrl = template;
+
+  // Yer tutucuları doldur
+  for (const [key, value] of Object.entries(variables)) {
+    const placeholder = `%3C${key}%3E`; // `<${key}>`
+    filledUrl = filledUrl.replace(placeholder, encodeURIComponent(value));
+  }
+
+  return filledUrl;
+}
+
 $(document)
   .on("click", "a.dialog-confirm", function (){
     const message = $(this).attr("confirm-message") || "Bu işlemi yapmak istediğinizden emin misiniz?";
