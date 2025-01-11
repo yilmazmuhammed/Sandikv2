@@ -1,8 +1,9 @@
 import os
 from datetime import datetime
 
-from flask import Flask
+from flask import Flask, render_template
 from pony.flask import Pony
+from werkzeug.exceptions import HTTPException
 
 from sandik.auth.page import auth_page_bp
 from sandik.auth.utils import setup_login_manager
@@ -77,11 +78,38 @@ def jinja2_integration(flask_app):
     flask_app.jinja_env.globals.update(set_parameters_of_url=set_parameters_of_url)
 
 
+def initialize_exceptions_handlers(flask_app):
+    HTTP_ERRORS = {
+        401: {"title": "Kimlik Doğrulama Başarısız",
+              "msg": "Bu sayfaya erişebilmek için lütfen giriş yapınız.",
+              "style": {"text-color": "#e53e3e", "btn-hover": "#c53030"}},
+        403: {"title": "Yetkisiz Erişim",
+              "msg": "Bu sayfaya erişim izniniz yok. Lütfen geri dönün veya yetkili kişiyle iletişime geçin.",
+              "style": {"text-color": "#e53e3e", "btn-hover": "#c53030"}},
+        404: {"title": "Sayfa Bulunamadı",
+              "msg": "Üzgünüz, aradığınız sayfa mevcut değil veya kaldırılmış olabilir.",
+              "style": {"text-color": "#3182ce", "btn-hover": "#2b6cb0"}},
+    }
+
+    @flask_app.errorhandler(HTTPException)
+    def unauthorized_error(e: HTTPException):
+        http_error: dict = HTTP_ERRORS[e.code]
+        http_error["code"] = e.code
+
+        if e.description != type(e).description:
+            http_error["msg"] = e.description
+
+        return render_template("utils/http_errors.html", http_error=http_error), e.code
+
+    return flask_app
+
+
 def create_app() -> Flask:
     flask_app = initialize_flask()
     initialize_database(flask_app)
     initialize_login_manager(flask_app)
     jinja2_integration(flask_app)
+    initialize_exceptions_handlers(flask_app)
     register_blueprints(flask_app)
     return flask_app
 
