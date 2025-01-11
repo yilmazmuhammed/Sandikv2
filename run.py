@@ -1,6 +1,9 @@
 import os
+import sys
 
 from dotenv import load_dotenv
+
+sys.path.append(os.path.dirname(__file__))
 
 if os.getenv("FLASK_DEBUG"):
     load_dotenv(os.path.join(os.path.dirname(__file__), '.env_debug'), override=True)
