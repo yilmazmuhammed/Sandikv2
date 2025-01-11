@@ -7,7 +7,7 @@ import requests
 
 def git_pull(directory=None):
     if directory is None:
-        directory = os.getenv("PROJECT_DIRECTORY")
+        directory = os.getenv("SANDIKv2_PROJECT_DIRECTORY")
     ret = git.cmd.Git(directory).pull()
     return ret
 

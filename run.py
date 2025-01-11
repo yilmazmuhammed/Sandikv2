@@ -9,7 +9,7 @@ else:
 
 from sandik.app import create_app
 
-os.environ["PROJECT_DIRECTORY"] = os.path.dirname(__file__)
+os.environ["SANDIKv2_PROJECT_DIRECTORY"] = os.path.dirname(__file__)
 
 app = create_app()
 if __name__ == '__main__':

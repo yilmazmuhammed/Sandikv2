@@ -19,13 +19,13 @@ def update_source_code_api():
 @admin_required
 def reload_webapp_api():
     domain = request.host
-    api_token = os.getenv("API_TOKEN")
-    username = os.getenv("SANDIKv2_PYTHON_ANYWHERE_USERNAME")
+    api_token = os.getenv("API_TOKEN")  # pythonanywhere sunucusunun varsayılan ortam değişkenlerinden gelmektedir
+    username = os.getenv("USER")  # pythonanywhere sunucusunun varsayılan ortam değişkenlerinden gelmektedir
 
     if username is None:
-        return jsonify(result=False, msg="'SANDIKv2_PYTHON_ANYWHERE_USERNAME' çevresel değişkeni bulunamadı")
+        return jsonify(result=False, msg="PythonAnyWhere kullanıcısı için 'USER' çevresel değişkeni bulunamadı")
     if api_token is None:
-        return jsonify(result=False, msg="'API_TOKEN' çevresel değişkeni bulunamadı")
+        return jsonify(result=False, msg="PythonAnyWhere uygulaması için 'API_TOKEN' çevresel değişkeni bulunamadı")
 
     paw_api = utils.PythonAnywhereApi(token=api_token, username=username, domain=domain)
     response = paw_api.webapp_reload()
