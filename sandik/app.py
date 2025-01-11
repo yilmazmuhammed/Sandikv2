@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 
 from flask import Flask, render_template
+from flask_login import LoginManager
 from pony.flask import Pony
 from werkzeug.exceptions import HTTPException
 
@@ -35,15 +36,15 @@ def initialize_flask() -> Flask:
     return flask_app
 
 
-def initialize_database(flask_app):
+def initialize_database(flask_app: Flask) -> Pony:
     return Pony(flask_app)
 
 
-def initialize_login_manager(flask_app):
+def initialize_login_manager(flask_app: Flask) -> LoginManager:
     return setup_login_manager(flask_app, login_view="auth_page_bp.login_page")
 
 
-def register_blueprints(flask_app):
+def register_blueprints(flask_app: Flask) -> Flask:
     flask_app.register_blueprint(general_page_bp, url_prefix="/")
     flask_app.register_blueprint(general_api_bp, url_prefix="/api/")
     flask_app.register_blueprint(auth_page_bp, url_prefix="/")
@@ -67,7 +68,7 @@ def catch_exception(func, default_value, *args, **kwargs):
         return default_value
 
 
-def jinja2_integration(flask_app):
+def jinja2_integration(flask_app: Flask) -> Flask:
     flask_app.jinja_env.globals.update(MoneyTransaction=MoneyTransaction)
     flask_app.jinja_env.globals.update(isinstance=isinstance)
     flask_app.jinja_env.globals.update(Installment=Installment)
@@ -76,9 +77,10 @@ def jinja2_integration(flask_app):
     flask_app.jinja_env.globals.update(SandikRule=SandikRule)
     flask_app.jinja_env.globals.update(catch_exception=catch_exception)
     flask_app.jinja_env.globals.update(set_parameters_of_url=set_parameters_of_url)
+    return flask_app
 
 
-def initialize_exceptions_handlers(flask_app):
+def initialize_exceptions_handlers(flask_app: Flask) -> Flask:
     HTTP_ERRORS = {
         401: {"title": "Kimlik Doğrulama Başarısız",
               "msg": "Bu sayfaya erişebilmek için lütfen giriş yapınız.",

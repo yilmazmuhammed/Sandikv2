@@ -30,7 +30,7 @@ function setUrlVars(key, value) {
  * @param {Object} variables - Yer tutucuları doldurmak için gereken değerleri içeren bir nesne.
  * @returns {string} - Dinamik değişkenlerle tamamlanmış URL.
  *
- * Example usage: flask_url_for("{{ url_for('example', var1='<var1>', var2='<var2>') }}", { var1: "dynamicValue1", var2: 42 });
+ * @Example flask_url_for("{{ url_for('example', var1='<var1>', var2='<var2>') }}", { var1: "dynamicValue1", var2: 42 });
  */
 function flask_url_for(template, variables) {
   let filledUrl = template;

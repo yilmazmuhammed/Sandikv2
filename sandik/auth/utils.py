@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timedelta
 
 import jwt
-from flask import current_app, url_for
+from flask import current_app, url_for, Flask
 from flask_login import LoginManager
 
 from sandik.auth import db
@@ -11,7 +11,7 @@ from sandik.bot.email_bot import EmailBot
 from sandik.general import db as general_db
 
 
-def setup_login_manager(app, login_view=None):
+def setup_login_manager(app: Flask, login_view=None):
     lm = LoginManager()
 
     @lm.user_loader

@@ -9,7 +9,7 @@
           <i class="glyphicon glyphicon-align-justify"></i>
         </button>
         <!-- brand -->
-        <a href="{{ url_for('general_page_bp.home_page') }}" class="navbar-brand text-lt">
+        <a href="{{ url_for("general_page_bp.home_page") }}" class="navbar-brand text-lt">
 {#          <i class="fa fa-btc"></i>#}
           <img src="{{ url_for('static', filename='my_custom/img/logo.png') }}" alt="." style="border-radius: 30%; max-height: 30px;">
           <span class="hidden-folded m-l-xs">{{ page_info.short_website_name }}</span>
@@ -116,7 +116,7 @@
               <li class="divider"></li>
               {% endif %}
               <li>
-                <a href="{{ url_for('auth_page_bp.logout_page') }}">Çıkış</a>
+                <a href="{{ url_for("auth_page_bp.logout_page") }}">Çıkış</a>
               </li>
             </ul>
             <!-- / dropdown -->
