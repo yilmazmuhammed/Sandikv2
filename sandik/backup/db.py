@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 
 from pony.orm import Set, Optional, Required
 from pony.orm.core import EntityMeta, flush
@@ -52,7 +52,7 @@ def restore_table(table, rows):
             elif row[column] is not None and isinstance(column_attr, (Optional, Required)):
                 if isinstance(column_attr.py_type, EntityMeta):
                     row[column] = column_attr.py_type[row[column]]
-                elif column_attr.py_type is datetime:
+                elif column_attr.py_type in [date, datetime]:
                     try:
                         row[column] = datetime.strptime(row[column], "%a, %d %b %Y %H:%M:%S %Z")
                     except ValueError:

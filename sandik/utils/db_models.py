@@ -1174,4 +1174,7 @@ def get_paging_variables(entities_query, page_size, page_num):
 if __name__ == '__main__':
     with db_session:
         # Initialize operations
+        for entity in db.entities.values():
+            data = entity.select()[:]
+            print(f"Tablo: {entity.__name__}, Kayıt Sayısı: {len(data)}")
         pass
