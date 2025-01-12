@@ -31,6 +31,8 @@ class SenderEmail:
             return "smtp.gmail.com:587"
         elif email_address.endswith("itu.edu.tr"):
             return "outgoing.itu.edu.tr:587"
+        elif email_address.endswith("outlook.com"):
+            return "smtp.office365.com:587"
         else:
             return ""
 
