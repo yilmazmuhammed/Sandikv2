@@ -526,7 +526,7 @@ def remove_contribution(contribution, removed_by):
 
 def validate_money_transaction_for_expense(mt_type: int, use_untreated_amount: bool, whose, amount=None,
                                            number_of_installment: int = None, start_period: str = None,
-                                           mt_date: date = None):
+                                           mt_date: date = None, validate_noi: bool = True):
     if not isinstance(whose, Member) and not isinstance(whose, Share):
         raise InvalidMoneyTransactionValidation("'whose' alanı Share yada Member olmalıdır.")
     if bool(start_period) and not bool(mt_date):
@@ -541,7 +541,7 @@ def validate_money_transaction_for_expense(mt_type: int, use_untreated_amount: b
                     f"{'Üye' if isinstance(whose, Member) else 'Share'} bu miktarı alamaz. En fazla {max_amount}₺ alabilir."
                 )
 
-        if number_of_installment:
+        if number_of_installment and validate_noi:
             max_noi = sandik_preferences.max_number_of_installment(sandik=whose.sandik_ref, amount=amount)
             if number_of_installment > max_noi:
                 raise MaximumInstallmentExceeded(f"{amount} için en fazla {max_noi} taksit yapılabilir.")

@@ -185,8 +185,8 @@ def add_custom_debt_by_manager_page(sandik_id):
 
             utils.validate_money_transaction_for_expense(
                 mt_type=MoneyTransaction.TYPE.EXPENSE, use_untreated_amount=use_untreated_amount,
-                amount=form.amount.data, whose=share, number_of_installment=form.number_of_installment.data,
-                start_period=form.start_period.data, mt_date=form.date.data
+                amount=form.amount.data, whose=share, start_period=form.start_period.data, mt_date=form.date.data,
+                number_of_installment=form.number_of_installment.data, validate_noi=False
             )
 
             debt_mt = utils.add_money_transaction(
