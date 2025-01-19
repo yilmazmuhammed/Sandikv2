@@ -15,10 +15,10 @@
       .ready(function () {
         /* ------------------------ Uluslararası telefon formatı için tel alanları ----------------------- */
         let inputs = document.getElementsByTagName('input');
-        for(let i = 0; i < inputs.length; i++) {
-          if(inputs[i].type.toLowerCase() == 'tel') {
+        for (let i = 0; i < inputs.length; i++) {
+          if (inputs[i].type.toLowerCase() == 'tel') {
             fancy_phones[inputs[i].id] = window.intlTelInput(inputs[i], {
-              initialCountry:"tr",
+              initialCountry: "tr",
               separateDialCode: true,
               utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/16.0.4/js/utils.js",
             });
@@ -28,18 +28,18 @@
 
         /* --------------------------- Form değerlerini otomatik doldurma/seçme --------------------------- */
         let parameters = getUrlVars();
-        for(let i=0; i<parameters.length; i++){
-          console.log(parameters[i],"->",parameters[parameters[i]]);
-          $("#"+parameters[i]).val(parameters[parameters[i]]);
+        for (let i = 0; i < parameters.length; i++) {
+          console.log(parameters[i], "->", parameters[parameters[i]]);
+          $("#" + parameters[i]).val(parameters[parameters[i]]);
         }
         /* ------------------------------------------------------------------------------------------------ */
       })
-      .on("submit", "form", function (){
+      .on("submit", "form", function () {
         /* ----------------- Uluslararası telefon formatı için tel alanları gönderilirken ----------------- */
         let inputs = document.getElementsByTagName('input');
-        for(let i = 0; i < inputs.length; i++) {
-          if(inputs[i].type.toLowerCase() === 'tel') {
-            $("#"+inputs[i].id).val(fancy_phones[inputs[i].id].getNumber());
+        for (let i = 0; i < inputs.length; i++) {
+          if (inputs[i].type.toLowerCase() === 'tel') {
+            $("#" + inputs[i].id).val(fancy_phones[inputs[i].id].getNumber());
           }
         }
         /* ------------------------------------------------------------------------------------------------ */
@@ -55,19 +55,25 @@
         <div class="panel panel-default" style="max-width:600px; margin: auto;">
           <div class="panel-heading font-bold">{{ page_info.form.form_title }}</div>
           <div class="panel-body">
-{#          TODO flash mesajlarını include ile al include ile #}
+            {#          TODO flash mesajlarını include ile al include ile #}
             {% if get_flashed_messages(category_filter=["success", "warning"]) %}
               {% for category, msg in get_flashed_messages(with_categories=true, category_filter=["success", "warning"]) %}
-                <div class="col-12 alert alert-{{category}} text-center" role="alert">
+                <div class="col-12 alert alert-{{ category }} text-center" role="alert">
                   {{ msg|safe }}
                 </div>
               {% endfor %}
             {% endif %}
-            {%  with form = page_info.form, errors = get_flashed_messages(category_filter=["error", "danger"])  %}
-            {%  include 'utils/parts/form.html' %}
-            {%  endwith %}
+            {% with form = page_info.form, errors = get_flashed_messages(category_filter=["error", "danger"]) %}
+              {% include 'utils/parts/form.html' %}
+            {% endwith %}
           </div>
         </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-sm-offset-3 col-sm-6">
+        {% block content_under_form_block %}
+        {% endblock %}
       </div>
     </div>
   </div>

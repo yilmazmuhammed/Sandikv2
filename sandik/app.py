@@ -77,6 +77,17 @@ def jinja2_integration(flask_app: Flask) -> Flask:
     flask_app.jinja_env.globals.update(SandikRule=SandikRule)
     flask_app.jinja_env.globals.update(catch_exception=catch_exception)
     flask_app.jinja_env.globals.update(set_parameters_of_url=set_parameters_of_url)
+
+    @flask_app.template_filter('tr_number_format')
+    def tr_number_format(value):
+        # Ondalık kısım yoksa sadece tam kısmı döndür
+        if value == int(value):
+            return f"{int(value):,}".replace(",", ".")
+        # Ondalık kısım varsa, iki basamak göster
+        else:
+            integer_part, decimal_part = f"{value:,.2f}".split(".")
+            return f"{integer_part.replace(',', '.')}," + decimal_part
+
     return flask_app
 
 

@@ -1,45 +1,49 @@
 {% extends "utils/form_layout.html" %}
 
 {% block js_block2 %}
-<script>
-  $(document)
-    .on("submit", "form", function (e){
-      let url = new URL('{{ url_for("sandik_api_bp.member_financial_status_api", sandik_id=g.sandik.id, _external=True)}}');
-      url.searchParams.set("member", $("#member").val());
+  <script>
+    $(document)
+      .on("submit", "form", function (e) {
+        let url = new URL('{{ url_for("sandik_api_bp.member_financial_status_api", sandik_id=g.sandik.id, _external=True)}}');
+        url.searchParams.set("member", $("#member").val());
 
-      jQuery.ajax({
-        url: url.href,
-        error: function () {
-          alert("Tekrar deneyiniz...");
-        },
-        success: function (data) {
-          console.log(data);
-          {# revenue=para girişi, expense=para çıkışı #}
-          if($("#type").val() == {{ MoneyTransaction.TYPE.REVENUE }}){
-            console.log($("#amount").val(), data.sum_of_unpaid_and_due_payments);
-            if($("#amount").val() > data.sum_of_unpaid_and_due_payments && data.sum_of_future_and_unpaid_payments > 0){
-              if(confirm("Vadesi gelmiş ödemeler tamamlandıktan sonra kalan para ile vadesi gelmemiş ödemeler ödensin mi?\n\nNot: Vazgeç butonuna basılırsa vadesi gelmemiş ödemeler için kullanılmaz ve artan para işleme konmaz.")){
-                $("#pay_future_payments").val(true);
+        jQuery.ajax({
+          url: url.href,
+          error: function () {
+            alert("Tekrar deneyiniz...");
+          },
+          success: function (data) {
+            console.log(data);
+            {# revenue=para girişi, expense=para çıkışı #}
+            if ($("#type").val() == {{ MoneyTransaction.TYPE.REVENUE }}) {
+              console.log($("#amount").val(), data.sum_of_unpaid_and_due_payments);
+              if ($("#amount").val() > data.sum_of_unpaid_and_due_payments && data.sum_of_future_and_unpaid_payments > 0) {
+                if (confirm("Vadesi gelmiş ödemeler tamamlandıktan sonra kalan para ile vadesi gelmemiş ödemeler ödensin mi?\n\nNot: Vazgeç butonuna basılırsa vadesi gelmemiş ödemeler için kullanılmaz ve artan para işleme konmaz.")) {
+                  $("#pay_future_payments").val(true);
+                }
+              }
+            } else if ($("#type").val() == {{ MoneyTransaction.TYPE.EXPENSE }}) {
+              if (data.undistributed_amount > 0) {
+                let msg;
+                if (data.undistributed_amount >= $("#amount").val()) {
+                  msg = "Üyenin sandıkta işleme konmamış parası (" + data.undistributed_amount.toString() + " tl) bulunmakta. Üyeye borç verilirmesi yerine bu bakiye kullanılsın mı?\n\nNot: Vazgeç butonuna basılırsa üyenin sandıkta bulunan fazla parası kullanılmadan borç işlemi eklenir."
+                } else {
+                  msg = "Üyenin sandıkta fazla parası (" + data.undistributed_amount.toString() + " tl) bulunmakta. Üyeye borç verilirken önce bu para kullanılarak, kalan miktar borç olarak eklensin mi?\n\nNot: Vazgeç butonuna basılırsa üyenin sandıkta bulunan fazla parası kullanılmadan borç işlemi eklenir."
+                }
+                if (confirm(msg)) {
+                  $("#use_untreated_amount").val(true);
+                }
               }
             }
-          }
-          else if($("#type").val() == {{ MoneyTransaction.TYPE.EXPENSE }}){
-            if(data.undistributed_amount > 0) {
-              let msg;
-              if(data.undistributed_amount >= $("#amount").val()) {
-                msg = "Üyenin sandıkta işleme konmamış parası (" + data.undistributed_amount.toString() + " tl) bulunmakta. Üyeye borç verilirmesi yerine bu bakiye kullanılsın mı?\n\nNot: Vazgeç butonuna basılırsa üyenin sandıkta bulunan fazla parası kullanılmadan borç işlemi eklenir."
-              }
-              else {
-                msg = "Üyenin sandıkta fazla parası (" + data.undistributed_amount.toString() + " tl) bulunmakta. Üyeye borç verilirken önce bu para kullanılarak, kalan miktar borç olarak eklensin mi?\n\nNot: Vazgeç butonuna basılırsa üyenin sandıkta bulunan fazla parası kullanılmadan borç işlemi eklenir."
-              }
-              if(confirm(msg)){
-                $("#use_untreated_amount").val(true);
-              }
-            }
-          }
-        },
-        async: false,
+          },
+          async: false,
+        });
       });
-    });
-</script>
+  </script>
+{% endblock %}
+
+{% block content_under_form_block %}
+  <div class="text-center">
+    Sandık son durumu: {{ g.sandik.get_final_status()|tr_number_format }} ₺
+  </div>
 {% endblock %}

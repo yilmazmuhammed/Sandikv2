@@ -119,7 +119,7 @@
               </tr>
               <tr class="row">
                 <th>Aidat miktarı:</th>
-                <td>{{ g.sandik.contribution_amount|round(0) }}</td>
+                <td>{{ g.sandik.contribution_amount|tr_number_format }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Durumu:</th>
@@ -154,23 +154,23 @@
               <tbody>
               <tr class="row">
                 <th>Toplanan aidat:</th>
-                <td>{{ g.sandik.sum_of_contributions() }} ₺</td>
+                <td>{{ g.sandik.sum_of_contributions()|tr_number_format }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Verilen borç:</th>
-                <td>{{ g.sandik.sum_of_debts() }} ₺</td>
+                <td>{{ g.sandik.sum_of_debts()|tr_number_format }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Toplanan taksit:</th>
-                <td>{{ g.sandik.sum_of_paid_installments() }} ₺</td>
+                <td>{{ g.sandik.sum_of_paid_installments()|tr_number_format }} ₺</td>
               </tr>
               <tr class="row">
                 <th>İşleme konmamış:</th>
-                <td>{{ g.sandik.total_of_undistributed_amount() }} ₺</td>
+                <td>{{ g.sandik.total_of_undistributed_amount()|tr_number_format }} ₺</td>
               </tr>
               <tr class="row">
                 <th>Son durum:</th>
-                <td>{{ g.sandik.get_final_status() }} ₺</td>
+                <td>{{ g.sandik.get_final_status()|tr_number_format }} ₺</td>
               </tr>
               </tbody>
             </table>

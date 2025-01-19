@@ -47,16 +47,16 @@
           {
             "index": `<span title='ID: {{ member.id }}'>{{ loop.index }}</span>`,
             "name_surname": `{{ member.web_user_ref.name_surname }}`,
-            "sum_of_paid_contributions": `{{ member.sum_of_paid_contributions() }} ₺`,
-            "sum_of_debts": `{{ member.sum_of_debts() }} ₺`,
-            "sum_of_paid_installments": `{{ member.sum_of_paid_installments() }} ₺`,
-            "total_of_undistributed_amount": `{{ member.total_of_undistributed_amount() }} ₺`,
-            "sum_of_unpaid_amount_of_debts": `{{ member.sum_of_unpaid_amount_of_debts() }} ₺`,
+            "sum_of_paid_contributions": `{{ member.sum_of_paid_contributions()|tr_number_format }} ₺`,
+            "sum_of_debts": `{{ member.sum_of_debts()|tr_number_format }} ₺`,
+            "sum_of_paid_installments": `{{ member.sum_of_paid_installments()|tr_number_format }} ₺`,
+            "total_of_undistributed_amount": `{{ member.total_of_undistributed_amount()|tr_number_format }} ₺`,
+            "sum_of_unpaid_amount_of_debts": `{{ member.sum_of_unpaid_amount_of_debts()|tr_number_format }} ₺`,
             {#"end_of_month": `... ₺`,#}
             {#"end_of_mil": `... ₺`,#}
-            "max_amount_can_borrow": `{{ catch_exception(member.max_amount_can_borrow, default_value="---", use_untreated_amount=False, dont_care_sandik_status=True) }} ₺`,
+            "max_amount_can_borrow": `{{ catch_exception(member.max_amount_can_borrow, default_value="---", use_untreated_amount=False, dont_care_sandik_status=True)|tr_number_format }} ₺`,
             "shares_count": `{{ member.shares_count() }}`,
-            "sandik_points": `{{ member.calculate_sandik_point() }} sp`,
+            "sandik_points": `{{ member.calculate_sandik_point()|tr_number_format }} sp`,
             "is_active": `{{ "Aktif" if member.is_active else "Pasif" }}`,
             "date_of_membership": `{{ member.date_of_membership.strftime("%Y-%m-%d") }}`,
             {% if current_user.is_authenticated and (current_user.is_admin() or current_user.has_permission(sandik=g.sandik, permission="read")) %}

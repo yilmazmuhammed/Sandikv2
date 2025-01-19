@@ -45,7 +45,7 @@ jQuery(function($){
       {
         "id": `<span title='ID: {{ mt.id }}'>{{ g.first_index - loop.index + 1 }}</span>`,
         "date": `{{ mt.date.strftime("%Y-%m-%d") }}`,
-        "amount": `{{ mt.amount }} ₺`,
+        "amount": `{{ mt.amount|tr_number_format }} ₺`,
         "name_surname": `{% if g.type == "management"%}<a href="{{ url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=g.sandik.id, member_id=mt.member_ref.id) }}" title="Üye özeti için tıklayınız..." class="font-bold text-primary">{{ mt.member_ref.web_user_ref.name_surname }}</a>{% else %}{{ mt.member_ref.web_user_ref.name_surname }}{% endif %}`,
         "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}`Para girişi`{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}`Para çıkışı`{% else %}`---`{% endif %},
         "detail": `{{ mt.detail | replace("\n", "<br>") | safe  }}`,
@@ -80,16 +80,16 @@ jQuery(function($){
                     <td>{% if sr.share_ref %}Hisse {{ sr.share_ref.share_order_of_member }}{% else %}-{% endif %}</td>
                     <td title='ID: {{ (sr.installment_ref or sr.contribution_ref).id }}'>{% if sr.installment_ref %}Taksit{% elif sr.contribution_ref %}Aidat{% elif sr.debt_ref %}Borç{% elif sr.revenue_retracted_ref %}Geri alınmış{% elif sr.expense_retracted_ref %}Geri alınmış{% else %}---{% endif %}</td>
                     <td>{% if sr.installment_ref or sr.contribution_ref %}{{ (sr.installment_ref or sr.contribution_ref).term }}{% elif sr.debt_ref %}{{ sr.money_transaction_ref.date.strftime("%Y-%m-%d") }}{% elif sr.revenue_retracted_ref or sr.expense_retracted_ref %}-{% else %}---{% endif %}</td>
-                    <td>{{ (sr.installment_ref or sr.contribution_ref or sr.debt_ref or sr.revenue_retracted_ref or sr.expense_retracted_ref ).amount }} ₺</td>
-                    <td title="Kalan miktar, bu para girişinden sonra kalan miktar değil, sandık işleminin güncel durumudur.">{% if sr.installment_ref or sr.contribution_ref %}{{ (sr.installment_ref or sr.contribution_ref).get_unpaid_amount() }} ₺ {% else %}-{% endif %}</td>
+                    <td>{{ (sr.installment_ref or sr.contribution_ref or sr.debt_ref or sr.revenue_retracted_ref or sr.expense_retracted_ref ).amount|tr_number_format }} ₺</td>
+                    <td title="Kalan miktar, bu para girişinden sonra kalan miktar değil, sandık işleminin güncel durumudur.">{% if sr.installment_ref or sr.contribution_ref %}{{ (sr.installment_ref or sr.contribution_ref).get_unpaid_amount()|tr_number_format }} ₺ {% else %}-{% endif %}</td>
                     <td>... ₺</td>
-                    <td>{{ sr.amount }} ₺</td>
+                    <td>{{ sr.amount|tr_number_format }} ₺</td>
                     <td>... ₺</td>
                   </tr>
                 {% endfor %}
                 {% if not mt.is_fully_distributed %}
                   <tr>
-                    <td colspan="8" class="font-bold">Para girişinin {{ mt.get_undistributed_amount() }} ₺'si işleme sokulmamış.</td>
+                    <td colspan="8" class="font-bold">Para girişinin {{ mt.get_undistributed_amount()|tr_number_format }} ₺'si işleme sokulmamış.</td>
                   </tr>
                 {% endif %}
               </table>

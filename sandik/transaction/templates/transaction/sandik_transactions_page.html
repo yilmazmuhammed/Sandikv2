@@ -41,7 +41,7 @@ jQuery(function($){
         "term": "{{ t.term }}",
         "name_surname": "{{ t.transaction.member_ref.web_user_ref.name_surname }}",
         "transaction_type": `{{ t.transaction_type }}`,
-        "amount": "{{ t.transaction.amount }} ₺",
+        "amount": "{{ t.transaction.amount|tr_number_format }} ₺",
         "is_fully_paid": "{{ "Ödendi" if t.transaction.is_fully_paid else "Tamamlanmadı" }}",
         "detail": "{{ t.detail }}",
         {# "action":` #}

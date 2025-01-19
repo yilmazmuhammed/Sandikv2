@@ -61,8 +61,8 @@
         "term": "{{ p.term }}",
         "name_surname": "{{ p.member_ref.web_user_ref.name_surname }} - {{ p.share_ref.share_order_of_member }}",
         "transaction_type": `{{ transaction_type }}`,
-        "amount": "{{ p.amount }} ₺",
-        "remaining_amount": `<span class="{% if p.is_fully_paid %}text-success{% else %}text-danger{% endif %}">{{ p.get_unpaid_amount() }} ₺</span>`,
+        "amount": "{{ p.amount|tr_number_format }} ₺",
+        "remaining_amount": `<span class="{% if p.is_fully_paid %}text-success{% else %}text-danger{% endif %}">{{ p.get_unpaid_amount()|tr_number_format }} ₺</span>`,
         "is_fully_paid": `{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
         "sub_receipts": `
           {% if p.sub_receipts_set.count() == 0 %}
@@ -87,10 +87,10 @@
                   {% set remaining_amount=p.amount-sr_amounts | sum() %}
                   <tr>
                     <td title='{% if sr.money_transaction_ref.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}Manuel{% elif sr.money_transaction_ref.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}Banka işlemi{% endif %}'>{{ sr.money_transaction_ref.date.strftime("%Y-%m-%d") }}</td>
-                    <td>{{ sr.money_transaction_ref.amount }} ₺</td>
+                    <td>{{ sr.money_transaction_ref.amount|tr_number_format }} ₺</td>
                     <td title='{% if sr.is_auto %}Otomatik{% else %}Manuel{% endif %}'>{{ sr.creation_time.strftime("%Y-%m-%d") }}</td>
-                    <td>{{ sr.amount }} ₺</td>
-                    <td>{{ remaining_amount }} ₺</td>
+                    <td>{{ sr.amount|tr_number_format }} ₺</td>
+                    <td>{{ remaining_amount|tr_number_format }} ₺</td>
                   </tr>
                 {% endfor %}
               </table>
@@ -155,7 +155,7 @@
           {% else %}
             {{ pg["name_surname"] }}
           {% endif %}`,
-        "remaining_amount": `<span class="{% if pg["remaining_amount"] == 0 %}text-success{% else %}text-danger{% endif %}">{{ pg["remaining_amount"] }} ₺</span>`,
+        "remaining_amount": `<span class="{% if pg["remaining_amount"] == 0 %}text-success{% else %}text-danger{% endif %}">{{ pg["remaining_amount"]|tr_number_format }} ₺</span>`,
         "is_fully_paid": `{% if pg["remaining_amount"] == 0 %}<span class="text-success">Ödendi</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
         "payments": `
           <div class="table table-responsive">
@@ -188,8 +188,8 @@
                   <td title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.index }}</td>
                   <td>{{ transaction_type }}</td>
                   <td>Hisse {{ p.share_ref.share_order_of_member }}</td>
-                  <td class="{% if p.is_fully_paid %}text-success{% else %}text-danger{% endif %}">{{ p.get_unpaid_amount() }} ₺</td>
-                  <td>{{ p.amount }} ₺</td>
+                  <td class="{% if p.is_fully_paid %}text-success{% else %}text-danger{% endif %}">{{ p.get_unpaid_amount()|tr_number_format }} ₺</td>
+                  <td>{{ p.amount|tr_number_format }} ₺</td>
                   <td>{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}</td>
                   <td>{{ detail }}</td>
                   <td>
