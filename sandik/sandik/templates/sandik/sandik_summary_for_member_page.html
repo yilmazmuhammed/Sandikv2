@@ -371,7 +371,7 @@
               <tbody>
               <tr class="row text-center" onclick="$('#detailed-borrowing-table').toggle(); $('#detailed-borrowing-table-icon').toggleClass('fa-angle-down').toggleClass('fa-angle-up');">
                 <th>Alabileceğim miktar:</th>
-                <td class="font-bold text-primary">{{ catch_exception(g.member.max_amount_can_borrow, default_value="---", use_untreated_amount=False) }} ₺</td>
+                <td class="font-bold text-primary">{{ catch_exception(g.member.max_amount_can_borrow, default_value="---", use_untreated_amount=False)|tr_number_format }} ₺</td>
                 <td>
                   <span>
                     <i class="fas fa-angle-down" id="detailed-borrowing-table-icon"></i>
@@ -393,14 +393,14 @@
                     {% set max_debt_amount=catch_exception(sandik_preferences.remaining_debt_balance, default_value="---", sandik=share.sandik_ref, whose=share)  %}
                       <tr class="row text-center">
                         <td>Hisse {{ share.share_order_of_member }}</td>
-                        <td>{{ max_debt_amount }} ₺</td>
+                        <td>{{ max_debt_amount|tr_number_format }} ₺</td>
                         <td>{{ catch_exception(sandik_preferences.max_number_of_installment, default_value="---", sandik=share.sandik_ref, amount=max_debt_amount) }}</td>
                       </tr>
                     {% endfor %}
                     {% set max_debt_amount=catch_exception(sandik_preferences.remaining_debt_balance, default_value="---", sandik=g.member.sandik_ref, whose=g.member) %}
                     <tr class="row text-center font-bold">
                       <td class="">Toplam</td>
-                      <td>{{ max_debt_amount }} ₺</td>
+                      <td>{{ max_debt_amount|tr_number_format }} ₺</td>
                       <td></td>
                     </tr>
                     </tbody>
