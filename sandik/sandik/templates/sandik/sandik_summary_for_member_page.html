@@ -40,7 +40,7 @@
             "id": `<span title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.index }}</span>`,
             "term": `{{ p.term }}`,
             "transaction_type": `{{ transaction_type }}`,
-            "amount": `<span title="Toplam miktar:\t{{ p.amount }} \nKalan miktar:\t{{ p.get_unpaid_amount() }}">{{ p.get_unpaid_amount() }} ₺</span>`,
+            "amount": `<span title="Toplam miktar:\t{{ p.amount|tr_number_format }} \nKalan miktar:\t{{ p.get_unpaid_amount()|tr_number_format }}">{{ p.get_unpaid_amount()|tr_number_format }} ₺</span>`,
             "is_fully_paid": `{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
             "detail": `{{ detail | replace("\n", "<br>")| safe }}`,
           },
