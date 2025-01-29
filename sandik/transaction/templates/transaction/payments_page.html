@@ -3,7 +3,7 @@
 {% import "transaction/parts/macros.html" as transaction_macros %}
 
 {% block js_block %}
-<script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+<script src="{{ url_for('static', filename='my_custom/js/footable_utils.js') }}"></script>
 <script>
 jQuery(function($){
   {% if g.all_payments["is_grouped"] %}

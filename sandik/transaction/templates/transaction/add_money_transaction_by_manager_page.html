@@ -16,7 +16,6 @@
             console.log(data);
             {# revenue=para girişi, expense=para çıkışı #}
             if ($("#type").val() == {{ MoneyTransaction.TYPE.REVENUE }}) {
-              console.log($("#amount").val(), data.sum_of_unpaid_and_due_payments);
               if ($("#amount").val() > data.sum_of_unpaid_and_due_payments && data.sum_of_future_and_unpaid_payments > 0) {
                 if (confirm("Vadesi gelmiş ödemeler tamamlandıktan sonra kalan para ile vadesi gelmemiş ödemeler ödensin mi?\n\nNot: Vazgeç butonuna basılırsa vadesi gelmemiş ödemeler için kullanılmaz ve artan para işleme konmaz.")) {
                   $("#pay_future_payments").val(true);

@@ -2,7 +2,7 @@
 {% import "transaction/parts/macros.html" as macros2 %}
 
 {% block js_block %}
-<script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+<script src="{{ url_for('static', filename='my_custom/js/footable_utils.js') }}"></script>
 <script>
 jQuery(function($){
 	$('#all-debts-table').footable({
@@ -28,9 +28,9 @@ jQuery(function($){
 			{ "name": "id", "title": "#", "breakpoints": "xs sm"},
 			{ "name": "date", "title": "Tarih" },
 			{ "name": "name_surname", "title": "İsim Soyisim" },
-			{ "name": "unpaid_amount", "title": "Kalan miktar", "breakpoints": "xs sm md", },
+			{ "name": "unpaid_amount", "title": "Kalan miktar", "breakpoints": "xs sm md", "formatter":(value, options, rowData) => `<span class="text-` + ((value === "0") ? "success" : "danger") + `">` + currency_column_formatter(value, options, rowData) +` </span>`,},
 			{ "name": "status", "title": "Ödenme durumu", },
-			{ "name": "amount", "title": "Miktar", },
+			{ "name": "amount", "title": "Miktar", "formatter": currency_column_formatter, },
 			{ "name": "installments", "title": "", "breakpoints": "xs sm md lg", },
 			{# { "name": "action", "title": "", "breakpoints": "xs sm md lg", }, #}
 		],
@@ -45,9 +45,9 @@ jQuery(function($){
           {% else %}
             {{ d.share_ref.name_surname_share }}
           {% endif %}`,
-        "amount": "{{ d.amount|tr_number_format }} ₺",
+        "amount": {{ d.amount }},
         "status": `<span class="text-{{ "danger" if d.get_unpaid_amount() else "success" }}">{{ "Ödenmedi" if d.get_unpaid_amount() else "Ödendi" }}</span>`,
-        "unpaid_amount": `<span class="text-{{ "danger" if d.get_unpaid_amount() else "success" }}">{{ d.get_unpaid_amount()|tr_number_format }} ₺</span>`,
+        "unpaid_amount": {{ d.get_unpaid_amount() }},
         "installments": `
           <div class="table table-responsive">
             <table class="table table-striped table-bordered text-center" id="installments-of-d{{ d.id }}-table">
@@ -111,9 +111,9 @@ jQuery(function($){
 			{ "name": "id", "title": "#", "breakpoints": "xs sm"},
 			{ "name": "date", "title": "Tarih" },
 			{ "name": "name_surname", "title": "İsim Soyisim" },
-			{ "name": "unpaid_amount", "title": "Kalan miktar", "breakpoints": "xs sm md", },
+			{ "name": "unpaid_amount", "title": "Kalan miktar", "breakpoints": "xs sm md", "formatter":(value, options, rowData) => `<span class="text-` + ((value === "0") ? "success" : "danger") + `">` + currency_column_formatter(value, options, rowData) +` </span>`, },
 			{ "name": "status", "title": "Ödenme durumu", },
-			{ "name": "amount", "title": "Miktar", },
+			{ "name": "amount", "title": "Miktar", "formatter": currency_column_formatter, },
 			{ "name": "installments", "title": "", "breakpoints": "xs sm md lg", },
 			{# { "name": "action", "title": "", "breakpoints": "xs sm md lg", }, #}
 		],
@@ -128,9 +128,9 @@ jQuery(function($){
           {% else %}
             {{ d.share_ref.name_surname_share }}
           {% endif %}`,
-        "amount": "{{ d.amount|tr_number_format }} ₺",
+        "amount": {{ d.amount }},
         "status": `<span class="text-{{ "danger" if d.get_unpaid_amount() else "success" }}">{{ "Ödenmedi" if d.get_unpaid_amount() else "Ödendi" }}</span>`,
-        "unpaid_amount": `<span class="text-{{ "danger" if d.get_unpaid_amount() else "success" }}">{{ d.get_unpaid_amount()|tr_number_format }} ₺</span>`,
+        "unpaid_amount": {{ d.get_unpaid_amount() }},
         "installments": `
           <div class="table table-responsive">
             <table class="table table-striped table-bordered text-center" id="installments-of-d{{ d.id }}-table">

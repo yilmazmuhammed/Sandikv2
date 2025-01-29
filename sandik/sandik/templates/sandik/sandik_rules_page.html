@@ -2,7 +2,7 @@
 {% import "utils/parts/macros.html" as macros %}
 
 {% block js_block %}
-  <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+  <script src="{{ url_for('static', filename='my_custom/js/footable_utils.js') }}"></script>
   <script>
     jQuery(function($){
       {% for rule_type_key, rule_type_value in SandikRule.TYPE.strings.items() %}
