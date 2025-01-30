@@ -34,7 +34,7 @@
 			{ "name": "term", "title": "Dönem" },
 			{ "name": "name_surname", "title": "İsim Soyisim" },
 			{ "name": "transaction_type", "title": "Ödeme türü", "breakpoints": "xs", },
-			{ "name": "remaining_amount", "title": "Ödenmemiş miktar", "formatter":(value, options, rowData) => `<span class="text-` + ((value === "0") ? "success" : "danger") + `">` + currency_column_formatter(value, options, rowData) +` </span>`, },
+			{ "name": "remaining_amount", "title": "Ödenmemiş miktar", "formatter": currency_column_formatter, },
 			{ "name": "amount", "title": "Miktar", "formatter": currency_column_formatter, },
 			{ "name": "is_fully_paid", "title": "Ödenme durumu", "breakpoints": "xs sm md", },
 			{ "name": "detail", "title": "Detay", "breakpoints": "xs sm md", },
@@ -62,7 +62,7 @@
         "name_surname": "{{ p.member_ref.web_user_ref.name_surname }} - {{ p.share_ref.share_order_of_member }}",
         "transaction_type": `{{ transaction_type }}`,
         "amount": {{ p.amount }},
-        "remaining_amount": {{ p.get_unpaid_amount() }},
+        "remaining_amount": {"value": {{ p.get_unpaid_amount() }}, "options": {"classes": (({{ p.get_unpaid_amount() }} === 0) ? "text-success" : "text-danger")}},
         "is_fully_paid": `{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
         "sub_receipts": `
           {% if p.sub_receipts_set.count() == 0 %}
@@ -140,7 +140,7 @@
 			{ "name": "id", "title": "#", "breakpoints": "xs sm"},
 			{ "name": "term", "title": "Dönem", },
 			{ "name": "name_surname", "title": "İsim Soyisim" },
-			{ "name": "remaining_amount", "title": "Ödenmemiş miktar", "classes": "text-center", "formatter":(value, options, rowData) => `<span class="text-` + ((value === "0") ? "success" : "danger") + `">` + currency_column_formatter(value, options, rowData) +` </span>`, },
+			{ "name": "remaining_amount", "title": "Ödenmemiş miktar", "classes": "text-center", "formatter": currency_column_formatter, },
 			{ "name": "is_fully_paid", "title": "Ödenme durumu", "breakpoints": "xs sm md", "classes": "text-center", },
 			{ "name": "payments", "title": "", "breakpoints": "xs sm md lg", },
 		],
@@ -155,7 +155,7 @@
           {% else %}
             {{ pg["name_surname"] }}
           {% endif %}`,
-        "remaining_amount": {{ pg["remaining_amount"] }},
+        "remaining_amount": {"value": {{ pg["remaining_amount"] }}, "options": {"classes": (({{ pg["remaining_amount"] }} === 0) ? "text-success" : "text-danger")}},
         "is_fully_paid": `{% if pg["remaining_amount"] == 0 %}<span class="text-success">Ödendi</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
         "payments": `
           <div class="table table-responsive">
