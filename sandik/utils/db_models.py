@@ -757,7 +757,6 @@ class Contribution(db.Entity):
         elif unpaid_amount > 0:
             self.is_fully_paid = False
         else:
-            print("recalculate_is_fully_paid:", unpaid_amount)
             rollback()
             from sandik.utils.exceptions import UnexpectedValue
             raise UnexpectedValue("ERRCODE: 0010, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
@@ -856,7 +855,6 @@ class Installment(db.Entity):
         elif unpaid_amount > 0:
             self.is_fully_paid = False
         else:
-            print("Installment.recalculate_is_fully_paid:", unpaid_amount)
             rollback()
             from sandik.utils.exceptions import UnexpectedValue
             raise UnexpectedValue("ERRCODE: 0011, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
@@ -898,9 +896,7 @@ class SubReceipt(db.Entity):
                 counter += 1
         if counter != 1:
             rollback()
-            err_msg = "ERRCODE: 0012, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz."
-            print(err_msg)
-            raise Exception(err_msg)
+            raise Exception("ERRCODE: 0012, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
 
     def after_insert(self):
         # TODO test et
@@ -940,12 +936,9 @@ class PieceOfDebt(db.Entity):
     def before_insert(self):
         # TODO test et
         if self.member_ref.get_balance() < self.amount:
-            err_msg = "ERRCODE: 0018, " \
-                      "MSG: Beklenmedik bir hata ile karşılaşıldı. " \
-                      "Düzeltilmesi için lütfen site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz."
-            print(err_msg)
-            raise Exception(err_msg)
-            pass
+            raise Exception("ERRCODE: 0018, " \
+                            "MSG: Beklenmedik bir hata ile karşılaşıldı. " \
+                            "Düzeltilmesi için lütfen site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
 
 
 class Retracted(db.Entity):
