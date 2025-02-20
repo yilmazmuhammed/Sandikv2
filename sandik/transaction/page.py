@@ -9,7 +9,7 @@ from sandik.sandik.requirement import sandik_authorization_required, to_be_membe
 from sandik.transaction import forms, utils, db
 from sandik.transaction.authorization import money_transaction_required, contribution_required
 from sandik.transaction.exceptions import MaximumDebtAmountExceeded, ThereIsNoDebt, MaximumAmountExceeded, \
-    MaximumInstallmentExceeded, InvalidStartingTerm
+    MaximumInstallmentExceeded, InvalidStartingTerm, TransactionException
 from sandik.utils import LayoutPI
 from sandik.utils.db_models import MoneyTransaction, get_paging_variables
 from sandik.utils.forms import FormPI, flask_form_to_dict
@@ -161,14 +161,48 @@ def add_custom_contribution_by_manager_page(sandik_id):
             utils.add_custom_contribution(amount=form.amount.data, period=form.period.data, share=share,
                                           created_by=current_user)
             return redirect(url_for("transaction_page_bp.add_custom_contribution_by_manager_page", sandik_id=sandik_id))
-        except (ThereIsNoMember, ThereIsNoShare) as e:
+        except (ThereIsNoMember, ThereIsNoShare, NotValidPeriod) as e:
             flash(str(e), "danger")
-        except NotValidPeriod as e:
-            flash(str(e), "danger")
-            form.share.choices += sandik_db.shares_of_member_form_choices(member=member)
 
     return render_template("transaction/add_custom_contribution_by_manager_page.html",
                            page_info=FormPI(title="Manuel aidat ekle", form=form,
+                                            active_dropdown="management-transactions"))
+
+
+@transaction_page_bp.route('eskiye-yonelik-aidat-ekle', methods=["GET", "POST"])
+@sandik_authorization_required("write")
+def add_custom_old_contributions_by_manager_page(sandik_id):
+    form = forms.AddOldContributionsForm(sandik=g.sandik)
+
+    if form.validate_on_submit():
+        try:
+            member, share = sandik_utils.validate_whose_of_sandik(sandik=g.sandik, member_id=form.member.data,
+                                                                  share_id=form.share.data)
+            added_contributions, not_added_contributions_with_amounts = utils.add_old_contributions(
+                share=share,
+                number_of_contributions=form.number_of_contribution.data,
+                created_by=current_user
+            )
+
+            if added_contributions:
+                success_messages = "Eklenen aidatlar:"
+                for c in added_contributions:
+                    success_messages += f"<br>{c.term} ({c.amount}₺)"
+                flash(success_messages, "success")
+
+            if not_added_contributions_with_amounts:
+                warning_msg = ("Bazı aidat dönemlerinde birden farklı aidat miktarı var. Bu dönemler için eskiye "
+                               "yönelik aidatlar otomatik olarak eklenemez. Bunları manuel eklemeniz gerekmektedir.")
+                for period, amounts in not_added_contributions_with_amounts.items():
+                    warning_msg += f"<br>{period} -> {', '.join([f'{a}₺' for a in amounts])}"
+                flash(warning_msg, "warning")
+
+            return redirect(url_for("transaction_page_bp.add_custom_old_contributions_by_manager_page", sandik_id=sandik_id))
+        except (ThereIsNoMember, ThereIsNoShare, TransactionException) as e:
+            flash(str(e), "danger")
+
+    return render_template("transaction/add_custom_old_contributions_by_manager_page.html",
+                           page_info=FormPI(title="Eskiye yönelik aidat ekle", form=form,
                                             active_dropdown="management-transactions"))
 
 

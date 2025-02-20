@@ -1,8 +1,8 @@
 from math import ceil
 
-from pony.orm import select, flush
+from pony.orm import select, flush, distinct
 
-from sandik.transaction.exceptions import InvalidRemoveOperation
+from sandik.transaction.exceptions import InvalidRemoveOperation, TransactionException
 from sandik.utils import period as period_utils, sandik_preferences
 from sandik.utils.db_models import Contribution, Share, Member, Installment, MoneyTransaction, Log, SubReceipt, Debt, \
     PieceOfDebt, Retracted, Sandik
@@ -463,3 +463,26 @@ def total_loaned_amount_of_trusted_links(member):
 
 def total_balance_of_trusted_links(member):
     return member.total_balance_from_accepted_trust_links()
+
+
+def get_contribution_periods_with_amounts(sandik: Sandik = None, member: Member = None,
+                                          first_period: str = None, last_period: str = None):
+    if sandik is None and member is None:
+        raise TransactionException("Hem sandik hem de member boş olamaz")
+
+    first_period = first_period or period_utils.date_to_period(sandik.date_of_opening)
+    last_period = last_period or period_utils.current_period()
+    periods = period_utils.get_periods_between_two_period(first_period=first_period, last_period=last_period)
+    periods_with_amounts = {}
+    for period in periods:
+        periods_with_amounts[period] = distinct(
+            c.amount for c in Contribution if
+            (not sandik or c.sandik_ref == sandik)
+            and (not member or c.member_ref == member) and c.term == period
+        )[:]
+    return periods_with_amounts
+
+
+def get_first_contribution_period(share: Share):
+    first_period = select(c.term for c in Contribution if c.share_ref == share).min()
+    return first_period

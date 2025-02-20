@@ -285,3 +285,39 @@ class DebtForm(CustomFlaskForm):
     def __init__(self, sandik, form_title='Para işlemi formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.member.choices += sandik_db.members_form_choices(sandik=sandik)
+
+
+class AddOldContributionsForm(CustomFlaskForm):
+    member = SelectField(
+        label="Üye:",
+        validators=[
+            input_required_validator("Üye")
+        ],
+        choices=[("", "Üye seçiniz...")],
+        coerce=str,
+    )
+
+    share = SelectField(
+        label="Hisse:",
+        validators=[
+            input_required_validator("Hisse")
+        ],
+        choices=[("", "Hisse seçiniz...")],
+        coerce=str,
+        validate_choice=False
+    )
+
+    number_of_contribution = IntegerField(
+        label="Eskiye yönelik eklenecek aidat sayısı:",
+        validators=[
+            input_required_validator("Eskiye yönelik eklenecek aidat sayısı"),
+            min_number_validator(field="Eskiye yönelik eklenecek aidat sayısı", min=1),
+        ],
+        render_kw={"placeholder": "5"},
+    )
+
+    submit = SubmitField(label="Kaydet")
+
+    def __init__(self, sandik, form_title='Eskiye yönelik aidat ekleme formu', *args, **kwargs):
+        super().__init__(form_title=form_title, *args, **kwargs)
+        self.member.choices += sandik_db.members_form_choices(sandik=sandik)

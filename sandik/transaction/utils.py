@@ -5,7 +5,7 @@ from pony.orm import desc, flush  # ponyorm order_by icin lambda string'inde 'de
 from sandik.transaction import db
 from sandik.transaction.exceptions import UndefinedRemoveOperation, MaximumDebtAmountExceeded, \
     UndefinedMoneyTransactionValidation, InvalidMoneyTransactionValidation, MaximumInstallmentExceeded, \
-    InvalidStartingTerm
+    InvalidStartingTerm, TransactionException
 from sandik.utils import period as period_utils, sandik_preferences
 from sandik.utils.db_models import Share, Member, MoneyTransaction, Contribution, Installment, Sandik, Debt, Log, \
     WebUser
@@ -437,6 +437,40 @@ def add_custom_contribution(amount, period, share, created_by):
     if not period_utils.is_valid_period(period=period):
         raise NotValidPeriod(f"'{period}' geçerli bir aidat dönemi değil. Lütfen YYYY-AA (Yıl-Ay) formatında giriniz.")
     return db.create_contribution(share=share, period=period, amount=amount, created_by=created_by)
+
+
+def add_old_contributions(share, number_of_contributions, created_by):
+    share_first_period = db.get_first_contribution_period(share=share)
+    first_period_to_be_added = period_utils.get_period_by_difference(start_period=share_first_period,
+                                                                     diff_count=-number_of_contributions)
+    last_period_to_be_added = period_utils.get_period_by_difference(start_period=share_first_period,
+                                                                    diff_count=-1)
+    if first_period_to_be_added < period_utils.date_to_period(share.sandik_ref.date_of_opening):
+        raise TransactionException(f"Eklenmek istenen aidat sayısına göre ilk eklenecek aidat dönemi "
+                                   f"{first_period_to_be_added}. Fakat sandık {share.sandik_ref.date_of_opening} "
+                                   f"tarihinde kurulmuş. eskiye yönelik bu kadar aidat eklenemez!")
+
+    periods_with_amounts = db.get_contribution_periods_with_amounts(
+        sandik=share.sandik_ref, first_period=first_period_to_be_added, last_period=last_period_to_be_added
+    )
+
+    not_added_contributions_with_amounts = {}
+    for period, amounts in periods_with_amounts.items():
+        if db.get_contribution(share_ref=share, term=period):
+            TransactionException(f"{first_period_to_be_added} ve {last_period_to_be_added} arasındaki aidatları "
+                                 f"eklerken {period} aidatı eklenemedi. Hissenin zaten bu döneme ait aidatı bulunuyor!")
+
+        if len(amounts) != 1:
+            not_added_contributions_with_amounts[period] = amounts
+
+    added_contributions = []
+    for period, amounts in periods_with_amounts.items():
+        if len(amounts) == 1:
+            added_contributions.append(
+                db.create_contribution(share=share, period=period, amount=amounts[0], created_by=created_by)
+            )
+
+    return added_contributions, not_added_contributions_with_amounts
 
 
 def remove_sub_receipt_from_contribution(sub_receipt, removed_by):

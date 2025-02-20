@@ -4,7 +4,7 @@
   <script>
     function fill_shares_by_member() {
       let member_id = $("#member").val();
-      if(member_id){
+      if (member_id) {
         let url = new URL('{{ url_for("sandik_api_bp.get_shares_of_member_api", sandik_id=g.sandik.id, _external=True)}}');
         url.searchParams.set("member", member_id);
 
@@ -26,14 +26,13 @@
             $.each(data.shares, function (i, share) {
               $('#share').append($('<option>', {
                 value: share.id,
-                text : "Hisse "+ share.share_order_of_member.toString(10)
+                text: "Hisse " + share.share_order_of_member.toString(10)
               }));
             });
           },
           async: false,
         });
-      }
-      else {
+      } else {
 
         $('#share')
           .find('option')
@@ -47,10 +46,16 @@
     }
 
     $(document)
-      .on("change", "#member", function (e) {
-        console.log($("#member").val());
+      .on("ready", function () {
         fill_shares_by_member();
-
+        {% if page_info.form.share.data %}
+          $('#share').val('{{ page_info.form.share.data }}').change();
+        {% endif %}
+      })
+      .on("change", "#member", function (e) {
+        fill_shares_by_member();
       });
   </script>
+
+  {% block js_block3 %}{% endblock %}
 {% endblock %}
