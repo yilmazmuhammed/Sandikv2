@@ -2,7 +2,7 @@
 {% import "transaction/parts/macros.html" as macros2 %}
 
 {% block js_block %}
-<script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+<script src="{{ url_for('static', filename='my_custom/js/footable_utils.js') }}"></script>
 <script>
 jQuery(function($){
 	$('#sandik-transactions-table').footable({
@@ -29,7 +29,7 @@ jQuery(function($){
 			{ "name": "term", "title": "Tarih" },
 			{ "name": "name_surname", "title": "İsim Soyisim" },
 			{ "name": "transaction_type", "title": "İşlem türü", },
-			{ "name": "amount", "title": "Miktar", },
+			{ "name": "amount", "title": "Miktar", "formatter": currency_column_formatter},
 			{ "name": "is_fully_paid", "title": "Ödenme durumu", },
 			{ "name": "detail", "title": "Detay", },
 			{# { "name": "action", "title": "", "breakpoints": "xs sm md lg", }, #}
@@ -41,7 +41,7 @@ jQuery(function($){
         "term": "{{ t.term }}",
         "name_surname": "{{ t.transaction.member_ref.web_user_ref.name_surname }}",
         "transaction_type": `{{ t.transaction_type }}`,
-        "amount": "{{ t.transaction.amount|tr_number_format }} ₺",
+        "amount": {{ t.transaction.amount }},
         "is_fully_paid": "{{ "Ödendi" if t.transaction.is_fully_paid else "Tamamlanmadı" }}",
         "detail": "{{ t.detail }}",
         {# "action":` #}

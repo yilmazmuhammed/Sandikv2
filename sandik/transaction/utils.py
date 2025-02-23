@@ -584,8 +584,8 @@ def validate_money_transaction_for_expense(mt_type: int, use_untreated_amount: b
             a = period_utils.date_to_period(mt_date)
             b = period_utils.period_to_date(start_period)
             c = period_utils.period_to_date(a)
-            if b <= c:
-                raise InvalidStartingTerm("Ödeme başlangıcı, borç tarihinden bir sonraki aydan önce başlayamaz.")
+            if b < c:
+                raise InvalidStartingTerm("Ödeme başlangıcı, borç alınan aydan önce başlayamaz.")
     else:
         raise UndefinedMoneyTransactionValidation("Para çıkışı dışında doğrulama işlemi tanımlanmamıştır.")
 

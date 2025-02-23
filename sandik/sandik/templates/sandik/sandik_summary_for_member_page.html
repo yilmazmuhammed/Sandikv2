@@ -2,7 +2,7 @@
 {% import "utils/parts/macros.html" as macros%}
 
 {% block js_block %}
-  <script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+  <script src="{{ url_for('static', filename='my_custom/js/footable_utils.js') }}"></script>
 
   <script>
     jQuery(function($){
@@ -57,7 +57,7 @@
         "columns": [
             { "name": "id", "title": "#"},
             { "name": "date", "title": "Tarih" },
-            { "name": "amount", "title": "Miktar", },
+            { "name": "amount", "title": "Miktar", "formatter": currency_column_formatter, },
             { "name": "type", "title": "İşlem türü", },
             { "name": "detail", "title": "Detay", },
             { "name": "is_fully_distributed", "title": "Hepsi işleme sokulmuş mu?", "breakpoints": "xs sm md lg", },
@@ -69,7 +69,7 @@
             {
               "id": `<span title='ID: {{ mt.id }}'>{{ loop.index }}</span>`,
               "date": `{{ mt.date.strftime("%Y-%m-%d") }}`,
-              "amount": `{{ mt.amount|tr_number_format }} ₺`,
+              "amount": {{ mt.amount }},
               "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}`Para girişi`{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}`Para çıkışı`{% else %}`---`{% endif %},
               "detail": `{{ mt.detail | replace("\n", "<br>")| safe }}`,
               "is_fully_distributed": `{{ "Evet" if mt.is_fully_distributed else "Hayır" }}`,

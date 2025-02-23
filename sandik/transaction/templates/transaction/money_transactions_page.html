@@ -3,7 +3,7 @@
 {% import "transaction/parts/macros.html" as macros2 %}
 
 {% block js_block %}
-<script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+<script src="{{ url_for('static', filename='my_custom/js/footable_utils.js') }}"></script>
 <script>
 jQuery(function($){
   $('#money-transactions-table').footable({
@@ -28,7 +28,7 @@ jQuery(function($){
     "columns": [
         { "name": "id", "title": "#"},
         { "name": "date", "title": "Tarih" },
-        { "name": "amount", "title": "Miktar", },
+        { "name": "amount", "title": "Miktar", "formatter": currency_column_formatter },
         { "name": "name_surname", "title": "İsim Soyisim" },
         { "name": "type", "title": "İşlem türü", },
         { "name": "detail", "title": "Detay", },
@@ -45,12 +45,12 @@ jQuery(function($){
       {
         "id": `<span title='ID: {{ mt.id }}'>{{ g.first_index - loop.index + 1 }}</span>`,
         "date": `{{ mt.date.strftime("%Y-%m-%d") }}`,
-        "amount": `{{ mt.amount|tr_number_format }} ₺`,
+        "amount": {{ mt.amount }},
         "name_surname": `{% if g.type == "management"%}<a href="{{ url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=g.sandik.id, member_id=mt.member_ref.id) }}" title="Üye özeti için tıklayınız..." class="font-bold text-primary">{{ mt.member_ref.web_user_ref.name_surname }}</a>{% else %}{{ mt.member_ref.web_user_ref.name_surname }}{% endif %}`,
         "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}`Para girişi`{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}`Para çıkışı`{% else %}`---`{% endif %},
         "detail": `{{ mt.detail | replace("\n", "<br>") | safe  }}`,
         "is_fully_distributed": `{{ "Evet" if mt.is_fully_distributed else "Hayır" }}`,
-        "creation_type": {% if mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}"Manuel"{% elif mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}"Otomatik"{% else %}"---"{% endif %},
+        "creation_type": `{% if mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}Manuel{% elif mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}Otomatik{% else %}---{% endif %}`,
         "bank_transaction": `{{ "Var" if mt.bank_transaction_ref else "Yok" }}`,
         "sub_receipts": `
           {% if mt.sub_receipts_set.count() == 0 %}

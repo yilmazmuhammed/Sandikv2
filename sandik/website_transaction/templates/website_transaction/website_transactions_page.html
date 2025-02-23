@@ -2,7 +2,7 @@
 {% import "utils/parts/macros.html" as macros%}
 
 {% block js_block %}
-<script src="{{ url_for('static', filename='my_custom/js/footable_filters.js') }}"></script>
+<script src="{{ url_for('static', filename='my_custom/js/footable_utils.js') }}"></script>
 <script>
 jQuery(function($){
   $('#website-transactions-table').footable({
@@ -27,7 +27,7 @@ jQuery(function($){
     "columns": [
         { "name": "id", "title": "#"},
         { "name": "date", "title": "Tarih" },
-        { "name": "amount", "title": "Miktar", },
+        { "name": "amount", "title": "Miktar", "formatter": currency_column_formatter, },
         { "name": "payer", "title": "Bağışçı" },
         { "name": "category", "title": "İşlem kategorisi", },
         { "name": "detail", "title": "Detay", },
@@ -40,7 +40,7 @@ jQuery(function($){
       {
         "id": "<span title='ID: {{ wt.id }}'>{{ g.first_index - loop.index + 1 }}</span>",
         "date": "{{ wt.date.strftime("%Y-%m-%d") }}",
-        "amount": "{% if wt.type == wt.TYPE.EXPENSE %}-{% endif %}{{ wt.amount }} ₺",
+        "amount": {% if wt.type == wt.TYPE.EXPENSE %}{{ -wt.amount }}{% else %}{{ wt.amount }}{% endif %},
         "payer": `{{ wt.get_payer_name(is_hidden=not (current_user.is_authenticated and (current_user.is_admin() or current_user == wt.web_user_ref))) }}`,
         "category": `{{ wt.category }}`,
         "detail": "{{ wt.detail }}",
