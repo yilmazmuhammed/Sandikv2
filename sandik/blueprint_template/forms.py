@@ -9,6 +9,6 @@ class ExampleForm(CustomFlaskForm):
     def __init__(self, form_title='Example form', *args, **kwargs):
         super().__init__(
             form_title=form_title,
-            f_class="form-validation",
+            f_class="form-horizontal",
             *args, **kwargs
         )

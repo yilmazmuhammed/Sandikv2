@@ -1178,3 +1178,22 @@ if __name__ == '__main__':
             data = entity.select()[:]
             print(f"Tablo: {entity.__name__}, Kayıt Sayısı: {len(data)}")
         pass
+
+        # # İşlemleri dışarı aktarma
+        # import csv
+        #
+        # with open('islemler.csv', "w") as csvfile:
+        #     csv_writer = csv.writer(csvfile)
+        #
+        #     mt: MoneyTransaction = None
+        #     sr: SubReceipt = None
+        #     for mt in MoneyTransaction.select(lambda mt: mt.sandik_ref.id == 2).order_by(lambda mt: mt.id)[:]:
+        #         aidat = 0
+        #         for sr in mt.sub_receipts_set:
+        #             if sr.contribution_ref is not None:
+        #                 aidat += sr.amount
+        #         if mt.amount - aidat > 0:
+        #             csv_writer.writerow([mt.id, mt.date, mt.amount - aidat, MoneyTransaction.TYPE.strings[mt.type],
+        #                                  mt.member_ref.web_user_ref.name_surname])
+        #         if aidat > 0:
+        #             csv_writer.writerow([mt.id, mt.date, aidat, "Aidat", mt.member_ref.web_user_ref.name_surname])
