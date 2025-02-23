@@ -105,11 +105,15 @@ def initialize_exceptions_handlers(flask_app: Flask) -> Flask:
     }
 
     @flask_app.errorhandler(HTTPException)
-    def unauthorized_error(e: HTTPException):
-        http_error: dict = HTTP_ERRORS[e.code]
+    def http_error_handler(e: HTTPException):
+
+        http_error: dict = HTTP_ERRORS.get(e.code, {"style": {"text-color": "#3182ce", "btn-hover": "#2b6cb0"}})
         http_error["code"] = e.code
 
-        if e.description != type(e).description:
+        if not http_error.get("title"):
+            http_error["title"] = e.name
+
+        if not http_error.get("msg") or e.description != type(e).description:
             http_error["msg"] = e.description
 
         return render_template("utils/http_errors.html", http_error=http_error), e.code
