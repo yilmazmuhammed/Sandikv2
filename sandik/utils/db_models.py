@@ -1155,7 +1155,8 @@ def get_updated_fields(new_values, db_object):
     old_values = db_object.to_dict()
     for key, value in new_values.items():
         if key in old_values.keys() and value != old_values[key]:
-            ret[key] = {"new": value, "old": old_values[key]}
+            if not isinstance(old_values[key], int) or old_values[key] != int(value):
+                ret[key] = {"new": value, "old": old_values[key]}
     return ret
 
 
