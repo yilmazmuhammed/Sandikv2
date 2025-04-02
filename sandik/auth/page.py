@@ -1,4 +1,4 @@
-from flask import Blueprint, flash, request, redirect, render_template, url_for, g
+from flask import Blueprint, flash, request, redirect, render_template, url_for, g, session
 from flask_login import login_user, login_required, logout_user, current_user
 
 from sandik.auth import db, forms, utils
@@ -64,6 +64,7 @@ def login_page():
 @login_required
 def logout_page():
     logout_user()
+    session.pop("kt_auth_code", None)
     flash("Güvenli çıkış yapıldı", 'success')
     return redirect(url_for("general_page_bp.index_page"))
 
