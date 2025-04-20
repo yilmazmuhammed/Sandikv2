@@ -1,6 +1,6 @@
 from wtforms import SubmitField
 
-from dirilis_yonetim.utils.forms import CustomFlaskForm
+from sandik.utils.forms import CustomFlaskForm
 
 
 class ExampleForm(CustomFlaskForm):

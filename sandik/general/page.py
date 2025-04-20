@@ -42,6 +42,9 @@ def index_page():
 def home_page():
     return render_template("general/home_page.html", page_info=LayoutPI(title="Ana sayfa"))
 
+@general_page_bp.route("/tanitim")
+def promotional_page():
+    return render_template("general/promotional_page.html")
 
 @general_page_bp.route("/banka-hesaplarim")
 @login_required
