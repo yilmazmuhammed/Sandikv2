@@ -14,3 +14,4 @@ docs/build/
 *.sqlite
 
 /.env_debug
+/.env
