@@ -15,7 +15,7 @@
     .hero {
       background: linear-gradient(to right, #007bff, #6610f2);
       color: white;
-      padding: 80px 20px;
+      padding:20px 20px;
       text-align: center;
       animation: fadeIn 1.5s ease;
     }
@@ -59,6 +59,10 @@
 </head>
 <body>
   <div class="hero">
+    <div class="container d-flex justify-content-end" style="padding-bottom: 40px;">
+      <a href="{{ url_for('auth_page_bp.login_page') }}" class="btn btn-outline-light me-2">Giriş Yap</a>
+    </div>
+
     <img src="{{ url_for('static', filename='my_custom/img/logo.png') }}" alt="Sandık Logo" class="logo">
     <h1 class="display-4">Yardımlaşma Sandığı</h1>
     <p class="lead mt-3">"Yardımlaşma sandığı ihtiyacı olanlara organize bir şekilde borç (karzı hasen) verebilmek için kurulmuştur."</p>
