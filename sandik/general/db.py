@@ -1,7 +1,9 @@
 from datetime import datetime
 
+from pony.orm import select
+
 from sandik.general.exceptions import ThereIsAlreadyPrimaryBankAccount
-from sandik.utils.db_models import BankAccount, Log, Notification, get_updated_fields
+from sandik.utils.db_models import BankAccount, Log, Notification, get_updated_fields, Sandik, WebUser, SubReceipt, Debt
 
 
 def create_bank_account(created_by, is_primary, **kwargs) -> BankAccount:
@@ -50,3 +52,26 @@ def update_bank_account(bank_account, updated_by, **kwargs):
         detail=str(updated_fields))
     bank_account.set(**kwargs)
     return bank_account
+
+
+def get_sandik_count():
+    return Sandik.select().count()
+
+
+def get_web_user_count():
+    return WebUser.select().count()
+
+
+def get_total_contribution_amount_of_all_sandiks():
+    return select(
+        sr.amount for sr in SubReceipt
+        if sr.contribution_ref and sr.money_transaction_ref.is_type_revenue()
+    ).sum()
+
+
+def get_total_debt_amount_of_all_sandiks():
+    return select(d.amount for d in Debt).sum()
+
+
+def get_debts_count():
+    return Debt.select().count()

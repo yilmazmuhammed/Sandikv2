@@ -44,6 +44,11 @@ def home_page():
 
 @general_page_bp.route("/tanitim")
 def promotional_page():
+    g.sandik_count = db.get_sandik_count()
+    g.webuser_count = db.get_web_user_count()
+    g.contribution_amount = db.get_total_contribution_amount_of_all_sandiks()
+    g.debt_amount = db.get_total_debt_amount_of_all_sandiks()
+    g.debt_count = db.get_debts_count()
     return render_template("general/promotional_page.html")
 
 @general_page_bp.route("/banka-hesaplarim")

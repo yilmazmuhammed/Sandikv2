@@ -29,6 +29,8 @@
       padding: 30px;
       background: white;
       transition: transform 0.3s ease;
+      margin-top: 3px;
+      margin-bottom: 3px;
     }
     .stat-card:hover {
       transform: scale(1.05);
@@ -71,25 +73,30 @@
     </div>
 
     <div class="row mb-5">
+      <div class="col-md-2"></div>
       <div class="col-md-4">
         <div class="stat-card">
           <i class="bi bi-people-fill"></i>
-          <h4>Toplam Üye</h4>
-          <p class="display-6">124</p>
+          <h4>Kullanıcı Sayısı</h4>
+          <p class="display-6">{{ g.webuser_count | tr_number_format }}</p>
         </div>
       </div>
       <div class="col-md-4">
         <div class="stat-card">
           <i class="bi bi-collection"></i>
-          <h4>Toplam Sandık</h4>
-          <p class="display-6">5</p>
+          <h4>Sandık Sayısı</h4>
+          <p class="display-6">{{ g.sandik_count | tr_number_format }}</p>
         </div>
       </div>
-      <div class="col-md-4">
+    </div>
+
+    <div class="row mb-5">
+      <div class="col-md-3"></div>
+      <div class="col-md-6">
         <div class="stat-card">
           <i class="bi bi-cash-stack"></i>
-          <h4>Toplanan Aidat</h4>
-          <p class="display-6">₺2.500.000</p>
+          <h4>Toplanan Aidat Miktarı</h4>
+          <p class="display-6">{{ g.contribution_amount | tr_number_format }} ₺</p>
         </div>
       </div>
     </div>
@@ -99,14 +106,14 @@
         <div class="stat-card">
           <i class="bi bi-box-arrow-in-down"></i>
           <h4>Verilen Borç Sayısı</h4>
-          <p class="display-6">87</p>
+          <p class="display-6">{{ g.debt_count | tr_number_format }}</p>
         </div>
       </div>
       <div class="col-md-6">
         <div class="stat-card">
           <i class="bi bi-wallet2"></i>
-          <h4>Verilen Toplam Borç</h4>
-          <p class="display-6">₺1.750.000</p>
+          <h4>Verilen Toplam Borç Miktarı</h4>
+          <p class="display-6">{{ g.debt_amount | tr_number_format }}₺</p>
         </div>
       </div>
     </div>
