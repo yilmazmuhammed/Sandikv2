@@ -1,5 +1,9 @@
 <div class="text-center">
   <p>
-    <small class="text-muted">&copy; Sandık v2, 2022-{{ g.now.date().year }}</small>
+    <small class="text-muted">&copy; Sandık v2, 2022-<span id="year"></span></small>
   </p>
 </div>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear().toString();
+</script>

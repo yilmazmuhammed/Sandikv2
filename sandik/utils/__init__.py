@@ -12,7 +12,6 @@ class LayoutPI:
     def __init__(self, title, active_dropdown=None):
         self.title = title
         self.active_dropdown = active_dropdown
-        g.now = tz_to_tr(datetime.now(), tz="UTC")
 
 
 class CustomJSONEncoder(JSONEncoder):
