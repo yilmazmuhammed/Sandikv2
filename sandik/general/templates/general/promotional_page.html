@@ -49,10 +49,6 @@
       from { opacity: 0; }
       to { opacity: 1; }
     }
-    .contact-form input,
-    .contact-form textarea {
-      border-radius: 10px;
-    }
     .logo {
       width: 80px;
       margin-bottom: 20px;
@@ -169,71 +165,21 @@
     </div>
   </div>
 
-  <div class="section container contact-form">
-    <h2 class="fw-bold text-center mb-4">İletişim</h2>
-    <form id="contactForm" >
-      <div class="mb-3">
-        <label for="name" class="form-label">Adınız</label>
-        <input type="text" class="form-control" id="name" placeholder="Adınızı girin">
-      </div>
-      <div class="mb-3">
-        <label for="email" class="form-label">E-posta</label>
-        <input type="email" class="form-control" id="email" placeholder="eposta@ornek.com">
-      </div>
-      <div class="mb-3">
-        <label for="message" class="form-label">Mesajınız</label>
-        <textarea class="form-control" id="message" rows="4" placeholder="Mesajınızı yazın..."></textarea>
-      </div>
-      <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Gönder</button>
-
-        <div id="formResponse" class="text-center mt-3"></div>
-    </form>
+  <div class="section bg-light">
+    <div class="container text-center">
+      <h2 class="mb-3">İletişim</h2>
+      <p>Bize ulaşmak için lütfen <a href="mailto:noreply.myilmaz.tr@gmail.com" class="fw-bold">noreply.myilmaz.tr@gmail.com</a> adresine e-posta gönderin.</p>
+    </div>
   </div>
 
-  <footer class="bg-dark text-white text-center p-4 mt-5">
-    &copy; 2025 Yardımlaşma Sandığı
-  </footer>
+<footer class="bg-dark text-white text-center p-4 mt-5">
+  &copy; Sandık v2, 2022-<span id="year"></span>
+</footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
-    document.getElementById('contactForm').addEventListener('submit', async function(e) {
-      const form = e.target;
-      e.preventDefault();
-      const data = {
-        name: form.name.value,
-        email: form.email.value,
-        message: form.message.value
-      };
-      console.log(data);
-
-      const responseDiv = document.getElementById('formResponse');
-      responseDiv.textContent = 'Gönderiliyor...';
-
-      try {
-        const res = await fetch("{{ url_for('general_api_bp.contact_us') }}", {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-
-        const resp_data = await res.json();
-
-        if (resp_data.result) {
-          responseDiv.textContent = 'Mesajınız gönderildi, teşekkür ederiz!';
-          responseDiv.className = 'text-success';
-          form.reset();
-        } else {
-          responseDiv.textContent = 'Bir sorun oluştu. Lütfen daha sonra tekrar deneyiniz.';
-          responseDiv.className = 'text-danger';
-          console.log(resp_data);
-        }
-      } catch (err) {
-        responseDiv.textContent = 'Bir hata oluştu. Lütfen internet bağlantınızı kontrol edin.';
-        responseDiv.className = 'text-danger';
-        console.log(resp_data);
-      }
-    });
+    document.getElementById('year').textContent = new Date().getFullYear().toString();
   </script>
 </body>
 </html>
