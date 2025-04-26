@@ -3,7 +3,8 @@ from datetime import datetime
 from pony.orm import select
 
 from sandik.general.exceptions import ThereIsAlreadyPrimaryBankAccount
-from sandik.utils.db_models import BankAccount, Log, Notification, get_updated_fields, Sandik, WebUser, SubReceipt, Debt
+from sandik.utils.db_models import BankAccount, Log, Notification, get_updated_fields, Sandik, WebUser, SubReceipt, \
+    Debt, Member
 
 
 def create_bank_account(created_by, is_primary, **kwargs) -> BankAccount:
@@ -53,25 +54,27 @@ def update_bank_account(bank_account, updated_by, **kwargs):
     bank_account.set(**kwargs)
     return bank_account
 
+def get_real_sandiks():
+    return select(s for s in Sandik if s.is_testing_purposes() == False)
 
 def get_sandik_count():
-    return Sandik.select().count()
+    return get_real_sandiks().count()
 
 
 def get_web_user_count():
-    return WebUser.select().count()
+    return select(m.web_user_ref for m in Member if m.sandik_ref in get_real_sandiks()).count()
 
 
 def get_total_contribution_amount_of_all_sandiks():
     return select(
         sr.amount for sr in SubReceipt
-        if sr.contribution_ref and sr.money_transaction_ref.is_type_revenue()
+        if sr.contribution_ref and sr.money_transaction_ref.is_type_revenue() and sr.sandik_ref in get_real_sandiks()
     ).sum()
 
 
 def get_total_debt_amount_of_all_sandiks():
-    return select(d.amount for d in Debt).sum()
+    return select(d.amount for d in Debt if d.sandik_ref in get_real_sandiks()).sum()
 
 
 def get_debts_count():
-    return Debt.select().count()
+    return Debt.select(lambda d: d.sandik_ref in get_real_sandiks()).count()

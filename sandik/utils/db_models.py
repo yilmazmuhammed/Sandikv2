@@ -1,7 +1,7 @@
 import inspect
 import math
 import os
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 import cexprtk
@@ -653,6 +653,9 @@ class Sandik(db.Entity):
             mt.member_ref.sandik_ref == self and mt.member_ref.is_active and
             mt.type == MoneyTransaction.TYPE.REVENUE and mt.is_fully_distributed is False
         ).sum()
+
+    def is_testing_purposes(self):
+        return select(mt for mt in MoneyTransaction if mt.sandik_ref == self and date.today() - mt.date < timedelta(days=60)).count() == 0
 
 
 class TrustRelationship(db.Entity):
