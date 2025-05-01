@@ -73,7 +73,9 @@ class MoneyTransaction(db.Entity):
         elif mt_untreated_amount > 0:
             self.is_fully_distributed = False
         elif mt_untreated_amount < 0:
+            # BACKUP/RESTORE: Site yedeği yüklenirken bu Exception kaldırılmalı
             raise Exception("ERRCODE: 0013, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+            pass
 
 
 class Share(db.Entity):
@@ -939,9 +941,11 @@ class PieceOfDebt(db.Entity):
     def before_insert(self):
         # TODO test et
         if self.member_ref.get_balance() < self.amount:
+            # BACKUP/RESTORE: Site yedeği yüklenirken bu Exception kaldırılmalı
             raise Exception("ERRCODE: 0018, " \
                             "MSG: Beklenmedik bir hata ile karşılaşıldı. " \
                             "Düzeltilmesi için lütfen site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
+            pass
 
 
 class Retracted(db.Entity):
