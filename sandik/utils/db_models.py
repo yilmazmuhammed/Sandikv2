@@ -657,7 +657,10 @@ class Sandik(db.Entity):
         ).sum()
 
     def is_testing_purposes(self):
-        return select(mt for mt in MoneyTransaction if mt.sandik_ref == self and date.today() - mt.date < timedelta(days=60)).count() == 0
+        for mt in select(mt for mt in MoneyTransaction if mt.sandik_ref == self):
+            if date.today() - mt.date < timedelta(days=60):
+                return False
+        return True
 
 
 class TrustRelationship(db.Entity):

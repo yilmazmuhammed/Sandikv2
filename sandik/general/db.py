@@ -55,10 +55,10 @@ def update_bank_account(bank_account, updated_by, **kwargs):
     return bank_account
 
 def get_real_sandiks():
-    return select(s for s in Sandik if s.is_testing_purposes() == False)
+    return [s for s in Sandik.select() if s.is_testing_purposes() == False]
 
 def get_sandik_count():
-    return get_real_sandiks().count()
+    return len(get_real_sandiks())
 
 
 def get_web_user_count():
