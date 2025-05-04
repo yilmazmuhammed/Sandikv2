@@ -54,7 +54,8 @@ def login_page():
                 next_page = get_next_url(request.args, default_url=url_for("general_page_bp.index_page"))
                 return redirect(next_page)
             else:
-                flash("Kullanıcınız henüz onaylanmamış.", 'danger')
+                flash("Kullanıcınız henüz onaylanmamış. "
+                      "Bir hata olduğunu düşünüyorsanız site yöneticisiyle iletişime geçiniz.", 'danger')
         else:  # If password or username is incorrect
             flash("E-posta adresi veya parola doğru değil", 'danger')
     return render_template("auth/login_page.html", page_info=FormPI(form=form, title="Giriş yap"))
