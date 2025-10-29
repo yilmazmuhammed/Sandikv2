@@ -219,4 +219,4 @@ if __name__ == "__main__":
     client.fetch_token_client_credentials()
 
     # Artık istek yapabilirsin
-    print(client.api_get("/v1/data/testCustomers"))
+    print(client.api_get("/v2/data/testcustomers"))
