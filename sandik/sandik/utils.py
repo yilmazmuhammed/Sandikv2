@@ -275,7 +275,10 @@ def remove_member_from_sandik(member: Member, removed_by):
     return refunded_money_transaction
 
 
-def remove_share_from_member(share: Share, removed_by, refunded_money_transaction=None, removed_date=datetime.today()):
+def remove_share_from_member(share: Share, removed_by, refunded_money_transaction=None, removed_date=None):
+    if removed_date is None:
+        removed_date = datetime.today()
+
     if not share.is_active:
         raise NotActiveShareException("Silinmek istenen hisse zaten aktif hisse değil.", create_log=True)
 
