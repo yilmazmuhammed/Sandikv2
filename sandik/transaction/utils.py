@@ -1,6 +1,6 @@
 from datetime import date
 
-from pony.orm import desc, flush  # ponyorm order_by icin lambda string'inde 'desc' fonksiyonukullaniliyor
+from pony.orm import desc, flush  # ponyorm order_by icin lambda string'inde 'desc' fonksiyonu kullaniliyor
 
 from sandik.transaction import db
 from sandik.transaction.exceptions import UndefinedRemoveOperation, MaximumDebtAmountExceeded, \
@@ -97,7 +97,11 @@ def borrow_debt(amount, money_transaction, created_by, number_of_installment=Non
     optimal_share = share
     remaining_amount = amount
 
-    if not optimal_share:
+    if optimal_share:
+        db.create_debt(amount=remaining_amount, money_transaction=money_transaction, share=optimal_share,
+                       created_by=created_by, number_of_installment=number_of_installment, start_period=start_period)
+        remaining_amount -= remaining_amount
+    else:
         shares_with_max_amount_can_borrow = [(share, share.max_amount_can_borrow()) for share in
                                              member.get_active_shares()]
         sorted_shares_by_max_amount_can_borrow = sorted(shares_with_max_amount_can_borrow, key=lambda x: x[1],
@@ -117,10 +121,6 @@ def borrow_debt(amount, money_transaction, created_by, number_of_installment=Non
             else:
                 break
 
-    if optimal_share:
-        db.create_debt(amount=remaining_amount, money_transaction=money_transaction, share=optimal_share,
-                       created_by=created_by, number_of_installment=number_of_installment, start_period=start_period)
-        remaining_amount -= remaining_amount
 
     if remaining_amount != 0:
         raise Exception(f"ERRCODE: 0020, RA: {remaining_amount}, MSG: Beklenmedik bir hata ile karşılaşıldı. "

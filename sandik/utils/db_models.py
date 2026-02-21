@@ -669,7 +669,7 @@ class TrustRelationship(db.Entity):
         ACCEPTED = 3
         CANCELLED = 4
 
-    def other_member(self, whose):
+    def other_member(self, whose) -> Member:
         if isinstance(whose, Member):
             if whose not in [self.receiver_member_ref, self.requester_member_ref]:
                 raise Exception("gönderilen sandık üyesi güven bağının taraflarından değil")

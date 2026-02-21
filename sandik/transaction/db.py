@@ -58,6 +58,10 @@ def create_contribution(share, period, created_by, amount=None, log_detail=""):
 
 
 def create_piece_of_debt(member, debt, amount, trust_relationship_for_log, created_by) -> PieceOfDebt:
+    if amount <= 0:
+        raise UnexpectedValue(f"ERR POD-1: = veya daha küçük piece_of_debt oluşturulamaz. "
+                              f"Lütfen site yöneticisi ile iletişime geçin")
+
     logged_ref_items = {
         "logged_debt_ref": debt,
         "logged_sub_receipt_ref": debt.sub_receipt_ref,
@@ -100,23 +104,23 @@ def create_installments_of_debt(debt, created_by):
 
 
 def create_piece_of_debts(debt, created_by):
-    debt_amount = debt.amount
-
     member = debt.share_ref.member_ref
-    trusted_links = member.accepted_trust_links()
-    # TODO performans için get_balance bir defa çağrılarak bir listede tutulabilir
-    sorted_trusted_links = sorted(trusted_links, key=lambda tl: tl.other_member(whose=member).get_balance())
-
-    remaining_amount = debt_amount
+    remaining_amount = debt.amount
 
     # Önce kendinden borç almalı
-    temp_amount = member.get_balance() if member.get_balance() <= remaining_amount else remaining_amount
-    create_piece_of_debt(member=member, debt=debt, amount=temp_amount,
-                         trust_relationship_for_log=None, created_by=created_by)
-    remaining_amount -= temp_amount
+    if member.get_balance() > 0:
+        temp_amount = member.get_balance() if member.get_balance() <= remaining_amount else remaining_amount
 
-    if remaining_amount == 0:
-        return debt.piece_of_debts_set
+        create_piece_of_debt(member=member, debt=debt, amount=temp_amount,
+                             trust_relationship_for_log=None, created_by=created_by)
+        remaining_amount -= temp_amount
+
+        if remaining_amount == 0:
+            return debt.piece_of_debts_set
+
+    positive_trusted_links = select(tl for tl in member.accepted_trust_links()
+                                    if tl.other_member(whose=member).get_balance() > 0)
+    sorted_trusted_links = sorted(positive_trusted_links, key=lambda tl: tl.other_member(whose=member).get_balance())
 
     for i, link in enumerate(sorted_trusted_links):
         if remaining_amount <= 0:
