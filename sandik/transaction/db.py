@@ -59,8 +59,8 @@ def create_contribution(share, period, created_by, amount=None, log_detail=""):
 
 def create_piece_of_debt(member, debt, amount, trust_relationship_for_log, created_by) -> PieceOfDebt:
     if amount <= 0:
-        raise UnexpectedValue(f"ERR POD-1: = veya daha küçük piece_of_debt oluşturulamaz. "
-                              f"Lütfen site yöneticisi ile iletişime geçin")
+        raise ValueError(f"ERR POD-1: = veya daha küçük piece_of_debt oluşturulamaz. "
+                         f"Lütfen site yöneticisi ile iletişime geçin")
 
     logged_ref_items = {
         "logged_debt_ref": debt,
@@ -103,13 +103,13 @@ def create_installments_of_debt(debt, created_by):
     return debt.installments_set
 
 
-def create_piece_of_debts(debt, created_by):
+def create_piece_of_debts(debt, created_by, debt_amount=None):
     member = debt.share_ref.member_ref
-    remaining_amount = debt.amount
+    remaining_amount = debt_amount or debt.amount
 
-    # Önce kendinden borç almalı
+    # 1. Aşama: Önce kendinden borç almalı
     if member.get_balance() > 0:
-        temp_amount = member.get_balance() if member.get_balance() <= remaining_amount else remaining_amount
+        temp_amount = min(member.get_balance(), remaining_amount)
 
         create_piece_of_debt(member=member, debt=debt, amount=temp_amount,
                              trust_relationship_for_log=None, created_by=created_by)
@@ -118,25 +118,39 @@ def create_piece_of_debts(debt, created_by):
         if remaining_amount == 0:
             return debt.piece_of_debts_set
 
-    positive_trusted_links = select(tl for tl in member.accepted_trust_links()
-                                    if tl.other_member(whose=member).get_balance() > 0)
-    sorted_trusted_links = sorted(positive_trusted_links, key=lambda tl: tl.other_member(whose=member).get_balance())
+    # 2. Aşama: Güvendiği kişilerden (Trusted Links) tahsilat
+    trusted_links = select(tl for tl in member.accepted_trust_links())
 
-    for i, link in enumerate(sorted_trusted_links):
-        if remaining_amount <= 0:
+    positive_trusted_links = []
+    for tl in trusted_links:
+        other_member = tl.other_member(whose=member)
+        balance = other_member.get_balance()
+        if balance > 0:
+            positive_trusted_links.append({
+                'link': tl,
+                'member': other_member,
+                'balance': balance
+            })
+    # Kritik Nokta: Bakiyesi en az olandan en çoka doğru sıralıyoruz
+    sorted_trusted_links = sorted(positive_trusted_links, key=lambda x: x['balance'])
+
+    for i, item in enumerate(sorted_trusted_links):
+        # Borç başarıyla tamamen dağıtıldıysa döngüden güvenle çık
+        if remaining_amount == 0:
+            break
+        elif remaining_amount < 0:
             raise Exception(f"ERRCODE: 0016, RA: {remaining_amount}, "
                             f"MSG: Beklenmedik bir hata ile karşılaşıldı. Düzeltilmesi için "
                             f"lütfen site yöneticisi ile iletişime geçerek ERRCODE'u ve RA'yı söyleyiniz.")
 
-        temp_amount = ceil(remaining_amount / (len(sorted_trusted_links) - i))
-        temp_amount = temp_amount if temp_amount <= remaining_amount else remaining_amount
+        remaining_people = len(sorted_trusted_links) - i
+        temp_amount = remaining_amount // remaining_people
+        temp_amount = min(temp_amount, item['balance'], remaining_amount)
 
-        other_member = link.other_member(whose=member)
-        temp_amount = temp_amount if temp_amount <= other_member.get_balance() else other_member.get_balance()
-
-        create_piece_of_debt(member=other_member, debt=debt, amount=temp_amount,
-                             trust_relationship_for_log=link, created_by=created_by)
-        remaining_amount -= temp_amount
+        if temp_amount > 0:
+            create_piece_of_debt(member=item['member'], debt=debt, amount=temp_amount,
+                                 trust_relationship_for_log=item['link'], created_by=created_by)
+            remaining_amount -= temp_amount
 
     if remaining_amount != 0:
         raise Exception(f"ERRCODE: 0017, RA: {remaining_amount}, "

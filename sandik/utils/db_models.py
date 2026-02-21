@@ -129,15 +129,13 @@ class Share(db.Entity):
             remaining_debt_amount += self.member_ref.total_of_undistributed_amount()
 
         if self.sandik_ref.is_type_classic():
-            amount = self.sandik_ref.get_final_status()
+            group_final_status = self.sandik_ref.get_final_status()
         elif self.sandik_ref.is_type_with_trust_relationship():
-            amount = self.member_ref.total_balance_from_accepted_trust_links()
+            group_final_status = self.member_ref.max_borrow_amount_from_accepted_trust_links()
         else:
             raise Exception("Bilinmeyen sandık tipi")
 
-        amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
-
-        return amount
+        return min(group_final_status, remaining_debt_amount)
 
     def total_amount_of_paid_contribution(self):
         total_of_half_paid_contributions = select(
@@ -277,6 +275,13 @@ class Member(db.Entity):
         return select(t for t in TrustRelationship
                       if t.receiver_member_ref == self and t.status == TrustRelationship.STATUS.WAITING)
 
+    def max_borrow_amount_from_accepted_trust_links(self):
+        amount = 0
+        amount += max(self.get_balance(), 0)
+        for link in self.accepted_trust_links():
+            amount += max(link.other_member(whose=self).get_balance(), 0)
+        return amount
+
     def total_balance_from_accepted_trust_links(self):
         amount = 0
         amount += self.get_balance()
@@ -297,7 +302,7 @@ class Member(db.Entity):
         if self.sandik_ref.is_type_classic():
             amount = self.sandik_ref.get_final_status()
         elif self.sandik_ref.is_type_with_trust_relationship():
-            amount = self.total_balance_from_accepted_trust_links()
+            amount = self.max_borrow_amount_from_accepted_trust_links()
         else:
             raise Exception("Bilinmeyen sandık tipi")
 
