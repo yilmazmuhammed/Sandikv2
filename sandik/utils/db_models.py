@@ -129,15 +129,13 @@ class Share(db.Entity):
             remaining_debt_amount += self.member_ref.total_of_undistributed_amount()
 
         if self.sandik_ref.is_type_classic():
-            amount = self.sandik_ref.get_final_status()
+            group_final_status = self.sandik_ref.get_final_status()
         elif self.sandik_ref.is_type_with_trust_relationship():
-            amount = self.member_ref.total_balance_from_accepted_trust_links()
+            group_final_status = self.member_ref.max_borrow_amount_from_accepted_trust_links()
         else:
             raise Exception("Bilinmeyen sandık tipi")
 
-        amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
-
-        return amount
+        return min(group_final_status, remaining_debt_amount)
 
     def total_amount_of_paid_contribution(self):
         total_of_half_paid_contributions = select(
@@ -277,6 +275,13 @@ class Member(db.Entity):
         return select(t for t in TrustRelationship
                       if t.receiver_member_ref == self and t.status == TrustRelationship.STATUS.WAITING)
 
+    def max_borrow_amount_from_accepted_trust_links(self):
+        amount = 0
+        amount += max(self.get_balance(), 0)
+        for link in self.accepted_trust_links():
+            amount += max(link.other_member(whose=self).get_balance(), 0)
+        return amount
+
     def total_balance_from_accepted_trust_links(self):
         amount = 0
         amount += self.get_balance()
@@ -297,7 +302,7 @@ class Member(db.Entity):
         if self.sandik_ref.is_type_classic():
             amount = self.sandik_ref.get_final_status()
         elif self.sandik_ref.is_type_with_trust_relationship():
-            amount = self.total_balance_from_accepted_trust_links()
+            amount = self.max_borrow_amount_from_accepted_trust_links()
         else:
             raise Exception("Bilinmeyen sandık tipi")
 
@@ -669,7 +674,7 @@ class TrustRelationship(db.Entity):
         ACCEPTED = 3
         CANCELLED = 4
 
-    def other_member(self, whose):
+    def other_member(self, whose) -> Member:
         if isinstance(whose, Member):
             if whose not in [self.receiver_member_ref, self.requester_member_ref]:
                 raise Exception("gönderilen sandık üyesi güven bağının taraflarından değil")
@@ -795,20 +800,52 @@ class Debt(db.Entity):
         return self.amount - self.get_paid_amount()
 
     def update_pieces_of_debt(self):
-        # TODO ilgili borç tamamen ödendiyse PieceOfDebt'leri sil ?=> Peki sandığa katkım nasıl hesaplanacak
         paid_amount = self.get_paid_amount()
-        undistributed_paid_amount = paid_amount
-        for piece in self.piece_of_debts_set.order_by(lambda p: p.amount):
-            piece_lot = math.ceil(paid_amount * (piece.amount / self.amount))
+        total_amount = self.amount
 
-            temp_paid_amount = piece_lot if piece_lot <= undistributed_paid_amount else undistributed_paid_amount
-            piece.set(paid_amount=temp_paid_amount)
-            undistributed_paid_amount -= temp_paid_amount
+        if paid_amount == 0:
+            for piece in self.piece_of_debts_set:
+                piece.paid_amount = 0
+        elif paid_amount == total_amount:
+            for piece in self.piece_of_debts_set:
+                piece.paid_amount = piece.amount
+        else:
+            distribution_info = []
+            # Adım 1 & 2: Oransal payları ve tam sayı kısımlarını bul
+            for piece in self.piece_of_debts_set:
+                exact_share = paid_amount * (piece.amount / total_amount)
+                int_share = int(exact_share)
+                remainder = exact_share - int_share
 
-        if undistributed_paid_amount != 0:
-            raise Exception(f"ERRCODE: 0019, RA: {undistributed_paid_amount}, "
-                            f"MSG: Beklenmedik bir hata ile karşılaşıldı. Düzeltilmesi için "
-                            f"lütfen site yöneticisi ile iletişime geçerek ERRCODE'u ve RA'yı söyleyiniz.")
+                # Veritabanı nesnesini ve hesapları geçici bir listede tutuyoruz
+                distribution_info.append({
+                    'piece': piece,
+                    'int_share': int_share,
+                    'remainder': remainder
+                })
+
+            # Adım 3: Şu ana kadar dağıtılan miktarı ve kalanı bul
+            distributed_amount = sum(item['int_share'] for item in distribution_info)
+            remaining_to_distribute = int(paid_amount - distributed_amount)
+
+            # Adım 4: Küsuratları büyükten küçüğe sırala
+            distribution_info.sort(key=lambda x: x['remainder'], reverse=True)
+
+            # Adım 5: Kalan ödemeyi küsuratı en büyük olanlara 1'er 1'er dağıt
+            for i in range(remaining_to_distribute):
+                distribution_info[i]['int_share'] += 1
+
+            # Adım 6: Hesaplanan değerleri asıl nesnelere (veritabanına) kaydet
+            for i, item in enumerate(distribution_info):
+                piece = item['piece']
+                piece.paid_amount = item['int_share']
+                distribution_info[i]['piece'] = piece.id
+
+        if select(pod.amount for pod in self.piece_of_debts_set).sum() != self.amount:
+            raise Exception("ERR U-POD-01: Sistem yöneticisiyle iletişime geçiniz")
+
+        if select(pod.paid_amount for pod in self.piece_of_debts_set).sum() != self.get_paid_amount():
+            raise Exception("ERR U-POD-02: Sistem yöneticisiyle iletişime geçiniz")
 
     def get_unpaid_installments(self):
         return select(i for i in self.installments_set if not i.is_fully_paid)
