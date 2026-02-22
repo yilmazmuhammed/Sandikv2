@@ -60,7 +60,7 @@ def create_contribution(share, period, created_by, amount=None, log_detail=""):
 def create_piece_of_debt(member, debt, amount, trust_relationship_for_log, created_by) -> PieceOfDebt:
     if amount <= 0:
         raise ValueError("ERR POD-1: = veya daha küçük piece_of_debt oluşturulamaz. "
-                         f"Lütfen site yöneticisi ile iletişime geçin")
+                         "Lütfen site yöneticisi ile iletişime geçin")
 
     logged_ref_items = {
         "logged_debt_ref": debt,
