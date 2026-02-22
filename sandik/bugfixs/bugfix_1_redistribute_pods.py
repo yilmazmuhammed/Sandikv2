@@ -1,3 +1,8 @@
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", '.env'))
 from pony.orm import select
 from pony.orm.core import db_session, desc
 
