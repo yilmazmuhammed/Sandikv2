@@ -48,7 +48,7 @@ def add_money_transaction_by_manager_page(sandik_id):
             # rollback()
             flash(str(e), "danger")
         except Exception as e:
-            raise e
+            # raise e
             rollback()
             flash(str(e), "danger")
 

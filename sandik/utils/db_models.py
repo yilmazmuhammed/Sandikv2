@@ -131,7 +131,7 @@ class Share(db.Entity):
         if self.sandik_ref.is_type_classic():
             group_final_status = self.sandik_ref.get_final_status()
         elif self.sandik_ref.is_type_with_trust_relationship():
-            group_final_status = self.member_ref.max_borrow_amount_from_accepted_trust_links()
+            group_final_status = self.member_ref.total_balance_from_accepted_trust_links()
         else:
             raise Exception("Bilinmeyen sandık tipi")
 
@@ -302,7 +302,7 @@ class Member(db.Entity):
         if self.sandik_ref.is_type_classic():
             amount = self.sandik_ref.get_final_status()
         elif self.sandik_ref.is_type_with_trust_relationship():
-            amount = self.max_borrow_amount_from_accepted_trust_links()
+            amount = self.total_balance_from_accepted_trust_links()
         else:
             raise Exception("Bilinmeyen sandık tipi")
 
