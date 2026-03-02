@@ -131,7 +131,7 @@ class Share(db.Entity):
         if self.sandik_ref.is_type_classic():
             group_final_status = self.sandik_ref.get_final_status()
         elif self.sandik_ref.is_type_with_trust_relationship():
-            group_final_status = self.member_ref.total_balance_from_accepted_trust_links()
+            group_final_status = self.member_ref.max_borrow_amount_from_accepted_trust_links()
         else:
             raise Exception("Bilinmeyen sandık tipi")
 
@@ -280,7 +280,7 @@ class Member(db.Entity):
         amount += max(self.get_balance(), 0)
         for link in self.accepted_trust_links():
             amount += max(link.other_member(whose=self).get_balance(), 0)
-        return amount
+        return min(amount, self.sandik_ref.get_final_status())
 
     def total_balance_from_accepted_trust_links(self):
         amount = 0
@@ -302,13 +302,11 @@ class Member(db.Entity):
         if self.sandik_ref.is_type_classic():
             amount = self.sandik_ref.get_final_status()
         elif self.sandik_ref.is_type_with_trust_relationship():
-            amount = self.total_balance_from_accepted_trust_links()
+            amount = self.max_borrow_amount_from_accepted_trust_links()
         else:
             raise Exception("Bilinmeyen sandık tipi")
 
-        amount = amount if amount <= remaining_debt_amount else remaining_debt_amount
-
-        return amount
+        return min(amount, remaining_debt_amount)
 
     def get_revenue_money_transactions_are_not_fully_distributed(self):
         return select(mt for mt in self.money_transactions_set if
