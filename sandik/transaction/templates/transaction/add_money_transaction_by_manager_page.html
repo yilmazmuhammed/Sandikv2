@@ -2,6 +2,42 @@
 
 {% block js_block2 %}
   <script>
+    function formatMoney(value) {
+      let parts = value.toFixed(2).split(".");
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      if (parts[1] === "00") {
+        return parts[0];
+      }
+      return parts[0] + "," + parts[1];
+    }
+
+    $(document).ready(function () {
+      $("#member").on("change", function () {
+        let member_id = $(this).val();
+        if (!member_id || member_id === "None" || member_id === "") {
+          $("#member_required_payment_div").hide();
+          return;
+        }
+        let url = new URL('{{ url_for("sandik_api_bp.member_financial_status_api", sandik_id=g.sandik.id, _external=True)}}');
+        url.searchParams.set("member", member_id);
+
+        jQuery.ajax({
+          url: url.href,
+          success: function (data) {
+            if (data.result) {
+              $("#member_required_payment_span").text(formatMoney(parseFloat(data.undistributed_amount) - parseFloat(data.sum_of_unpaid_and_due_payments)));
+              $("#member_required_payment_div").show();
+            } else {
+              $("#member_required_payment_div").hide();
+            }
+          }
+        });
+      });
+      if ($("#member").val() && $("#member").val() !== "None") {
+        $("#member").trigger("change");
+      }
+    });
+
     $(document)
       .on("submit", "form", function (e) {
         let url = new URL('{{ url_for("sandik_api_bp.member_financial_status_api", sandik_id=g.sandik.id, _external=True)}}');
@@ -42,7 +78,10 @@
 {% endblock %}
 
 {% block content_under_form_block %}
-  <div class="text-center">
-    Sandık son durumu: {{ g.sandik.get_final_status()|tr_number_format }} ₺
-  </div>
+<div class="text-center">
+  Sandık son durumu: {{ g.sandik.get_final_status()|tr_number_format }} ₺
+</div>
+<div class="text-center mt-2" id="member_required_payment_div" style="display: none;">
+  Seçilen üyenin ay sonu: <span id="member_required_payment_span" class="font-weight-bold">-</span> ₺
+</div>
 {% endblock %}
