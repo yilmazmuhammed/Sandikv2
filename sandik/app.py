@@ -32,6 +32,8 @@ def initialize_flask() -> Flask:
         template_folder='utils/templates', static_folder='utils/static', static_url_path='/assets'
     )
     flask_app.secret_key = os.getenv("SANDIKv2_SECRET_KEY")
+    flask_app.config["SESSION_COOKIE_NAME"] = "session-sandikv2"
+    flask_app.config["REMEMBER_COOKIE_NAME"] = "remember-sandikv2"
     flask_app.json_encoder = CustomJSONEncoder
     return flask_app
 
