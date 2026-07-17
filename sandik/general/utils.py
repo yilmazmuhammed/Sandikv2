@@ -1,5 +1,71 @@
+from decimal import Decimal
+
 from sandik.general import db
 from sandik.general.exceptions import BankAccountNotFound, PrimaryBankAccountCannotBeDeleted
+from sandik.transaction import utils as transaction_utils
+from sandik.utils import period as period_utils
+
+
+def get_home_page_data(web_user):
+    """
+    Ana sayfada, kullanıcının üye olduğu bütün sandıkları kapsayan iki tablo için veri hazırlar:
+        - status_rows: Her sandıktaki son durum (ödenen aidat, alınan borç, ödenen taksit, ay sonu, mil sonu...)
+        - payment_rows: Ödenmemiş ödemelerin ay bazında, sandık sandık dağılımı
+    Yetki verilmiş fakat üye olunmayan sandıklar bu tablolara dahil edilmez.
+    """
+    members = sorted(
+        web_user.members_set.filter(lambda m: m.is_active)[:],
+        key=lambda m: m.sandik_ref.name.lower()
+    )
+
+    # --- Tablo 1: Sandık bazında son durum ---
+    status_rows = []
+    for member in members:
+        undistributed = member.total_of_undistributed_amount() or Decimal(0)
+        sum_of_unpaid_and_due = transaction_utils.sum_of_unpaid_and_due_payments(whose=member) or Decimal(0)
+        sum_of_future_and_unpaid = transaction_utils.sum_of_future_and_unpaid_payments(whose=member) or Decimal(0)
+        status_rows.append({
+            "member": member,
+            "sandik": member.sandik_ref,
+            "paid_contributions": member.sum_of_paid_contributions() or Decimal(0),
+            "total_debts": member.sum_of_debts() or Decimal(0),
+            "paid_installments": member.sum_of_paid_installments() or Decimal(0),
+            "unpaid_debt": member.sum_of_unpaid_amount_of_debts() or Decimal(0),
+            "undistributed": undistributed,
+            "month_end": undistributed - sum_of_unpaid_and_due,
+            "mile_end": undistributed - sum_of_unpaid_and_due - sum_of_future_and_unpaid,
+        })
+
+    # --- Tablo 2: Aylık ödemeler (ödenmemiş aidat + taksitler) ---
+    # payments_matrix[term][member.id] = o ay o sandıkta ödenmemiş toplam miktar
+    payments_matrix = {}
+    sandik_totals = {member.id: Decimal(0) for member in members}
+    for member in members:
+        for payment in transaction_utils.get_payments(whose=member, is_fully_paid=False):
+            unpaid_amount = payment.get_unpaid_amount()
+            if unpaid_amount <= 0:
+                continue
+            row = payments_matrix.setdefault(payment.term, {})
+            row[member.id] = row.get(member.id, Decimal(0)) + unpaid_amount
+            sandik_totals[member.id] += unpaid_amount
+
+    payment_rows = []
+    for term in sorted(payments_matrix.keys()):
+        cells = payments_matrix[term]
+        payment_rows.append({
+            "term": term,
+            "cells": cells,
+            "total": sum(cells.values()),
+        })
+
+    return {
+        "members": members,
+        "status_rows": status_rows,
+        "payment_rows": payment_rows,
+        "sandik_totals": sandik_totals,
+        "grand_total": sum(sandik_totals.values()) if sandik_totals else Decimal(0),
+        "current_period": period_utils.current_period(),
+    }
 
 
 def remove_bank_account(bank_account_id, deleted_by):

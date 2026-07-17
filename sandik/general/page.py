@@ -40,6 +40,7 @@ def index_page():
 @general_page_bp.route("/ana-sayfa")
 @login_required
 def home_page():
+    g.home_data = utils.get_home_page_data(web_user=current_user)
     return render_template("general/home_page.html", page_info=LayoutPI(title="Ana sayfa"))
 
 

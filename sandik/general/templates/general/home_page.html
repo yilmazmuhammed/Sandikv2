@@ -39,5 +39,112 @@
 
     </div>
 
+    {% if g.home_data.members %}
+
+      <!-- Sandıklardaki son durumlarım -->
+      <div class="row">
+        <div class="col-md-12">
+          <div class="panel panel-default">
+            <div class="panel-heading font-bold">
+              <span>Sandıklardaki son durumlarım</span>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-striped table-bordered" style="margin-bottom: 0;">
+                <thead>
+                  <tr class="text-center font-bold">
+                    <th>Sandık</th>
+                    <th>Ödenen aidat</th>
+                    <th>Alınan borç</th>
+                    <th>Ödenen taksit</th>
+                    <th>Kalan borç</th>
+                    <th>İşleme konmamış</th>
+                    <th title="İşleme konmamış miktar - vadesi gelmiş ödenmemiş ödemeler">Ay sonu</th>
+                    <th title="İşleme konmamış miktar - bütün ödenmemiş ödemeler">Mil sonu</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in g.home_data.status_rows %}
+                    <tr class="text-center">
+                      <td class="text-left font-bold">
+                        <a href="{{ url_for('sandik_page_bp.sandik_summary_for_member_page', sandik_id=row.sandik.id) }}">{{ row.sandik.name }}</a>
+                      </td>
+                      <td>{{ row.paid_contributions|tr_number_format }} ₺</td>
+                      <td>{{ row.total_debts|tr_number_format }} ₺</td>
+                      <td>{{ row.paid_installments|tr_number_format }} ₺</td>
+                      <td>{{ row.unpaid_debt|tr_number_format }} ₺</td>
+                      <td>{{ row.undistributed|tr_number_format }} ₺</td>
+                      <td class="font-bold {% if row.month_end < 0 %}text-danger{% else %}text-success{% endif %}">{{ row.month_end|tr_number_format }} ₺</td>
+                      <td class="font-bold {% if row.mile_end < 0 %}text-danger{% else %}text-success{% endif %}">{{ row.mile_end|tr_number_format }} ₺</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aylık ödemelerim -->
+      <div class="row">
+        <div class="col-md-12">
+          <div class="panel panel-default">
+            <div class="panel-heading font-bold">
+              <span>Aylık ödemelerim</span>
+              <span class="text-muted" style="font-weight: normal;">(ödenmemiş aidat ve taksitler)</span>
+            </div>
+            <div class="table-responsive">
+              {% if g.home_data.payment_rows %}
+                <table class="table table-striped table-bordered" style="margin-bottom: 0;">
+                  <thead>
+                    <tr class="text-center font-bold">
+                      <th>Ay</th>
+                      {% for member in g.home_data.members %}
+                        <th>{{ member.sandik_ref.name }}</th>
+                      {% endfor %}
+                      <th>Toplam</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for prow in g.home_data.payment_rows %}
+                      <tr class="text-center {% if prow.term < g.home_data.current_period %}text-danger{% elif prow.term == g.home_data.current_period %}text-warning font-bold{% endif %}">
+                        <td class="text-left font-bold">
+                          {{ prow.term }}
+                          {% if prow.term < g.home_data.current_period %}
+                            <i class="fas fa-exclamation-triangle" title="Vadesi geçmiş"></i>
+                          {% endif %}
+                        </td>
+                        {% for member in g.home_data.members %}
+                          <td>
+                            {% if prow.cells.get(member.id) %}
+                              {{ prow.cells.get(member.id)|tr_number_format }} ₺
+                            {% else %}
+                              <span class="text-muted">–</span>
+                            {% endif %}
+                          </td>
+                        {% endfor %}
+                        <td class="font-bold">{{ prow.total|tr_number_format }} ₺</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                  <tfoot>
+                    <tr class="text-center font-bold active">
+                      <td class="text-left">Toplam</td>
+                      {% for member in g.home_data.members %}
+                        <td>{{ g.home_data.sandik_totals.get(member.id)|tr_number_format }} ₺</td>
+                      {% endfor %}
+                      <td>{{ g.home_data.grand_total|tr_number_format }} ₺</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              {% else %}
+                <div class="wrapper text-center text-muted">Ödenmemiş ödemeniz bulunmuyor.</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    {% endif %}
+
   </div>
 {% endblock %}
