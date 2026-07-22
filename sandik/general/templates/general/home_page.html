@@ -1,6 +1,54 @@
 {% extends "utils/layout.html" %}
 {% import "utils/parts/macros.html" as macros%}
 
+{% block css_block %}
+  <style>
+    /* Sandık başlık isimleri: kelimeler arası alt satıra geçsin,
+       tek uzun kelime sığmazsa (JS ile) yazı boyutu küçülür */
+    #home-payments-table th.sandik-col {
+      vertical-align: middle;
+    }
+    #home-payments-table .sandik-head {
+      display: inline-block;
+      max-width: 90px;
+      white-space: normal;      /* kelimeler arası sarma */
+      overflow-wrap: normal;    /* uzun kelimeyi kendisi kırmasın */
+      word-break: normal;
+      line-height: 1.15;
+      vertical-align: middle;
+    }
+    /* Ödeme miktarları ₺ işareti dahil tek satırda kalsın */
+    #home-payments-table tbody td,
+    #home-payments-table tfoot td,
+    #home-payments-table thead th:first-child,
+    #home-payments-table thead th:last-child {
+      white-space: nowrap;
+    }
+  </style>
+{% endblock %}
+
+{% block js_block %}
+  <script>
+    jQuery(function ($) {
+      $('#home-payments-table .sandik-head').each(function () {
+        var el = this;
+        var size = 13;
+        el.style.fontSize = size + 'px';
+        // Bir kelime kutuya sığmıyorsa yazı boyutunu küçült
+        while (el.scrollWidth > el.clientWidth + 1 && size > 8) {
+          size -= 0.5;
+          el.style.fontSize = size + 'px';
+        }
+        // En küçük boyutta bile sığmıyorsa son çare olarak kelimeyi böl
+        if (el.scrollWidth > el.clientWidth + 1) {
+          el.style.wordBreak = 'break-word';
+          el.style.overflowWrap = 'break-word';
+        }
+      });
+    });
+  </script>
+{% endblock %}
+
 {% block content_block %}
   {{ macros.page_header(page_info.title) }}
   <div class="wrapper-md">
@@ -94,12 +142,12 @@
             </div>
             <div class="table-responsive">
               {% if g.home_data.payment_rows %}
-                <table class="table table-striped table-bordered" style="margin-bottom: 0;">
+                <table id="home-payments-table" class="table table-striped table-bordered" style="margin-bottom: 0;">
                   <thead>
                     <tr class="text-center font-bold">
                       <th>Ay</th>
                       {% for member in g.home_data.members %}
-                        <th>{{ member.sandik_ref.name }}</th>
+                        <th class="sandik-col"><div class="sandik-head">{{ member.sandik_ref.name }}</div></th>
                       {% endfor %}
                       <th>Toplam</th>
                     </tr>
