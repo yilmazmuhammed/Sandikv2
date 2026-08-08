@@ -148,6 +148,11 @@ def update_share(share, updated_by, **kwargs):
 
 
 def update_member(member, updated_by, **kwargs) -> Member:
+    web_user = kwargs.get("web_user_ref")
+    if web_user and web_user != member.web_user_ref \
+            and get_member(sandik_ref=member.sandik_ref, web_user_ref=web_user):
+        raise WebUserIsAlreadyMember("Bu kullanıcı zaten sandığa üye")
+
     updated_fields = get_updated_fields(new_values=kwargs, db_object=member)
     Log(web_user_ref=updated_by, type=Log.TYPE.MEMBER.UPDATE, logged_member_ref=member, detail=str(updated_fields))
     member.set(**kwargs)
