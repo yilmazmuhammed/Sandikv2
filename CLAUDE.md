@@ -78,6 +78,16 @@ process'i olarak tanımlı.
   geçici çözümdür — kök nedeni bulup kaldır.
 - `Sandikv2Exception.detect_caller_function_name()` `inspect.stack()` kullanır; frame'in kaynak
   kodu okunamazsa (`code_context is None`) gerçek hata maskelenebilir.
+- **Entity hook'ları (`before_insert` / `after_insert`) yedekten geri yüklemede çalıştırılmaz.**
+  Bu hook'lar "tek bir işlem yapılırken" geçerli iş kurallarını kontrol eder; geri yüklemede satırlar
+  tamamlanmış bir anlık görüntü olarak yazıldığı için kurallar satır satır sağlanmaz. Örnek:
+  `PieceOfDebt.before_insert` (ERRCODE 0018) borç verenin bakiyesinin verdiği borçtan büyük olmasını
+  ister — borç geri ödendikten sonra bu doğru değildir, dolayısıyla geçmiş satır tekrar yazılamaz.
+  `backup/db.py` → `entity_hooks_disabled()` bu yüzden vardır; türetilmiş alanlar yükleme sonrası
+  `recalculate_derived_fields_for_all_rows()` ile topluca hesaplanır. Bu aşamada tutarsızlık
+  bulunursa `InconsistentBackupData` fırlatılır ve **yükleme tamamen geri alınır**: tutarsız bir
+  yedeği yükleyip uyarmaktansa hiç yüklememek tercih edilir. `backup/page.py` bu durumda
+  `rollback()` çağırıp tutarsızlıkları ekranda listeler.
 - Pony ORM sorguları lambda içinde entity metodu çağırabilir (`c.get_unpaid_amount() > 0`); bunlar
   SQL'e çevrilir, dolayısıyla metot gövdesi SQL'e çevrilebilir olmalıdır.
 - Veri değiştiren döngülerden sonra sorgu yapmadan önce `flush()` çağırmak güvenlidir.

@@ -5,6 +5,7 @@ from pony.orm import rollback
 from sandik.auth import db as auth_db
 from sandik.auth.requirement import admin_required
 from sandik.backup import utils, forms
+from sandik.backup.exceptions import InconsistentBackupData
 from sandik.utils.forms import FormPI
 
 backup_page_bp = Blueprint(
@@ -27,7 +28,17 @@ def restore_backup_page():
             current_user_email_address = current_user.to_dict()["email_address"]
             utils.restore_database(backup_data=backup_data)
             login_user(auth_db.get_web_user(email_address=current_user_email_address))
+
+            flash("Yedek geri yüklendi.", "success")
+        except InconsistentBackupData as e:
+            # Geri yükleme mevcut verileri silerek başlar; tutarsızlık tespit edildiğinde
+            # işlemin geri alınması şarttır, aksi halde veritabanı yarım kalmış olur.
+            rollback()
+            flash(str(e), "danger")
+            for inconsistency in e.inconsistencies:
+                flash(inconsistency, "danger")
         except Exception as e:
+            rollback()
             flash(str(e), "danger")
             raise e
 

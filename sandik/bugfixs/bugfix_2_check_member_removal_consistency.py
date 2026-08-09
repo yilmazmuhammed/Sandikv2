@@ -100,7 +100,9 @@ def find_problems():
         elif mt.amount == 0:
             # Zararsız: iade edilecek bir tutar yokken oluşturulmuş boş kayıt. Sadece görsel kirlilik.
             add(mt.member_ref, f"MT#{mt.id} sıfır tutarlı para işlemi (zararsız, detay={mt.detail!r})")
-        if mt.is_fully_distributed != (undistributed == 0):
+        # Aşırı dağıtılmış işlemler zaten yukarıda bildirildi; bayrak onlarda bilerek True'dur
+        # (bkz. backup/db.py -> recalculate_derived_fields_for_all_rows), tekrar bildirilmez.
+        if mt.is_fully_distributed != (undistributed <= 0):
             add(mt.member_ref, f"MT#{mt.id} is_fully_distributed={mt.is_fully_distributed} "
                                f"ama dağıtılmamış={undistributed}")
 

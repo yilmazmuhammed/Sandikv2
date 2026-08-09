@@ -4,6 +4,7 @@ from pony.orm import flush
 
 from sandik.auth import db as auth_db
 from sandik.backup import db
+from sandik.backup.exceptions import InconsistentBackupData
 from sandik.sandik import utils as sandik_utils, db as sandik_db
 from sandik.transaction import utils as transaction_utils
 from sandik.utils.db_models import MoneyTransaction, Sandik
@@ -29,8 +30,13 @@ def create_or_update_admin_users(admin_users_data):
 
 
 def restore_database(backup_data):
-    # TODO bütün satırlar import edildikten sonra before_insert gibi fonksiyonların çalışması lazım
+    """
+    Yedeği geri yükler.
 
+    Yedeğin kendi içinde tutarsız olduğu tespit edilirse `InconsistentBackupData` fırlatılır ve
+    hiçbir şey yazılmaz: tutarsız bir yedeği yükleyip kullanıcıyı uyarmaktansa hiç yüklememek
+    tercih edilir. Bu durumda çağıran taraf işlemi geri almalıdır (bkz. backup/page.py).
+    """
     for table, relations in db.EXCLUDED_RELATIONS.items():
         for relation in relations:
             for row in backup_data[table.__name__]:
@@ -39,14 +45,20 @@ def restore_database(backup_data):
     admin_users = auth_db.get_admin_web_users()
     admin_users_data = [user.to_dict() for user in admin_users]
 
-    db.reset_database(db.DATABASE_TABLES_TO_BACKUP_WITH_ORDER)
+    # Entity hook'ları tek tek işlem yapılırkenki iş kurallarını kontrol eder; satır satır yazılan
+    # bir anlık görüntüde bu kurallar sağlanmaz. Ayrıntı için db.entity_hooks_disabled().
+    with db.entity_hooks_disabled(db.DATABASE_TABLES_TO_BACKUP_WITH_ORDER):
+        db.reset_database(db.DATABASE_TABLES_TO_BACKUP_WITH_ORDER)
 
-    for table in db.DATABASE_TABLES_TO_BACKUP_WITH_ORDER:
-        db.restore_table(table=table, rows=backup_data[table.__name__])
+        for table in db.DATABASE_TABLES_TO_BACKUP_WITH_ORDER:
+            db.restore_table(table=table, rows=backup_data[table.__name__])
 
-    db.recalculate_is_fully_paid_for_all_payments()
+        inconsistencies = db.recalculate_derived_fields_for_all_rows()
+        if inconsistencies:
+            raise InconsistentBackupData(inconsistencies=inconsistencies)
 
-    create_or_update_admin_users(admin_users_data=admin_users_data)
+        create_or_update_admin_users(admin_users_data=admin_users_data)
+        flush()
 
 
 def create_sandik_from_sandikv1_data(data, created_by):

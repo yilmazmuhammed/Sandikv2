@@ -19,8 +19,9 @@ class THOUSANDS:
     SandikRuleException = 25
     BankAccountException = 30
     AuthException = 40
-    EmailBotException = 40
-    EmailServerException = 41
+    EmailBotException = 50
+    EmailServerException = 51
+    BackupException = 60
 
 
 class ErrcodeException(Exception):
