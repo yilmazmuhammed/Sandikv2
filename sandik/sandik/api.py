@@ -20,7 +20,8 @@ def member_financial_status_api(sandik_id):
     return jsonify(result=True, member_id=member.id,
                    sum_of_unpaid_and_due_payments=utils.sum_of_unpaid_and_due_payments(whose=member),
                    sum_of_future_and_unpaid_payments=utils.sum_of_future_and_unpaid_payments(whose=member),
-                   undistributed_amount=member.total_of_undistributed_amount())
+                   undistributed_amount=member.total_of_undistributed_amount(),
+                   max_amount_can_borrow=member.max_amount_can_borrow())
 
 
 @sandik_api_bp.route('<int:sandik_id>/uye-hisseleri')

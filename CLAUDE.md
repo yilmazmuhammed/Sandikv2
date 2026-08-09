@@ -90,6 +90,24 @@ process'i olarak tanımlı.
   `rollback()` çağırıp tutarsızlıkları ekranda listeler.
 - Pony ORM sorguları lambda içinde entity metodu çağırabilir (`c.get_unpaid_amount() > 0`); bunlar
   SQL'e çevrilir, dolayısıyla metot gövdesi SQL'e çevrilebilir olmalıdır.
+- **Form alanları ortak `utils/parts/form.html` ile render edilir**; alan tipine göre genel bir
+  kalıp uygulanır. Tek bir sayfada bir alanı zenginleştirmek (yanına tuş koymak, placeholder'ı
+  duruma göre değiştirmek) gerekiyorsa bu ortak partial değiştirilmez; sayfanın `js_block2`
+  bloğunda jQuery ile yapılır. Örnek: `transaction/add_money_transaction_by_manager_page.html`
+  seçilen üye + işlem türüne göre `#amount` placeholder'ını günceller, alanı `input-group` içine alıp
+  hızlı doldurma tuşu ekler ve form altındaki bilgi satırlarından yalnızca ilgili olanı gösterir.
+  Bootstrap **3** kullanılır; tuş gizlenirken `input-group` sınıfı da kaldırılmalıdır, aksi hâlde
+  alanın köşe yuvarlaklığı bozulur.
+- `MoneyTransaction.TYPE.REVENUE` **0** olduğu için JS'te işlem türü karşılaştırmaları katı (`===`)
+  ve string üzerinden yapılmalıdır: seçim yapılmamış `<select>` boş string döndürür ve `"" == 0`
+  JavaScript'te doğrudur — gevşek karşılaştırmada "türü seçilmemiş" durum "para girişi" sanılır.
+- `DecimalField` tarayıcıda `<input type="number">` olarak render edilir. Bu alanlara JS ile değer
+  veya placeholder yazarken **binlik ayraçsız, noktalı ondalıklı** biçim kullanılmalıdır (`1249.5`);
+  gösterim için kullanılan Türkçe biçim (`1.249,50`) ne alana yazılabilir ne de sunucuda
+  ayrıştırılabilir.
+- Hesaplanan bir ipucunu (placeholder/öneri) "anlamsız" diye tamamen gizlemek yerine 0'a sıkıştırıp
+  göstermek yeğlenir: değer beklenmedik şekilde 0/negatif çıktığında ipucunun hiç görünmemesi
+  "özellik çalışmıyor" gibi algılanıyor.
 - Veri değiştiren döngülerden sonra sorgu yapmadan önce `flush()` çağırmak güvenlidir.
 
 ## Yerelde çalıştırma ve test

@@ -27,15 +27,6 @@ class MoneyTransactionForm(CustomFlaskForm):
         default=datetime.today
     )
 
-    amount = DecimalField(
-        label="İşlem miktarı:",
-        validators=[
-            input_required_validator("İşlem miktarı"),
-            NumberRange(message="İşlem miktarı 0'dan büyük bir sayı olmalıdır", min=0.001),
-        ],
-        render_kw={"placeholder": "0.01"},
-    )
-
     type = SelectField(
         label="İşlem türü:",
         validators=[
@@ -43,6 +34,15 @@ class MoneyTransactionForm(CustomFlaskForm):
         ],
         choices=[("", "İşlem türünü seçiniz...")],
         coerce=str,
+    )
+
+    amount = DecimalField(
+        label="İşlem miktarı:",
+        validators=[
+            input_required_validator("İşlem miktarı"),
+            NumberRange(message="İşlem miktarı 0'dan büyük bir sayı olmalıdır", min=0.001),
+        ],
+        render_kw={"placeholder": "0.01"},
     )
 
     use_untreated_amount = HiddenField()

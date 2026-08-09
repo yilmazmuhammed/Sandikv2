@@ -2,6 +2,8 @@
 
 {% block js_block2 %}
   <script>
+    let member_financial_status = null;
+
     function formatMoney(value) {
       let parts = value.toFixed(2).split(".");
       parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -11,11 +13,95 @@
       return parts[0] + "," + parts[1];
     }
 
+    {# Miktar alanı binlik ayraçsız ve noktalı ondalıklı sayı bekler (input type=number) #}
+    function amountAsFormValue(value) {
+      return parseFloat(value.toFixed(2)).toString();
+    }
+
+    {#
+      Üyenin bu ay ödemesi gereken miktar: vadesi gelmiş ve ödenmemiş aidat + taksitleri.
+      Üyenin sandıkta işleme konmamış parası buradan DÜŞÜLMEZ; formun submit kontrolü de girilen
+      tutarı doğrudan bu değerle karşılaştırır.
+    #}
+    function memberRequiredPaymentAmount() {
+      if (!member_financial_status) {
+        return null;
+      }
+      let amount = parseFloat(member_financial_status.sum_of_unpaid_and_due_payments);
+      return isNaN(amount) ? null : Math.max(amount, 0);
+    }
+
+    function memberMaxBorrowAmount() {
+      if (!member_financial_status) {
+        return null;
+      }
+      let amount = parseFloat(member_financial_status.max_amount_can_borrow);
+      return isNaN(amount) ? null : Math.max(amount, 0);
+    }
+
+    {# Seçilen üye ve işlem türüne göre miktar alanını ve form altındaki bilgi satırlarını günceller #}
+    function updateMemberFinancialStatusView() {
+      {# Seçim yapılmamışken değer boş string'dir; "" == 0 doğru döndüğü için karşılaştırma katı olmalı #}
+      let type = $("#type").val();
+      let is_revenue = type === "{{ MoneyTransaction.TYPE.REVENUE }}";
+      let is_expense = type === "{{ MoneyTransaction.TYPE.EXPENSE }}";
+
+      let suggested_amount = null;
+      if (is_revenue) {
+        suggested_amount = memberRequiredPaymentAmount();
+      } else if (is_expense) {
+        suggested_amount = memberMaxBorrowAmount();
+      }
+
+      {#
+        Önerilen miktar, alanın placeholder'ı yerine tuşun üzerinde gösterilir: hem değer hem de
+        "tıklarsan bu yazılır" bilgisi tek yerde toplanır. Tuştaki metin okunmak için, alana yazılan
+        değer ise forma gönderilmek için biçimlendirilir.
+      #}
+      if (suggested_amount > 0) {
+        let fill_button_title = is_revenue ? "Üyenin bu ay ödemesi gereken miktarı işlem miktarına yazar"
+                                           : "Üyenin alabileceği en fazla borcu işlem miktarına yazar";
+        $("#fill_amount_btn")
+          .data("amount", amountAsFormValue(suggested_amount))
+          .attr("title", fill_button_title)
+          .attr("aria-label", fill_button_title);
+        $("#fill_amount_value").text(formatMoney(suggested_amount) + " ₺");
+        {# Tuş görünmezken "input-group" sınıfı da kaldırılır, böylece alan normal görünümünde kalır #}
+        $("#amount_input_group").addClass("input-group");
+        $("#fill_amount_btn_wrapper").show();
+      } else {
+        $("#fill_amount_btn_wrapper").hide();
+        $("#amount_input_group").removeClass("input-group");
+      }
+
+      {# Her bilgi satırı yalnızca ilgili işlem türü seçiliyken gösterilir #}
+      let show_month_end_row = !!member_financial_status && is_revenue;
+      let show_max_borrow_row = !!member_financial_status && is_expense;
+      $("#member_month_end_row").toggle(show_month_end_row);
+      $("#member_max_borrow_row").toggle(show_max_borrow_row);
+      $("#member_financial_status_div").toggle(show_month_end_row || show_max_borrow_row);
+    }
+
     $(document).ready(function () {
+      $("#amount").wrap('<div id="amount_input_group"></div>').after(
+        '<span class="input-group-btn" id="fill_amount_btn_wrapper" style="display: none;">' +
+        {# Miktar ve açıklama işlem türüne göre updateMemberFinancialStatusView() içinde doldurulur #}
+        '<button type="button" class="btn btn-default" id="fill_amount_btn">' +
+        '<i class="fa fa-arrow-left"></i> <span id="fill_amount_value"></span></button>' +
+        '</span>'
+      );
+
+      $("#fill_amount_btn").on("click", function () {
+        $("#amount").val($(this).data("amount"));
+      });
+
+      $("#type").on("change", updateMemberFinancialStatusView);
+
       $("#member").on("change", function () {
         let member_id = $(this).val();
         if (!member_id || member_id === "None" || member_id === "") {
-          $("#member_required_payment_div").hide();
+          member_financial_status = null;
+          updateMemberFinancialStatusView();
           return;
         }
         let url = new URL('{{ url_for("sandik_api_bp.member_financial_status_api", sandik_id=g.sandik.id, _external=True)}}');
@@ -25,16 +111,24 @@
           url: url.href,
           success: function (data) {
             if (data.result) {
+              member_financial_status = data;
               $("#member_required_payment_span").text(formatMoney(parseFloat(data.undistributed_amount) - parseFloat(data.sum_of_unpaid_and_due_payments)));
-              $("#member_required_payment_div").show();
+              $("#member_max_borrow_amount_span").text(formatMoney(parseFloat(data.max_amount_can_borrow)));
             } else {
-              $("#member_required_payment_div").hide();
+              member_financial_status = null;
             }
+            updateMemberFinancialStatusView();
+          },
+          error: function () {
+            member_financial_status = null;
+            updateMemberFinancialStatusView();
           }
         });
       });
       if ($("#member").val() && $("#member").val() !== "None") {
         $("#member").trigger("change");
+      } else {
+        updateMemberFinancialStatusView();
       }
     });
 
@@ -81,7 +175,15 @@
 <div class="text-center">
   Sandık son durumu: {{ g.sandik.get_final_status()|tr_number_format }} ₺
 </div>
-<div class="text-center mt-2" id="member_required_payment_div" style="display: none;">
-  Seçilen üyenin ay sonu: <span id="member_required_payment_span" class="font-weight-bold">-</span> ₺
+{# Satırların görünürlüğünü işlem türüne göre updateMemberFinancialStatusView() belirler #}
+<div class="text-center mt-2" id="member_financial_status_div" style="display: none;">
+  <div id="member_month_end_row" style="display: none;">
+    Seçilen üyenin ay sonu: <span id="member_required_payment_span"
+      class="font-weight-bold">-</span> ₺
+  </div>
+  <div id="member_max_borrow_row" style="display: none;">
+    Üyenin alabileceği borç miktarı: <span id="member_max_borrow_amount_span"
+      class="font-weight-bold">-</span> ₺
+  </div>
 </div>
 {% endblock %}
