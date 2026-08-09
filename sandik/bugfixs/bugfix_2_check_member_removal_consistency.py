@@ -16,6 +16,10 @@ Kullanım:
 import os
 import sys
 
+# `sandik` paketini bulabilmek için depo kökü (Sandikv2/) sys.path'e ekleniyor.
+# Bu sayede script hangi dizinden çalıştırılırsa çalıştırılsın import'lar çalışır.
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
 from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", '.env'))
@@ -94,7 +98,8 @@ def find_problems():
         if mt.amount < 0:
             add(mt.member_ref, f"MT#{mt.id} negatif tutarlı para işlemi (tutar={mt.amount})")
         elif mt.amount == 0:
-            add(mt.member_ref, f"MT#{mt.id} sıfır tutarlı para işlemi")
+            # Zararsız: iade edilecek bir tutar yokken oluşturulmuş boş kayıt. Sadece görsel kirlilik.
+            add(mt.member_ref, f"MT#{mt.id} sıfır tutarlı para işlemi (zararsız, detay={mt.detail!r})")
         if mt.is_fully_distributed != (undistributed == 0):
             add(mt.member_ref, f"MT#{mt.id} is_fully_distributed={mt.is_fully_distributed} "
                                f"ama dağıtılmamış={undistributed}")

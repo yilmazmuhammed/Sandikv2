@@ -30,16 +30,46 @@ Kullanım:
 import os
 import sys
 
+# `sandik` paketini bulabilmek için depo kökü (Sandikv2/) sys.path'e ekleniyor.
+# Bu sayede script hangi dizinden çalıştırılırsa çalıştırılsın import'lar çalışır.
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
 from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", '.env'))
 
 from pony.orm import select, flush, rollback, commit
+from contextlib import contextmanager
+
 from pony.orm.core import db_session
 
 from sandik.auth import db as auth_db
 from sandik.transaction import db as transaction_db
 from sandik.utils.db_models import Member, MoneyTransaction, Contribution
+
+# Otomatik olarak (üye/hisse silinirken) oluşturulan iade para işlemlerinin detay alanları
+AUTO_REFUND_DETAILS = ("Üye ayrılışı", "Hisse kapatılması")
+
+
+@contextmanager
+def tolerant_recalculation():
+    """
+    Onarım sırasında ERRCODE 0013 kontrolünü geçici olarak kapatır.
+
+    Onarım adımları arasında para işlemi geçici olarak aşırı dağıtılmış kalabilir (ör. sıfır
+    tutarlı bir "geri alınmış" kaydı silinirken). Kontrol, onarım bittikten sonra
+    `check_invariants()` ile zaten yapılır.
+    """
+    original = MoneyTransaction.recalculate_is_fully_distributed
+
+    def tolerant(self):
+        self.is_fully_distributed = self.get_undistributed_amount() == 0
+
+    MoneyTransaction.recalculate_is_fully_distributed = tolerant
+    try:
+        yield
+    finally:
+        MoneyTransaction.recalculate_is_fully_distributed = original
 
 
 def _report(member: Member, label):
@@ -67,17 +97,40 @@ def check_invariants(member: Member):
 
 
 def fix_member(member: Member, removed_by):
+    with tolerant_recalculation():
+        return _fix_member(member=member, removed_by=removed_by)
+
+
+def _fix_member(member: Member, removed_by):
     _report(member, "önce")
 
-    # 1) Alt makbuzu olmayan, tutarı sıfır veya negatif para işlemlerini sil
+    # 1) Tutarı sıfır olan "geri alınmış" (Retracted) kayıtlarını alt makbuzlarıyla birlikte sil.
+    #    Bunlar ikinci silme denemesinde, iade edilecek işleme konmamış para kalmadığı hâlde
+    #    oluşturulmuş anlamsız kayıtlardır.
+    zero_retracteds = {}
+    for mt in member.money_transactions_set:
+        for sub_receipt in mt.sub_receipts_set:
+            retracted = sub_receipt.expense_retracted_ref or sub_receipt.revenue_retracted_ref
+            if retracted is not None and retracted.amount == 0:
+                zero_retracteds[retracted.id] = retracted
+    for retracted in zero_retracteds.values():
+        print(f"    Geri-alınmış#{retracted.id} siliniyor (tutar=0)")
+        transaction_db.delete_retracted_and_sub_receipts(retracted=retracted, removed_by=removed_by)
+    flush()
+
+    # 2) Alt makbuzu kalmamış, tutarı sıfır veya negatif otomatik iade para işlemlerini sil
     for mt in list(member.money_transactions_set.order_by(lambda m: m.id)):
-        if mt.amount <= 0 and mt.sub_receipts_set.count() == 0:
+        if mt.amount <= 0 and mt.sub_receipts_set.count() == 0 and mt.detail in AUTO_REFUND_DETAILS:
             print(f"    MT#{mt.id} siliniyor (tutar={mt.amount}, detay={mt.detail!r}, alt makbuz yok)")
             transaction_db.delete_money_transaction(money_transaction=mt, removed_by=removed_by)
     flush()
 
-    # 2) Fazla iade edilen aidat tutarını düzelt
+    # 3) Fazla iade edilen aidat tutarını düzelt.
+    #    Yalnızca kapatılmış hisseler incelenir; aktif hissede henüz iade yapılmamıştır.
     for share in member.shares_set.order_by(lambda s: s.share_order_of_member):
+        if share.is_active:
+            continue
+
         paid_in = select(sr.amount for sr in share.sub_receipts_set
                          if sr.contribution_ref and sr.money_transaction_ref.is_type_revenue()).sum()
         refunded = select(sr.amount for sr in share.sub_receipts_set
