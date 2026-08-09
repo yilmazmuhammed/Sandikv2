@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 
 from flask import url_for
+from pony.orm import flush
 
 from sandik.bot.sms import SmsBot
 from sandik.general import db as general_db
@@ -9,7 +10,7 @@ from sandik.sandik import db
 from sandik.sandik.exceptions import MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
     ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException, InvalidSmsType, \
     InvalidRuleVariable, InvalidRuleCharacter, InvalidArgument, RuleOperatorCountException, ThereIsNoMember, \
-    ThereIsNoShare
+    ThereIsNoShare, RemoveMemberException, RemoveShareException
 from sandik.sandik.exceptions import UpdateMemberException
 from sandik.transaction import utils as transaction_utils, db as transaction_db
 from sandik.utils import period as period_utils, sandik_preferences
@@ -246,12 +247,29 @@ def remove_member_from_sandik(member: Member, removed_by):
             raise ThereIsUnpaidAmountOfLoanedException("Üyenin verdiği borçlardan ödenmesi tamamlanmamış olan borç var",
                                                        create_log=True)
 
+    # Odemesi tamamlanmamis aidatlar, iade edilecek miktar hesaplanmadan once siliniyor.
+    # Boylece bu aidatlara yatirilmis kismi odemeler uyenin isleme konmamis parasina geri doner ve
+    # ayni para hem "odenmis aidat" hem de "isleme konmamis para" olarak iki kez iade edilmez.
+    for share in member.get_active_shares():
+        transaction_utils.remove_unpaid_contributions(share=share, removed_by=removed_by)
+    flush()
+
     total_amount_to_be_refunded = member.sum_of_paid_contributions() + member.total_of_undistributed_amount()
-    refunded_money_transaction = transaction_db.create_money_transaction(
-        member_ref=member, amount=total_amount_to_be_refunded, type=MoneyTransaction.TYPE.EXPENSE,
-        detail="Üye ayrılışı", creation_type=MoneyTransaction.CREATION_TYPE.BY_AUTO, is_fully_distributed=False,
-        created_by=removed_by
-    )
+    if total_amount_to_be_refunded < 0:
+        raise RemoveMemberException(
+            "Üyeye iade edilecek tutar negatif hesaplandı, üye silinemedi. "
+            "Üyenin para işlemlerinde tutarsızlık var. Lütfen site yöneticisi ile iletişime geçiniz.",
+            create_log=True
+        )
+
+    # İade edilecek bir tutar yoksa para çıkışı da oluşturulmaz
+    refunded_money_transaction = None
+    if total_amount_to_be_refunded > 0:
+        refunded_money_transaction = transaction_db.create_money_transaction(
+            member_ref=member, amount=total_amount_to_be_refunded, type=MoneyTransaction.TYPE.EXPENSE,
+            detail="Üye ayrılışı", creation_type=MoneyTransaction.CREATION_TYPE.BY_AUTO,
+            is_fully_distributed=False, created_by=removed_by
+        )
 
     # Hisseler kaldiriliyor ve odenen aidatlar uyeye geri veriliyor
     for share in member.get_active_shares():
@@ -285,26 +303,39 @@ def remove_share_from_member(share: Share, removed_by, refunded_money_transactio
     if share.get_unpaid_debts().count() > 0:
         raise ThereIsUnpaidDebtOfShareException("Silinmek istenen hissenin ödenmemiş borcu var.", create_log=True)
 
-    refunded_amount = share.sum_of_paid_contributions()
-    refunded_contribution = transaction_db.create_contribution(
-        share=share, period="9999-01", amount=-refunded_amount, created_by=removed_by,
-    )
+    # Odemesi tamamlanmamis aidatlar, iade edilecek miktar hesaplanmadan once siliniyor.
+    # Bu aidatlara yatirilmis kismi odemeler uyenin isleme konmamis parasina geri doner;
+    # aksi halde ayni para hem nakit iade edilir hem de uyenin isleme konmamis parasi olarak kalir.
+    transaction_utils.remove_unpaid_contributions(share=share, removed_by=removed_by)
+    flush()
 
-    if not refunded_money_transaction:
-        refunded_money_transaction = transaction_db.create_money_transaction(
-            member_ref=share.member_ref, amount=refunded_amount, type=MoneyTransaction.TYPE.EXPENSE,
-            detail="Hisse kapatılması", creation_type=MoneyTransaction.CREATION_TYPE.BY_AUTO,
-            is_fully_distributed=False, created_by=removed_by, date=removed_date
+    refunded_amount = share.sum_of_paid_contributions()
+    if refunded_amount < 0:
+        raise RemoveShareException(
+            "Hisseye iade edilecek aidat tutarı negatif hesaplandı, hisse kapatılamadı. "
+            "Hissenin işlemlerinde tutarsızlık var. Lütfen site yöneticisi ile iletişime geçiniz.",
+            create_log=True
         )
 
-    transaction_db.create_sub_receipt(
-        money_transaction=refunded_money_transaction, contribution_ref=refunded_contribution,
-        amount=refunded_amount, is_auto=True, created_by=removed_by
-    )
+    # İade edilecek bir tutar yoksa ne iade aidatı ne de para çıkışı oluşturulur
+    if refunded_amount > 0:
+        refunded_contribution = transaction_db.create_contribution(
+            share=share, period="9999-01", amount=-refunded_amount, created_by=removed_by,
+        )
+
+        if not refunded_money_transaction:
+            refunded_money_transaction = transaction_db.create_money_transaction(
+                member_ref=share.member_ref, amount=refunded_amount, type=MoneyTransaction.TYPE.EXPENSE,
+                detail="Hisse kapatılması", creation_type=MoneyTransaction.CREATION_TYPE.BY_AUTO,
+                is_fully_distributed=False, created_by=removed_by, date=removed_date
+            )
+
+        transaction_db.create_sub_receipt(
+            money_transaction=refunded_money_transaction, contribution_ref=refunded_contribution,
+            amount=refunded_amount, is_auto=True, created_by=removed_by
+        )
 
     db.update_share(share=share, updated_by=removed_by, is_active=False)
-
-    transaction_utils.remove_unpaid_contributions(share=share, removed_by=removed_by)
 
     return refunded_money_transaction
 

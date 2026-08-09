@@ -61,7 +61,8 @@ class Sandikv2Exception(Exception):
 
     def detect_caller_function_name(self):
         for frame_info in inspect.stack():
-            for line in frame_info[4]:
+            # Kaynak kodu okunamayan frame'lerde (exec ile üretilen kod, template vs.) code_context None gelir
+            for line in frame_info[4] or []:
                 if "raise" in line:
                     self.caller_function_name = frame_info[3]
                     self.exception_class = line.split("(")[0].split("raise")[1].strip()

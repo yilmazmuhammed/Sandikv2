@@ -10,7 +10,7 @@ from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelatio
     MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, SandikAuthorityException, AddMemberException, \
     MembershipException, MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
     ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException, NoValidRuleFound, \
-    RuleOperatorCountException
+    RuleOperatorCountException, RemoveMemberException, RemoveShareException
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, to_be_member_of_sandik_required, \
     trust_relationship_required, to_be_member_or_manager_of_sandik_required, sandik_type_required, sandik_rule_required, \
     member_required
@@ -377,7 +377,8 @@ def remove_member_from_sandik_page(sandik_id, member_id):
     try:
         utils.remove_member_from_sandik(member=g.member, removed_by=current_user)
     except (NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, ThereIsUnpaidAmountOfLoanedException,
-            NotActiveShareException, ThereIsUnpaidDebtOfShareException) as e:
+            NotActiveShareException, ThereIsUnpaidDebtOfShareException,
+            RemoveMemberException, RemoveShareException) as e:
         flash(str(e), "danger")
 
     return redirect(request.referrer or url_for("sandik_page_bp.members_of_sandik_page", sandik_id=sandik_id))
@@ -393,7 +394,7 @@ def remove_share_from_member_page(sandik_id, member_id, share_id):
 
     try:
         utils.remove_share_from_member(share=share, removed_by=current_user)
-    except (NotActiveShareException, ThereIsUnpaidDebtOfShareException) as e:
+    except (NotActiveShareException, ThereIsUnpaidDebtOfShareException, RemoveShareException) as e:
         flash(str(e), "danger")
         print(type(e), e)
 

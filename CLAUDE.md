@@ -53,7 +53,7 @@ Kilit kavramlar:
 | `backup` | `/yedek/` | Veritabanının JSON olarak dışa/içe aktarımı |
 | `paw` | `/paw/` | PythonAnywhere: git pull + webapp reload |
 | `bot` | — | E-posta (`email_bot.py`), SMS (NetGSM), Kuveyt Türk API |
-| `bugfixs` | — | Tek seferlik veri düzeltme scriptleri |
+| `bugfixs` | — | Tek seferlik veri düzeltme scriptleri (`.env`'i, yani **gerçek veritabanını** kullanır) |
 | `blueprint_template` | — | Yeni modül açarken kopyalanacak iskelet |
 
 `sandik/utils/clock.py`: her ayın başında çalışacak iş (aidat oluşturma). Procfile'da `clock`
@@ -94,6 +94,16 @@ sqlite kullanılır ve dosya `sandik/utils/database.sqlite` olur.
 Otomatik test paketi **yoktur**. Bir akışı doğrulamak için `db_models`'ı import etmeden önce
 `pony.orm.Database.bind`'ı geçici bir sqlite dosyasına yönlendiren tek kullanımlık bir script yazmak
 pratik bir yöntemdir (import anında bind edildiği için sonradan değiştirilemez).
+
+## Veri onarım scriptleri (`sandik/bugfixs/`)
+
+Bunlar `.env` üzerinden **gerçek veritabanına** bağlanır. Çalıştırmadan önce yedek al.
+
+| Script | İş |
+|---|---|
+| `bugfix_1_redistribute_pods.py` | `PieceOfDebt` tutarsızlıklarını düzeltir |
+| `bugfix_2_check_member_removal_consistency.py` | **Salt okunur.** Aşırı dağıtılmış/negatif para işlemleri, pasif ama bakiyesi sıfır olmayan üyeler, yarıda kalmış silmeler |
+| `bugfix_3_fix_broken_member_removal.py` | Yarıda kalmış üye silmelerinin bıraktığı fazla iadeyi ve negatif para çıkışını onarır. Varsayılan kuru çalışmadır; yazmak için `--fix` gerekir, invariant'lar sağlanmazsa kendini geri alır |
 
 ## TODO.txt
 
