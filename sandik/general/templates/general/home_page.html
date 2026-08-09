@@ -124,6 +124,17 @@
                     </tr>
                   {% endfor %}
                 </tbody>
+                <tfoot>
+                  <tr class="text-center font-bold active">
+                    <td class="text-left">Toplam</td>
+                    <td>{{ g.home_data.status_totals.paid_contributions|tr_number_format }} ₺</td>
+                    <td>{{ g.home_data.status_totals.total_debts|tr_number_format }} ₺</td>
+                    <td>{{ g.home_data.status_totals.paid_installments|tr_number_format }} ₺</td>
+                    <td>{{ g.home_data.status_totals.unpaid_debt|tr_number_format }} ₺</td>
+                    <td>{{ g.home_data.status_totals.undistributed|tr_number_format }} ₺</td>
+                    <td class="{% if g.home_data.status_totals.mile_end < 0 %}text-danger{% else %}text-success{% endif %}">{{ g.home_data.status_totals.mile_end|tr_number_format }} ₺</td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>

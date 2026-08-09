@@ -10,6 +10,7 @@ def get_home_page_data(web_user):
     """
     Ana sayfada, kullanıcının üye olduğu bütün sandıkları kapsayan iki tablo için veri hazırlar:
         - status_rows: Her sandıktaki son durum (ödenen aidat, alınan borç, ödenen taksit, ay sonu, mil sonu...)
+          ve status_totals: bu tablonun sütun toplamları
         - payment_rows: Ödenmemiş ödemelerin ay bazında, sandık sandık dağılımı
     Yetki verilmiş fakat üye olunmayan sandıklar bu tablolara dahil edilmez.
     """
@@ -36,6 +37,13 @@ def get_home_page_data(web_user):
             "mile_end": undistributed - sum_of_unpaid_and_due - sum_of_future_and_unpaid,
         })
 
+    status_total_columns = ["paid_contributions", "total_debts", "paid_installments", "unpaid_debt",
+                            "undistributed", "month_end", "mile_end"]
+    status_totals = {
+        column: sum((row[column] for row in status_rows), Decimal(0))
+        for column in status_total_columns
+    }
+
     # --- Tablo 2: Aylık ödemeler (ödenmemiş aidat + taksitler) ---
     # payments_matrix[term][member.id] = o ay o sandıkta ödenmemiş toplam miktar
     payments_matrix = {}
@@ -61,6 +69,7 @@ def get_home_page_data(web_user):
     return {
         "members": members,
         "status_rows": status_rows,
+        "status_totals": status_totals,
         "payment_rows": payment_rows,
         "sandik_totals": sandik_totals,
         "grand_total": sum(sandik_totals.values()) if sandik_totals else Decimal(0),
