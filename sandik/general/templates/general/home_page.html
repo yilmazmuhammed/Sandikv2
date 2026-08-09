@@ -106,7 +106,6 @@
                     <th>Ödenen taksit</th>
                     <th>Kalan borç</th>
                     <th>İşleme konmamış</th>
-                    <th title="İşleme konmamış miktar - vadesi gelmiş ödenmemiş ödemeler">Ay sonu</th>
                     <th title="İşleme konmamış miktar - bütün ödenmemiş ödemeler">Mil sonu</th>
                   </tr>
                 </thead>
@@ -121,7 +120,6 @@
                       <td>{{ row.paid_installments|tr_number_format }} ₺</td>
                       <td>{{ row.unpaid_debt|tr_number_format }} ₺</td>
                       <td>{{ row.undistributed|tr_number_format }} ₺</td>
-                      <td class="font-bold {% if row.month_end < 0 %}text-danger{% else %}text-success{% endif %}">{{ row.month_end|tr_number_format }} ₺</td>
                       <td class="font-bold {% if row.mile_end < 0 %}text-danger{% else %}text-success{% endif %}">{{ row.mile_end|tr_number_format }} ₺</td>
                     </tr>
                   {% endfor %}
