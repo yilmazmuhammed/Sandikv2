@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pony.orm import flush, select
+from pony.orm import flush, select, desc
 
 from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelationshipCreationException, \
     MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, ThereIsNotSandikAuthority
@@ -290,34 +290,63 @@ def update_sandik_rule(sandik_rule: SandikRule, updated_by, **kwargs) -> SandikR
     return sandik_rule
 
 
+def get_adjacent_sandik_rule(sandik_rule, is_above):
+    """Aynı sandık ve türdeki bir üstteki (is_above) veya bir alttaki kuralı döndürür.
+
+    Komşu kural order±1 ile aranmaz: kural silindiğinde sıra numaralarında boşluk kalabildiği
+    için böyle bir arama None dönüp çağıranı AttributeError ile patlatır. Bunun yerine sıraya
+    göre en yakın kayıt seçilir.
+    """
+    current_order = sandik_rule.order
+    rule_type = sandik_rule.type
+    rules = sandik_rule.sandik_ref.sandik_rules_set.filter(lambda r: r.type == rule_type)
+
+    if is_above:
+        return rules.filter(lambda r: r.order < current_order).order_by(lambda r: desc(r.order)).first()
+    return rules.filter(lambda r: r.order > current_order).order_by(lambda r: r.order).first()
+
+
 def raise_order_of_sandik_rule(sandik_rule, updated_by):
-    if sandik_rule.order == 1:
+    above_rule = get_adjacent_sandik_rule(sandik_rule=sandik_rule, is_above=True)
+    if not above_rule:
         return False
 
-    above_rule = get_sandik_rule(sandik_ref=sandik_rule.sandik_ref, type=sandik_rule.type,
-                                 order=sandik_rule.order - 1)
-    update_sandik_rule(sandik_rule=above_rule, updated_by=updated_by, order=above_rule.order + 1)
-    update_sandik_rule(sandik_rule=sandik_rule, updated_by=updated_by, order=sandik_rule.order - 1)
+    above_order, current_order = above_rule.order, sandik_rule.order
+    update_sandik_rule(sandik_rule=above_rule, updated_by=updated_by, order=current_order)
+    update_sandik_rule(sandik_rule=sandik_rule, updated_by=updated_by, order=above_order)
 
     return True
 
 
 def lower_order_of_sandik_rule(sandik_rule, updated_by):
-    if sandik_rule.order == get_last_rule_order(sandik=sandik_rule.sandik_ref, type=sandik_rule.type):
+    bottom_rule = get_adjacent_sandik_rule(sandik_rule=sandik_rule, is_above=False)
+    if not bottom_rule:
         return False
-    bottom_rule = get_sandik_rule(sandik_ref=sandik_rule.sandik_ref, type=sandik_rule.type,
-                                  order=sandik_rule.order + 1)
-    update_sandik_rule(sandik_rule=bottom_rule, updated_by=updated_by, order=bottom_rule.order - 1)
-    update_sandik_rule(sandik_rule=sandik_rule, updated_by=updated_by, order=sandik_rule.order + 1)
 
-    return None
+    bottom_order, current_order = bottom_rule.order, sandik_rule.order
+    update_sandik_rule(sandik_rule=bottom_rule, updated_by=updated_by, order=current_order)
+    update_sandik_rule(sandik_rule=sandik_rule, updated_by=updated_by, order=bottom_order)
+
+    return True
 
 
 def remove_sandik_rule(sandik_rule, deleted_by):
+    sandik = sandik_rule.sandik_ref
+    rule_type = sandik_rule.type
+
     Log(web_user_ref=deleted_by, type=Log.TYPE.SANDIK_RULE.DELETE, detail=str(sandik_rule.to_dict()))
     for log in sandik_rule.logs_set:
         log.detail += f"deleted_sandik_rule_id: {sandik_rule.id}"
     sandik_rule.delete()
+    flush()
+
+    # Silme sonrasında sıra numaraları 1..n olarak yeniden düzenlenir; boşluk bırakmak yeni
+    # kuralların sırasını ve taşıma işlemlerini tutarsız gösterir. Bu bir düzeltme adımı olduğu
+    # için ayrıca log üretilmez, silme logu zaten yukarıda oluşturuldu.
+    remaining_rules = sandik.sandik_rules_set.filter(lambda r: r.type == rule_type).order_by(lambda r: r.order)
+    for new_order, rule in enumerate(remaining_rules, start=1):
+        if rule.order != new_order:
+            rule.order = new_order
 
 
 """
