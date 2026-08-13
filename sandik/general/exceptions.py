@@ -19,3 +19,7 @@ class BankAccountNotFound(BankAccountException):
 
 class PrimaryBankAccountCannotBeDeleted(BankAccountException):
     pass
+
+
+class UnauthorizedBankAccountOperation(BankAccountException):
+    pass

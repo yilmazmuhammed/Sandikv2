@@ -109,7 +109,9 @@ def initialize_exceptions_handlers(flask_app: Flask) -> Flask:
     @flask_app.errorhandler(HTTPException)
     def http_error_handler(e: HTTPException):
 
-        http_error: dict = HTTP_ERRORS.get(e.code, {"style": {"text-color": "#3182ce", "btn-hover": "#2b6cb0"}})
+        # HTTP_ERRORS istekler arasında paylaşılır; kopyalanmadan üzerine yazılırsa bir isteğin
+        # özel hata mesajı sonraki isteklerde de görünür.
+        http_error: dict = dict(HTTP_ERRORS.get(e.code, {"style": {"text-color": "#3182ce", "btn-hover": "#2b6cb0"}}))
         http_error["code"] = e.code
 
         if not http_error.get("title"):

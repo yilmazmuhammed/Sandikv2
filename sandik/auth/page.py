@@ -163,11 +163,11 @@ def update_password_page():
             flash(u"Parolalar eşleşmiyor!", 'danger')
         elif not db.get_web_user(web_user=current_user, password=form.old_password.data):
             flash(u"Eski parola doğrulanamadı!", 'danger')
-
-        db.update_web_user(web_user=current_user, updated_by=current_user, password=form.new_password.data)
-        flash("Kullanıcı parolası güncellendi", "success")
-        next_url = get_next_url(request.args, default_url=url_for("general_page_bp.index_page"))
-        return redirect(next_url)
+        else:
+            db.update_web_user(web_user=current_user, updated_by=current_user, password=form.new_password.data)
+            flash("Kullanıcı parolası güncellendi", "success")
+            next_url = get_next_url(request.args, default_url=url_for("general_page_bp.index_page"))
+            return redirect(next_url)
 
     return render_template("utils/form_layout.html",
                            page_info=FormPI(title="Kullanıcı parolasını güncelle", form=form,

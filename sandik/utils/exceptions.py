@@ -72,7 +72,10 @@ class Sandikv2Exception(Exception):
 class Sandikv2UtilsException(Sandikv2Exception):
     ERRCODE_THOUSAND = THOUSANDS.Sandikv2UtilsException
 
-    def __init__(self, msg="", errcode=0, create_log=False, **kwargs):
+    # DİKKAT: Sandikv2Exception, errcode için '0 < errcode < 1000' şartı arar. Varsayılan 0
+    # bırakılırsa errcode verilmeden fırlatılan her istisna, asıl mesajı kaybederek boş bir
+    # ErrcodeException'a dönüşür (ör. ERRCODE 0010/0011).
+    def __init__(self, msg="", errcode=1, create_log=False, **kwargs):
         super().__init__(msg=msg, errcode=errcode, create_log=create_log, errcode_thousand=self.ERRCODE_THOUSAND,
                          **kwargs)
 

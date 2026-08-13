@@ -1,7 +1,8 @@
 from decimal import Decimal
 
 from sandik.general import db
-from sandik.general.exceptions import BankAccountNotFound, PrimaryBankAccountCannotBeDeleted
+from sandik.general.exceptions import BankAccountNotFound, PrimaryBankAccountCannotBeDeleted, \
+    UnauthorizedBankAccountOperation
 from sandik.transaction import utils as transaction_utils
 from sandik.utils import period as period_utils
 
@@ -81,6 +82,18 @@ def remove_bank_account(bank_account_id, deleted_by):
     bank_account = db.get_bank_account(id=bank_account_id)
     if not bank_account:
         raise BankAccountNotFound("Banka hesabı bulunamadı.", create_log=True)
+
+    # Silme yetkisi, düzenleme yetkisiyle aynı kuralları izler (bkz. general/page.py ->
+    # update_bank_account_page): kişisel hesabı yalnızca sahibi, sandık hesabını yalnızca
+    # sandıkta yazma yetkisi olan siler.
+    if bank_account.web_user_ref:
+        if bank_account.web_user_ref != deleted_by:
+            raise UnauthorizedBankAccountOperation("Başkasının banka hesabını silemezsiniz!", create_log=True)
+    elif bank_account.sandik_ref:
+        if not deleted_by.has_permission(sandik=bank_account.sandik_ref, permission="write"):
+            raise UnauthorizedBankAccountOperation("Sandıkta yazma yetkiniz bulunmamaktadır!", create_log=True)
+    else:
+        raise UnauthorizedBankAccountOperation("Sahibi belirsiz banka hesabı silinemez.", create_log=True)
 
     # if bank_account.is_primary:
     #     raise PrimaryBankAccountCannotBeDeleted("Birincil banka hesabı silinemez.")

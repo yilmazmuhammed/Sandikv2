@@ -109,8 +109,9 @@ def sandik_type_required(sandik_type):
 
 def sandik_rule_required(func):
     @wraps(func)
+    @sandik_required
     def decorated_view(sandik_rule_id, *args, **kwargs):
-        sandik_rule = db.get_sandik_rule(id=sandik_rule_id)
+        sandik_rule = db.get_sandik_rule(id=sandik_rule_id, sandik_ref=g.sandik)
         if not sandik_rule:
             abort(404, "Sandık kuralı bulunamadı")
 

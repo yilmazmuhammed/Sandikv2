@@ -88,6 +88,27 @@ process'i olarak tanımlı.
   bulunursa `InconsistentBackupData` fırlatılır ve **yükleme tamamen geri alınır**: tutarsız bir
   yedeği yükleyip uyarmaktansa hiç yüklememek tercih edilir. `backup/page.py` bu durumda
   `rollback()` çağırıp tutarsızlıkları ekranda listeler.
+- **Kaynağa id ile erişen her yerde sandık kapsamı kontrol edilmelidir.** `requirement.py`
+  dekoratörleri (`member_required`, `sandik_rule_required`, `money_transaction_required`,
+  `contribution_required`) kaydı `sandik_ref=g.sandik` ile çeker; API'ler de `member` gibi query
+  parametrelerini aynı şekilde daraltır. Aksi halde bir sandıkta yetkisi olan kullanıcı, adresteki
+  sandık kendisininken başka sandığın kaydını okuyabilir/silebilir. Yeni bir dekoratör veya API
+  yazarken bu filtreyi atlama.
+- **Form alan adları entity sütun adlarıyla birebir aynı olmalıdır.** `page.py` katmanı
+  `flask_form_to_dict()` çıktısını doğrudan entity'ye `**kwargs` olarak geçirir; uyuşmayan bir ad
+  Pony'de `TypeError: Unknown attribute` (500) verir, eksik kalan `boolean_fields` anahtarı ise
+  sessizce hep `False` olur. (`SandikAuthorityForm.is_admin` bu yüzden `is_primary` değildir.)
+- **`Sandikv2UtilsException` türevlerinde `errcode` verilmezse** üst sınıftaki
+  `0 < errcode < 1000` kontrolü asıl mesajı yok edip boş bir `ErrcodeException` fırlatır. Varsayılan
+  bu nedenle `1`'dir; yeni istisna sınıflarında varsayılanı `0` bırakma.
+- **Taksitlendirmede yuvarlama her adımda kalan tutar üzerinden yapılmalıdır**
+  (`create_installments_of_debt`). Sabit bir taksit tutarı yukarı yuvarlanınca borç, son taksitlere
+  sıra gelmeden bitebilir (ör. 100₺ / 30 taksit). Kural sıralamasında da (`raise/lower_order_of_
+  sandik_rule`) komşu kural `order±1` ile aranmaz: silme sonrası boşluk kalabilir, komşu sıraya göre
+  en yakın kayıt seçilir.
+- **İstek başına değişen sözlükler modül seviyesinde tutulmamalı ya da kopyalanmalıdır.**
+  `app.py` içindeki `HTTP_ERRORS` kopyalanmadan güncellenirse bir isteğin özel hata mesajı sonraki
+  isteklere sızar.
 - Pony ORM sorguları lambda içinde entity metodu çağırabilir (`c.get_unpaid_amount() > 0`); bunlar
   SQL'e çevrilir, dolayısıyla metot gövdesi SQL'e çevrilebilir olmalıdır.
 - **Form alanları ortak `utils/parts/form.html` ile render edilir**; alan tipine göre genel bir

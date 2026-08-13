@@ -134,7 +134,7 @@ class SandikAuthorityForm(CustomFlaskForm):
         render_kw={"placeholder": "Yetki başlığı"}
     )
 
-    is_primary = BooleanField(
+    is_admin = BooleanField(
         label="Yönetici mi?",
         default=False
     )

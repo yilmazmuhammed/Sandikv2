@@ -16,7 +16,7 @@ def get_unpaid_debts_of_member_api(sandik_id):
     if not request.args.get("member"):
         return jsonify(result=False, msg="'member' parametresi ile member_id'nin gonderilmesi gerekmektedir.")
 
-    member = sandik_db.get_member(id=request.args.get("member"))
+    member = sandik_db.get_member(id=request.args.get("member"), sandik_ref=g.sandik)
     if not member:
         return jsonify(result=False, msg="Üye bulunamadı")
 
@@ -30,7 +30,7 @@ def get_unpaid_contributions_of_member_api(sandik_id):
     if not request.args.get("member"):
         return jsonify(result=False, msg="'member' parametresi ile member_id'nin gonderilmesi gerekmektedir.")
 
-    member = sandik_db.get_member(id=request.args.get("member"))
+    member = sandik_db.get_member(id=request.args.get("member"), sandik_ref=g.sandik)
     if not member:
         return jsonify(result=False, msg="Üye bulunamadı")
 
