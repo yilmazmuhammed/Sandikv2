@@ -48,15 +48,25 @@ def get_debt_distribution_api(sandik_id, member_id):
     if not amount.isnumeric():
         return jsonify(result=False, msg="Borç alınacak miktarın sayısal olarak girilmesi gerekmektedir.")
 
+    # 'share' parametresi, üyenin hissesine ait bir entity'ye çevrilmelidir;
+    # get_debt_distribution() gelen değeri Share nesnesi olarak kullanır.
+    share = None
+    share_id = request.args.get("share")
+    if share_id:
+        if not share_id.isnumeric():
+            return jsonify(result=False, msg="'share' parametresi sayısal olarak girilmelidir.")
+        share = sandik_db.get_share(id=int(share_id), member_ref=g.member)
+        if not share:
+            return jsonify(result=False, msg="Hisse bulunamadı")
+
     try:
         amount = int(amount)
         utils.validate_money_transaction_for_expense(
             mt_type=MoneyTransaction.TYPE.EXPENSE, use_untreated_amount=False,
-            amount=amount, whose=g.member
+            amount=amount, whose=share or g.member
         )
-        share = request.args.get("share", None)
         debts = utils.get_debt_distribution(amount=amount, member=g.member, share=share)
-        return jsonify(result=True, share=share, amount=amount, debts=debts)
+        return jsonify(result=True, share=share.id if share else None, amount=amount, debts=debts)
     except (MaximumDebtAmountExceeded, NoValidRuleFound) as e:
         return jsonify(result=False, msg=str(e))
     except Exception as e:
