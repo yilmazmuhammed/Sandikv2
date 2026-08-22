@@ -140,14 +140,32 @@ FLASK_DEBUG=1 ../venv/bin/python run.py
 `FLASK_DEBUG` ile `.env_debug` yüklenir. `SANDIKv2_DATABASE_PROVIDER` `postgres`/`mysql` değilse
 sqlite kullanılır ve dosya `sandik/utils/database.sqlite` olur.
 
-Otomatik test paketi **yoktur**. Bir akışı doğrulamak için `db_models`'ı import etmeden önce
-`pony.orm.Database.bind`'ı geçici bir sqlite dosyasına yönlendiren tek kullanımlık bir script yazmak
-pratik bir yöntemdir (import anında bind edildiği için sonradan değiştirilemez).
-`SANDIKv2_DATABASE_PROVIDER` set edilmemişse varsayılan sqlite dosya yolu (`filename='database.sqlite'`)
-scriptin çalıştığı dizine değil, **`db_models.py`'nin bulunduğu dizine** (`sandik/utils/`) göredir —
-Pony ORM görece sqlite yollarını `Database()` çağrısının yapıldığı dosyanın konumuna göre çözer.
-Test scripti bu yüzden farklı bir cwd'den çalıştırılsa bile veriler orada birikir; testten sonra
-`sandik/utils/database.sqlite` silinmelidir (gitignore'dadır, gerçek veritabanı değildir).
+### Otomatik testler (`tests/`)
+
+Yavaş yavaş büyütülen bir pytest paketi var (2026-08'de başladı). Kurulum ve çalıştırma:
+
+```bash
+../venv/bin/pip install -r requirements-dev.txt   # yalnızca pytest; üretime kurulmaz
+../venv/bin/python -m pytest
+```
+
+- `tests/conftest.py`: `db_models`'ın normalde `sandik/utils/database.sqlite` dosyasına bağlandığı
+  import-anı yan etkisini (bkz. "Alan modeli") ilk import'tan önce `Database.bind`'ı yamalayarak
+  bellek-içi (`:memory:`) bir sqlite'a yönlendirir — gerçek/geliştirme veritabanına asla dokunmaz.
+  `generate_mapping()` süreç başına yalnızca bir kez çalışabildiği için testler arası izolasyon her
+  testten sonra tüm tabloları boşaltıp yeniden oluşturarak sağlanır (`drop_all_tables` +
+  `create_tables`, `_clean_database` autouse fixture'ı).
+- `tests/factories.py`: sandık/üye/hisse/aidat/para hareketi kurmak için ince yardımcı fonksiyonlar.
+  Ham `Entity(...)` yerine gerçek `sandik/*/db.py` içindeki `create_*` fonksiyonlarını sarar (Log
+  oluşturma dahil), böylece testler uygulamanın gerçek yoluna yakın kalır. Yeni bir senaryo
+  kurarken önce burada uygun bir fabrika olup olmadığına bak, yoksa ekle.
+- Testler `@db_session` dekoratörüyle yazılır (Pony sorguları bir session içinde olmalı).
+- Yeni bir modülü test ederken bu kalıbı izle: `tests/test_<modül>.py`, `factories`'ten fabrika
+  kullan/gerekirse ekle, `assert` ile Decimal değerleri doğrudan karşılaştır (`==`, `int()`/`round()`
+  kullanma — bkz. "Dikkat edilmesi gereken yerler").
+- Bu paket dışında, tek seferlik bir akışı elle doğrulamak için hâlâ yukarıdaki yöntem (geçici
+  script + `Database.bind` yaması) kullanılabilir; ama kalıcı değeri olan bir doğrulamaysa
+  `tests/`'e eklemek tercih edilir.
 
 ## Veri onarım scriptleri (`sandik/bugfixs/`)
 
