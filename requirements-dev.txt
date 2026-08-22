@@ -1,0 +1,3 @@
+# Yalnızca test/geliştirme için gerekli bağımlılıklar. PythonAnywhere'deki üretim ortamına
+# kurulması gerekmez; ana `requirements.txt`'ten ayrı tutulur.
+pytest>=7,<9
