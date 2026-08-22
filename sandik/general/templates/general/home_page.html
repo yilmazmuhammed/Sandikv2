@@ -150,7 +150,7 @@
               <span class="text-muted" style="font-weight: normal;">(ödenmemiş aidat ve taksitler)</span>
             </div>
             <div class="table-responsive">
-              {% if g.home_data.payment_rows %}
+              {% if g.home_data.payment_rows or g.home_data.undistributed_row %}
                 <table id="home-payments-table" class="table table-striped table-bordered" style="margin-bottom: 0;">
                   <thead>
                     <tr class="text-center font-bold">
@@ -162,6 +162,25 @@
                     </tr>
                   </thead>
                   <tbody>
+                    {% if g.home_data.undistributed_row %}
+                      <tr class="text-center text-success font-bold"
+                          title="Yatırdığınız ama henüz bir aidat/taksite işlenmemiş tutar. Ödenmemiş ödemeleri karşılamak için kullanılabilir.">
+                        <td class="text-left">
+                          İşleme konmamış
+                          <i class="fas fa-info-circle"></i>
+                        </td>
+                        {% for member in g.home_data.members %}
+                          <td>
+                            {% if g.home_data.undistributed_row.cells.get(member.id) %}
+                              {{ g.home_data.undistributed_row.cells.get(member.id)|tr_number_format }} ₺
+                            {% else %}
+                              <span class="text-muted">–</span>
+                            {% endif %}
+                          </td>
+                        {% endfor %}
+                        <td>{{ g.home_data.undistributed_row.total|tr_number_format }} ₺</td>
+                      </tr>
+                    {% endif %}
                     {% for prow in g.home_data.payment_rows %}
                       <tr class="text-center {% if prow.term < g.home_data.current_period %}text-danger{% elif prow.term == g.home_data.current_period %}text-warning font-bold{% endif %}">
                         <td class="text-left font-bold">
@@ -185,11 +204,11 @@
                   </tbody>
                   <tfoot>
                     <tr class="text-center font-bold active">
-                      <td class="text-left">Toplam</td>
+                      <td class="text-left" title="İşleme konmamış tutarınız varsa bu tutar düşülerek hesaplanmıştır">Toplam</td>
                       {% for member in g.home_data.members %}
-                        <td>{{ g.home_data.sandik_totals.get(member.id)|tr_number_format }} ₺</td>
+                        <td class="{% if g.home_data.sandik_totals.get(member.id) > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.home_data.sandik_totals.get(member.id)|tr_number_format }} ₺</td>
                       {% endfor %}
-                      <td>{{ g.home_data.grand_total|tr_number_format }} ₺</td>
+                      <td class="{% if g.home_data.grand_total > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.home_data.grand_total|tr_number_format }} ₺</td>
                     </tr>
                   </tfoot>
                 </table>

@@ -143,6 +143,11 @@ sqlite kullanılır ve dosya `sandik/utils/database.sqlite` olur.
 Otomatik test paketi **yoktur**. Bir akışı doğrulamak için `db_models`'ı import etmeden önce
 `pony.orm.Database.bind`'ı geçici bir sqlite dosyasına yönlendiren tek kullanımlık bir script yazmak
 pratik bir yöntemdir (import anında bind edildiği için sonradan değiştirilemez).
+`SANDIKv2_DATABASE_PROVIDER` set edilmemişse varsayılan sqlite dosya yolu (`filename='database.sqlite'`)
+scriptin çalıştığı dizine değil, **`db_models.py`'nin bulunduğu dizine** (`sandik/utils/`) göredir —
+Pony ORM görece sqlite yollarını `Database()` çağrısının yapıldığı dosyanın konumuna göre çözer.
+Test scripti bu yüzden farklı bir cwd'den çalıştırılsa bile veriler orada birikir; testten sonra
+`sandik/utils/database.sqlite` silinmelidir (gitignore'dadır, gerçek veritabanı değildir).
 
 ## Veri onarım scriptleri (`sandik/bugfixs/`)
 

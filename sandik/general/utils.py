@@ -22,8 +22,10 @@ def get_home_page_data(web_user):
 
     # --- Tablo 1: Sandık bazında son durum ---
     status_rows = []
+    undistributed_amounts = {}  # member.id -> işleme konmamış (henüz bir ödemeye dağıtılmamış) tutar
     for member in members:
         undistributed = member.total_of_undistributed_amount() or Decimal(0)
+        undistributed_amounts[member.id] = undistributed
         sum_of_unpaid_and_due = transaction_utils.sum_of_unpaid_and_due_payments(whose=member) or Decimal(0)
         sum_of_future_and_unpaid = transaction_utils.sum_of_future_and_unpaid_payments(whose=member) or Decimal(0)
         status_rows.append({
@@ -67,13 +69,28 @@ def get_home_page_data(web_user):
             "total": sum(cells.values()),
         })
 
+    # İşleme konmamış para: üyenin yatırdığı ama henüz bir aidat/taksite dağıtılmamış tutarı.
+    # Ödenmemiş ödemeleri karşılamak için kullanılabileceğinden "Toplam" satırında bu tutar
+    # düşülerek gerçekte kalan net borç gösterilir; sadece varsa (>0) ayrıca bir satır olarak da
+    # gösterilir ki kullanıcı bu tutarın nereden geldiğini görebilsin.
+    undistributed_cells = {member.id: undistributed_amounts[member.id]
+                           for member in members if undistributed_amounts[member.id] > 0}
+    undistributed_row = {
+        "cells": undistributed_cells,
+        "total": sum(undistributed_cells.values(), Decimal(0)),
+    } if undistributed_cells else None
+
+    net_sandik_totals = {member.id: sandik_totals[member.id] - undistributed_amounts[member.id]
+                         for member in members}
+
     return {
         "members": members,
         "status_rows": status_rows,
         "status_totals": status_totals,
         "payment_rows": payment_rows,
-        "sandik_totals": sandik_totals,
-        "grand_total": sum(sandik_totals.values()) if sandik_totals else Decimal(0),
+        "sandik_totals": net_sandik_totals,
+        "grand_total": sum(net_sandik_totals.values()) if net_sandik_totals else Decimal(0),
+        "undistributed_row": undistributed_row,
         "current_period": period_utils.current_period(),
     }
 
