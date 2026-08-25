@@ -111,6 +111,40 @@ process'i olarak tanımlı.
   isteklere sızar.
 - Pony ORM sorguları lambda içinde entity metodu çağırabilir (`c.get_unpaid_amount() > 0`); bunlar
   SQL'e çevrilir, dolayısıyla metot gövdesi SQL'e çevrilebilir olmalıdır.
+- **Onay (yes/no) soruları için `window.confirm()` kullanılmaz.** Ortak tek bir Bootstrap 3 modal
+  (`utils/parts/confirm_dialog.html`, `layout.html`'e include edilir; her sayfada tek örnek) ve
+  `custom.js` → `showConfirmDialog(message, options)` kullanılır. `confirm()`'in aksine **asenkron**
+  çalışır ve boolean değil, `CONFIRM_DIALOG_RESULT` içinden **üç** değerden biriyle çözülen bir
+  Promise döndürür:
+  - `CONFIRM` — onay düğmesi (varsayılan "Evet", `options.confirmText`)
+  - `REJECT` — reddetme düğmesi (varsayılan "Vazgeç", `options.rejectText`)
+  - `DISMISS` — X / Esc / karartılmış alan
+
+  `REJECT` ile `DISMISS`'in ayrı olması bilinçlidir: bazı akışlarda "hayır" da bir işlem yapar,
+  pencereyi kapatmak ise işlemi tamamen iptal eder. Bu yüzden reddetme düğmesinde `data-dismiss`
+  **yoktur** (olsaydı X'ten ayırt edilemezdi) — kapatmayı `custom.js` yapar. İki seçenekli basit
+  onaylarda `REJECT` ve `DISMISS` aynı şekilde ele alınır; kalıp `if (result === CONFIRM_DIALOG_
+  RESULT.CONFIRM)` şeklinde yazılır (`if (result)` yazılmamalı, üç değer de truthy string'dir).
+
+  İki kullanım kalıbı:
+  - **Onaylı link** — `macros.html` → `button()` / `switch_button()` makrolarındaki `confirm_msg`
+    parametresi hâlâ aynı şekilde kullanılır (bunlar `<a class="dialog-confirm"
+    confirm-message="...">` üretir); `custom.js` bu linkin tıklamasını yakalayıp `preventDefault` +
+    `showConfirmDialog()` ile yalnızca `CONFIRM` sonucunda `window.location.href` ile yönlendirir,
+    `REJECT`/`DISMISS`'te hiçbir şey yapmaz. Yeni bir yerde onaylı link gerekiyorsa bu makrolar
+    kullanılmalı, `confirm()`'e geri dönülmemeli.
+  - **Onaya bağlı form submit'i** — bkz. `transaction/add_money_transaction_by_manager_page.html`
+    (`askAndSubmit()`): "Evet" ek davranışı açıp (gizli alanı `true` yapıp) gönderir, "Hayır" onu
+    açmadan gönderir, X ise formu **hiç göndermez**. `showConfirmDialog()` Promise döndüğü için
+    submit handler'ında **soru sorulacağı anda** `e.preventDefault()` çağrılır, kullanıcı cevaplayınca
+    `form.submit()` (native, jQuery "submit" olayını tekrar tetiklemeden) ile gönderilir. Soru
+    sorulmayan durumda `preventDefault` hiç çağrılmamalı ki `form_layout.html`'deki telefon alanı
+    biçimlendirme gibi diğer submit handler'ları ve tarayıcının normal gönderimi eskisi gibi
+    işlemeye devam etsin.
+
+  Reddetme düğmesinin işlemi yine de yaptığı akışlarda düğme **"Vazgeç" diye adlandırılmamalıdır**
+  (kullanıcı iptal sanır); "Hayır" kullanılır ve mesajın notunda hem "Hayır"ın ne yapacağı hem de
+  işlemi tamamen iptal etmek için pencerenin (X) ile kapatılacağı yazılır.
 - **Form alanları ortak `utils/parts/form.html` ile render edilir**; alan tipine göre genel bir
   kalıp uygulanır. Tek bir sayfada bir alanı zenginleştirmek (yanına tuş koymak, placeholder'ı
   duruma göre değiştirmek) gerekiyorsa bu ortak partial değiştirilmez; sayfanın `js_block2`

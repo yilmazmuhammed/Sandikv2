@@ -132,8 +132,36 @@
       }
     });
 
+    {#
+      Buradaki sorularda üç ayrı sonuç vardır: "Evet" ek davranışı açar, "Hayır" onu açmadan işlemi
+      yine de ekler, pencereyi kapatmak (X/Esc) ise işlemi tamamen iptal eder. Bu yüzden
+      CONFIRM_DIALOG_RESULT üç değeri de ayrı ayrı ele alınır; iki seçenekli basit onaylardan
+      (custom.js -> a.dialog-confirm) farkı budur.
+
+      showConfirmDialog() (custom.js) confirm()'in aksine asenkrondur (Promise döner). Soru
+      sorulacaksa e.preventDefault() ile tarayıcının normal (senkron) form gönderimi durdurulur;
+      kullanıcı cevaplayınca form.submit() ile (jQuery'nin "submit" olayını tekrar tetiklemeden,
+      doğrudan DOM üzerinden) form gönderilir. Soru sorulmayan durumda preventDefault hiç çağrılmaz
+      ve form, bu handler bittikten sonra tarayıcı tarafından normal şekilde gönderilir
+      (form_layout.html'deki telefon alanı biçimlendirme handler'ı da bu sırada araya girer) —
+      böylece iki akış da aynı sırayı izler.
+    #}
+    function askAndSubmit(form, message, on_confirm) {
+      showConfirmDialog(message, {rejectText: "Hayır"}).then(function (result) {
+        {# Pencerenin kapatılması "hayır" değil, "bu işlemi hiç yapma" demektir: form gönderilmez #}
+        if (result === CONFIRM_DIALOG_RESULT.DISMISS) {
+          return;
+        }
+        if (result === CONFIRM_DIALOG_RESULT.CONFIRM) {
+          on_confirm();
+        }
+        form.submit();
+      });
+    }
+
     $(document)
       .on("submit", "form", function (e) {
+        const form = this;
         let url = new URL('{{ url_for("sandik_api_bp.member_financial_status_api", sandik_id=g.sandik.id, _external=True)}}');
         url.searchParams.set("member", $("#member").val());
 
@@ -147,21 +175,32 @@
             {# revenue=para girişi, expense=para çıkışı #}
             if ($("#type").val() == {{ MoneyTransaction.TYPE.REVENUE }}) {
               if ($("#amount").val() > data.sum_of_unpaid_and_due_payments && data.sum_of_future_and_unpaid_payments > 0) {
-                if (confirm("Vadesi gelmiş ödemeler tamamlandıktan sonra kalan para ile vadesi gelmemiş ödemeler ödensin mi?\n\nNot: Vazgeç butonuna basılırsa vadesi gelmemiş ödemeler için kullanılmaz ve artan para işleme konmaz.")) {
-                  $("#pay_future_payments").val(true);
-                }
+                e.preventDefault();
+                askAndSubmit(
+                  form,
+                  "Vadesi gelmiş ödemeler tamamlandıktan sonra kalan para ile vadesi gelmemiş ödemeler ödensin mi?\n\nNot: Hayır'a basılırsa vadesi gelmemiş ödemeler için kullanılmaz ve artan para işleme konmaz. İşlemi hiç eklemek istemiyorsanız pencereyi (X) ile kapatınız.",
+                  function () {
+                    $("#pay_future_payments").val(true);
+                  }
+                );
               }
             } else if ($("#type").val() == {{ MoneyTransaction.TYPE.EXPENSE }}) {
               if (data.undistributed_amount > 0) {
                 let msg;
                 if (data.undistributed_amount >= $("#amount").val()) {
-                  msg = "Üyenin sandıkta işleme konmamış parası (" + data.undistributed_amount.toString() + " tl) bulunmakta. Üyeye borç verilirmesi yerine bu bakiye kullanılsın mı?\n\nNot: Vazgeç butonuna basılırsa üyenin sandıkta bulunan fazla parası kullanılmadan borç işlemi eklenir."
+                  msg = "Üyenin sandıkta işleme konmamış parası (" + data.undistributed_amount.toString() + " tl) bulunmakta. Üyeye borç verilirmesi yerine bu bakiye kullanılsın mı?"
                 } else {
-                  msg = "Üyenin sandıkta fazla parası (" + data.undistributed_amount.toString() + " tl) bulunmakta. Üyeye borç verilirken önce bu para kullanılarak, kalan miktar borç olarak eklensin mi?\n\nNot: Vazgeç butonuna basılırsa üyenin sandıkta bulunan fazla parası kullanılmadan borç işlemi eklenir."
+                  msg = "Üyenin sandıkta fazla parası (" + data.undistributed_amount.toString() + " tl) bulunmakta. Üyeye borç verilirken önce bu para kullanılarak, kalan miktar borç olarak eklensin mi?"
                 }
-                if (confirm(msg)) {
-                  $("#use_untreated_amount").val(true);
-                }
+                msg += "\n\nNot: Hayır'a basılırsa üyenin sandıkta bulunan fazla parası kullanılmadan borç işlemi eklenir. İşlemi hiç eklemek istemiyorsanız pencereyi (X) ile kapatınız."
+                e.preventDefault();
+                askAndSubmit(
+                  form,
+                  msg,
+                  function () {
+                    $("#use_untreated_amount").val(true);
+                  }
+                );
               }
             }
           },

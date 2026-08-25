@@ -1,0 +1,27 @@
+{#
+  js confirm() yerine kullanılan onay penceresi. İki seçenek düğmesi (onayla / reddet) ve bunlardan
+  ayrı bir kapatma (X) düğmesi vardır: X "işlemi tamamen iptal et" anlamına gelir ve reddetmekten
+  farklı bir sonuç üretir (bkz. custom.js -> showConfirmDialog / CONFIRM_DIALOG_RESULT).
+  Bu yüzden reddetme düğmesinde `data-dismiss` YOKTUR; kapatmayı custom.js yapar, aksi hâlde
+  reddetme ile X ayırt edilemez.
+
+  Sayfada tek örnek bulunur; içeriği ve düğme yazıları her çağrıda custom.js tarafından doldurulur.
+  Bootstrap 3 modal bileşenini kullanır (bkz. layout.html -> bootstrap.js).
+#}
+<div class="modal fade" id="confirm-dialog" tabindex="-1" role="dialog" aria-labelledby="confirm-dialog-title">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" title="İşlemi iptal et" aria-label="İşlemi iptal et"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="confirm-dialog-title">Emin misiniz?</h4>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-dialog-message" style="white-space: pre-line;"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" id="confirm-dialog-reject-btn">Vazgeç</button>
+        <button type="button" class="btn btn-primary" id="confirm-dialog-confirm-btn">Evet</button>
+      </div>
+    </div>
+  </div>
+</div>

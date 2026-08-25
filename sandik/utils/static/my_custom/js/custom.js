@@ -44,8 +44,82 @@ function flask_url_for(template, variables) {
   return filledUrl;
 }
 
+/**
+ * showConfirmDialog()'un dönebileceği sonuçlar. İki seçenek düğmesi ile "pencereyi kapatma"
+ * BİRBİRİNDEN AYRIDIR: soruya "hayır" demek ile işlemden tamamen vazgeçmek farklı şeyler olabilir.
+ * @readonly
+ * @enum {string}
+ */
+const CONFIRM_DIALOG_RESULT = {
+  CONFIRM: "confirm",  // onay düğmesi (varsayılan "Evet")
+  REJECT: "reject",    // reddetme düğmesi (varsayılan "Vazgeç")
+  DISMISS: "dismiss",  // X, Esc veya karartılmış alan: işlemi tamamen iptal et
+};
+
+/**
+ * window.confirm() yerine kullanılan onay penceresi (bkz. utils/parts/confirm_dialog.html).
+ * confirm() senkron olduğu için doğrudan yerine geçemez; çağıran taraf Promise'i beklemelidir.
+ *
+ * İki seçenekli basit kullanımda REJECT ve DISMISS aynı şekilde ele alınır (ikisi de "yapma"
+ * demektir). "Evet/Hayır'ın iki ayrı işlem yaptığı, X'in ise işlemi iptal ettiği" akışlarda ise
+ * üç sonuç da ayrı ayrı ele alınmalıdır.
+ *
+ * @param {string} message
+ * @param {Object} [options]
+ * @param {string} [options.title] - Varsayılan: "Emin misiniz?"
+ * @param {string} [options.confirmText] - Varsayılan: "Evet"
+ * @param {string} [options.rejectText] - Varsayılan: "Vazgeç"
+ * @returns {Promise<string>} CONFIRM_DIALOG_RESULT değerlerinden biri
+ */
+function showConfirmDialog(message, options) {
+  options = options || {};
+  const $dialog = $("#confirm-dialog");
+  const $confirmBtn = $dialog.find("#confirm-dialog-confirm-btn");
+  const $rejectBtn = $dialog.find("#confirm-dialog-reject-btn");
+
+  $dialog.find("#confirm-dialog-title").text(options.title || "Emin misiniz?");
+  $dialog.find("#confirm-dialog-message").text(message);
+  $confirmBtn.text(options.confirmText || "Evet");
+  $rejectBtn.text(options.rejectText || "Vazgeç");
+
+  return new Promise(function (resolve) {
+    // Düğmelerden birine basılmadan pencere kapanırsa (X, Esc, karartılmış alan) sonuç DISMISS kalır
+    let result = CONFIRM_DIALOG_RESULT.DISMISS;
+
+    function onConfirm() {
+      result = CONFIRM_DIALOG_RESULT.CONFIRM;
+      $dialog.modal("hide");
+    }
+
+    function onReject() {
+      result = CONFIRM_DIALOG_RESULT.REJECT;
+      $dialog.modal("hide");
+    }
+
+    // Pencere hangi yolla kapanırsa kapansın bu olay tetiklenir (bootstrap modal.js)
+    function onHidden() {
+      $confirmBtn.off("click", onConfirm);
+      $rejectBtn.off("click", onReject);
+      $dialog.off("hidden.bs.modal", onHidden);
+      resolve(result);
+    }
+
+    $confirmBtn.on("click", onConfirm);
+    $rejectBtn.on("click", onReject);
+    $dialog.on("hidden.bs.modal", onHidden);
+    $dialog.modal("show");
+  });
+}
+
 $(document)
-  .on("click", "a.dialog-confirm", function () {
-    const message = $(this).attr("confirm-message") || "Bu işlemi yapmak istediğinizden emin misiniz?";
-    return confirm(message);
+  .on("click", "a.dialog-confirm", function (e) {
+    e.preventDefault();
+    const $link = $(this);
+    const message = $link.attr("confirm-message") || "Bu işlemi yapmak istediğinizden emin misiniz?";
+    // Burada yalnızca onaylandığında devam edilir; reddetme de kapatma da işlemi iptal eder
+    showConfirmDialog(message).then(function (result) {
+      if (result === CONFIRM_DIALOG_RESULT.CONFIRM) {
+        window.location.href = $link.attr("href");
+      }
+    });
   });
