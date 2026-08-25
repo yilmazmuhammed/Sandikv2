@@ -61,14 +61,18 @@ const CONFIRM_DIALOG_RESULT = {
  * confirm() senkron olduğu için doğrudan yerine geçemez; çağıran taraf Promise'i beklemelidir.
  *
  * İki seçenekli basit kullanımda REJECT ve DISMISS aynı şekilde ele alınır (ikisi de "yapma"
- * demektir). "Evet/Hayır'ın iki ayrı işlem yaptığı, X'in ise işlemi iptal ettiği" akışlarda ise
- * üç sonuç da ayrı ayrı ele alınmalıdır.
+ * demektir). İki seçeneğin de birer işlem yaptığı, X'in ise işlemi iptal ettiği akışlarda ise üç
+ * sonuç da ayrı ayrı ele alınmalıdır. Böyle akışlarda soruyu "... mı?" diye sorup seçenekleri
+ * "Evet/Hayır"a yüklemek yerine, soruyu açık uçlu sorup (".. ne yapılsın?") seçenekleri
+ * confirmText/rejectText ile düğmelerin üzerine yazmak yeğlenir; X'in işlemi tamamen iptal ettiği
+ * ise `hint` ile belirtilir (yoksa kullanıcı iptal edebileceğini fark etmez).
  *
  * @param {string} message
  * @param {Object} [options]
  * @param {string} [options.title] - Varsayılan: "Emin misiniz?"
  * @param {string} [options.confirmText] - Varsayılan: "Evet"
  * @param {string} [options.rejectText] - Varsayılan: "Vazgeç"
+ * @param {string} [options.hint] - Mesajın altında küçük/soluk yazı. Verilmezse gösterilmez.
  * @returns {Promise<string>} CONFIRM_DIALOG_RESULT değerlerinden biri
  */
 function showConfirmDialog(message, options) {
@@ -76,11 +80,15 @@ function showConfirmDialog(message, options) {
   const $dialog = $("#confirm-dialog");
   const $confirmBtn = $dialog.find("#confirm-dialog-confirm-btn");
   const $rejectBtn = $dialog.find("#confirm-dialog-reject-btn");
+  const $hint = $dialog.find("#confirm-dialog-hint");
 
+  // Pencere tek örnek olduğu için her alan HER çağrıda yazılır; aksi hâlde önceki çağrının
+  // başlığı/etiketi/ipucu olduğu gibi kalır.
   $dialog.find("#confirm-dialog-title").text(options.title || "Emin misiniz?");
   $dialog.find("#confirm-dialog-message").text(message);
   $confirmBtn.text(options.confirmText || "Evet");
   $rejectBtn.text(options.rejectText || "Vazgeç");
+  $hint.text(options.hint || "").toggle(!!options.hint);
 
   return new Promise(function (resolve) {
     // Düğmelerden birine basılmadan pencere kapanırsa (X, Esc, karartılmış alan) sonuç DISMISS kalır

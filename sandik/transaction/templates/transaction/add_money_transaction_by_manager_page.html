@@ -133,10 +133,14 @@
     });
 
     {#
-      Buradaki sorularda üç ayrı sonuç vardır: "Evet" ek davranışı açar, "Hayır" onu açmadan işlemi
-      yine de ekler, pencereyi kapatmak (X/Esc) ise işlemi tamamen iptal eder. Bu yüzden
-      CONFIRM_DIALOG_RESULT üç değeri de ayrı ayrı ele alınır; iki seçenekli basit onaylardan
+      Buradaki sorularda üç ayrı sonuç vardır: iki düğmenin İKİSİ de işlemi ekler (yalnızca paranın
+      nasıl kullanılacağı değişir), pencereyi kapatmak (X/Esc) ise işlemi tamamen iptal eder. Bu
+      yüzden CONFIRM_DIALOG_RESULT üç değeri de ayrı ayrı ele alınır; iki seçenekli basit onaylardan
       (custom.js -> a.dialog-confirm) farkı budur.
+
+      Seçeneklerin ikisi de bir işlem yaptığı için soru "... mı?" diye sorulup cevaplar "Evet/Hayır"a
+      yüklenmez: soru açık uçludur ve iki seçenek düğmelerin üzerinde yazar. İptalin X ile yapıldığı
+      da `hint` ile belirtilir, yoksa kullanıcı işlemden vazgeçebileceğini fark etmez.
 
       showConfirmDialog() (custom.js) confirm()'in aksine asenkrondur (Promise döner). Soru
       sorulacaksa e.preventDefault() ile tarayıcının normal (senkron) form gönderimi durdurulur;
@@ -146,9 +150,11 @@
       (form_layout.html'deki telefon alanı biçimlendirme handler'ı da bu sırada araya girer) —
       böylece iki akış da aynı sırayı izler.
     #}
-    function askAndSubmit(form, message, on_confirm) {
-      showConfirmDialog(message, {rejectText: "Hayır"}).then(function (result) {
-        {# Pencerenin kapatılması "hayır" değil, "bu işlemi hiç yapma" demektir: form gönderilmez #}
+    const CANCEL_HINT = "İşlemi hiç eklemek istemiyorsanız pencereyi (X) ile kapatınız.";
+
+    function askAndSubmit(form, message, options, on_confirm) {
+      showConfirmDialog(message, options).then(function (result) {
+        {# Pencerenin kapatılması seçeneklerden biri değil, "bu işlemi hiç yapma" demektir #}
         if (result === CONFIRM_DIALOG_RESULT.DISMISS) {
           return;
         }
@@ -178,7 +184,13 @@
                 e.preventDefault();
                 askAndSubmit(
                   form,
-                  "Vadesi gelmiş ödemeler tamamlandıktan sonra kalan para ile vadesi gelmemiş ödemeler ödensin mi?\n\nNot: Hayır'a basılırsa vadesi gelmemiş ödemeler için kullanılmaz ve artan para işleme konmaz. İşlemi hiç eklemek istemiyorsanız pencereyi (X) ile kapatınız.",
+                  "Vadesi gelmiş ödemeler tamamlandıktan sonra kalan para ile ne yapılsın?",
+                  {
+                    title: "Kalan para",
+                    confirmText: "Vadesi gelmemiş ödemeler ödensin",
+                    rejectText: "Herhangi bir ödemeyle ilişkilendirilmeden dursun",
+                    hint: CANCEL_HINT,
+                  },
                   function () {
                     $("#pay_future_payments").val(true);
                   }
@@ -186,17 +198,23 @@
               }
             } else if ($("#type").val() == {{ MoneyTransaction.TYPE.EXPENSE }}) {
               if (data.undistributed_amount > 0) {
-                let msg;
-                if (data.undistributed_amount >= $("#amount").val()) {
-                  msg = "Üyenin sandıkta işleme konmamış parası (" + data.undistributed_amount.toString() + " tl) bulunmakta. Üyeye borç verilirmesi yerine bu bakiye kullanılsın mı?"
-                } else {
-                  msg = "Üyenin sandıkta fazla parası (" + data.undistributed_amount.toString() + " tl) bulunmakta. Üyeye borç verilirken önce bu para kullanılarak, kalan miktar borç olarak eklensin mi?"
-                }
-                msg += "\n\nNot: Hayır'a basılırsa üyenin sandıkta bulunan fazla parası kullanılmadan borç işlemi eklenir. İşlemi hiç eklemek istemiyorsanız pencereyi (X) ile kapatınız."
+                {#
+                  İşleme konmamış para, istenen borcun tamamını karşılıyorsa borç hiç verilmeyebilir;
+                  karşılamıyorsa yalnızca kalan kısım borç olur. Seçeneğin sonucu bu iki durumda
+                  farklı olduğu için düğme yazısı da buna göre değişir.
+                #}
+                let covers_whole_amount = data.undistributed_amount >= $("#amount").val();
                 e.preventDefault();
                 askAndSubmit(
                   form,
-                  msg,
+                  "Üyenin sandıkta işleme konmamış parası (" + data.undistributed_amount.toString() + " tl) bulunmakta. Bu para ne yapılsın?",
+                  {
+                    title: "İşleme konmamış para",
+                    confirmText: covers_whole_amount ? "Borç verilmeyip bu para kullanılsın"
+                                                     : "Önce bu para kullanılsın, kalanı borç verilsin",
+                    rejectText: "Kullanılmadan dursun, borç verilsin",
+                    hint: CANCEL_HINT,
+                  },
                   function () {
                     $("#use_untreated_amount").val(true);
                   }

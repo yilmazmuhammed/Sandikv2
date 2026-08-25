@@ -134,17 +134,23 @@ process'i olarak tanımlı.
     `REJECT`/`DISMISS`'te hiçbir şey yapmaz. Yeni bir yerde onaylı link gerekiyorsa bu makrolar
     kullanılmalı, `confirm()`'e geri dönülmemeli.
   - **Onaya bağlı form submit'i** — bkz. `transaction/add_money_transaction_by_manager_page.html`
-    (`askAndSubmit()`): "Evet" ek davranışı açıp (gizli alanı `true` yapıp) gönderir, "Hayır" onu
-    açmadan gönderir, X ise formu **hiç göndermez**. `showConfirmDialog()` Promise döndüğü için
-    submit handler'ında **soru sorulacağı anda** `e.preventDefault()` çağrılır, kullanıcı cevaplayınca
+    (`askAndSubmit()`): iki düğme de formu gönderir (yalnızca gizli alanın `true` olup olmaması
+    değişir), X ise formu **hiç göndermez**. `showConfirmDialog()` Promise döndüğü için submit
+    handler'ında **soru sorulacağı anda** `e.preventDefault()` çağrılır, kullanıcı cevaplayınca
     `form.submit()` (native, jQuery "submit" olayını tekrar tetiklemeden) ile gönderilir. Soru
     sorulmayan durumda `preventDefault` hiç çağrılmamalı ki `form_layout.html`'deki telefon alanı
     biçimlendirme gibi diğer submit handler'ları ve tarayıcının normal gönderimi eskisi gibi
     işlemeye devam etsin.
 
-  Reddetme düğmesinin işlemi yine de yaptığı akışlarda düğme **"Vazgeç" diye adlandırılmamalıdır**
-  (kullanıcı iptal sanır); "Hayır" kullanılır ve mesajın notunda hem "Hayır"ın ne yapacağı hem de
-  işlemi tamamen iptal etmek için pencerenin (X) ile kapatılacağı yazılır.
+  **Soru metni yazarken:** iki seçeneğin de birer işlem yaptığı (yani reddetmenin "iptal" olmadığı)
+  durumlarda soru "... yapılsın mı?" diye sorulup cevaplar "Evet/Hayır"a yüklenmez — bu, "Hayır ne
+  yapıyor?" sorusunu doğurur ve dipnotla açıklamak gerekir. Bunun yerine soru **açık uçlu** sorulur
+  ("Kalan para ile ne yapılsın?") ve iki seçenek `confirmText`/`rejectText` ile **düğmelerin üzerine**
+  yazılır ("Vadesi gelmemiş ödemeler ödensin" / "Herhangi bir ödemeyle ilişkilendirilmeden dursun").
+  Seçenekler düğmelerde yazınca iptalin nasıl yapılacağı görünmez kalır; bu yüzden `options.hint`
+  ile "İşlemi hiç eklemek istemiyorsanız pencereyi (X) ile kapatınız." gibi bir satır eklenir.
+  Uzun düğme yazıları Bootstrap'in `.btn { white-space: nowrap }` kuralıyla taşacağı için
+  `confirm_dialog.html` içindeki stil bunları sarmalar ve dar ekranda alt alta dizer.
 - **Form alanları ortak `utils/parts/form.html` ile render edilir**; alan tipine göre genel bir
   kalıp uygulanır. Tek bir sayfada bir alanı zenginleştirmek (yanına tuş koymak, placeholder'ı
   duruma göre değiştirmek) gerekiyorsa bu ortak partial değiştirilmez; sayfanın `js_block2`

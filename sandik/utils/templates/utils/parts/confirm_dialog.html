@@ -1,13 +1,37 @@
 {#
-  js confirm() yerine kullanılan onay penceresi. İki seçenek düğmesi (onayla / reddet) ve bunlardan
-  ayrı bir kapatma (X) düğmesi vardır: X "işlemi tamamen iptal et" anlamına gelir ve reddetmekten
-  farklı bir sonuç üretir (bkz. custom.js -> showConfirmDialog / CONFIRM_DIALOG_RESULT).
-  Bu yüzden reddetme düğmesinde `data-dismiss` YOKTUR; kapatmayı custom.js yapar, aksi hâlde
-  reddetme ile X ayırt edilemez.
+  js confirm() yerine kullanılan onay penceresi. İki seçenek düğmesi ve bunlardan ayrı bir kapatma
+  (X) düğmesi vardır: X "işlemi tamamen iptal et" anlamına gelir ve reddetmekten farklı bir sonuç
+  üretir (bkz. custom.js -> showConfirmDialog / CONFIRM_DIALOG_RESULT). Bu yüzden reddetme
+  düğmesinde `data-dismiss` YOKTUR; kapatmayı custom.js yapar, aksi hâlde reddetme ile X ayırt
+  edilemez.
 
-  Sayfada tek örnek bulunur; içeriği ve düğme yazıları her çağrıda custom.js tarafından doldurulur.
-  Bootstrap 3 modal bileşenini kullanır (bkz. layout.html -> bootstrap.js).
+  Sayfada tek örnek bulunur; başlık, mesaj, ipucu ve düğme yazıları her çağrıda custom.js
+  tarafından doldurulur. Bootstrap 3 modal bileşenini kullanır (bkz. layout.html -> bootstrap.js).
+  Stiller bileşenle birlikte dursun diye burada ve yalnızca `#confirm-dialog` altında tanımlıdır.
 #}
+<style>
+  /*
+    Düğme yazıları "Evet"/"Vazgeç" gibi kısa olmak zorunda değil: sorunun seçenekleri düğmelerin
+    üzerinde yazabilir. Bootstrap'in `.btn { white-space: nowrap }` kuralı bu uzun yazıları
+    taşırdığı için burada sarmalanmalarına izin verilir, dar ekranda da alt alta dizilirler.
+  */
+  #confirm-dialog .modal-footer .btn {
+    white-space: normal;
+  }
+
+  @media (max-width: 600px) {
+    #confirm-dialog .modal-footer .btn {
+      display: block;
+      width: 100%;
+      margin-left: 0;
+    }
+
+    #confirm-dialog .modal-footer .btn + .btn {
+      margin-top: 8px;
+    }
+  }
+</style>
+
 <div class="modal fade" id="confirm-dialog" tabindex="-1" role="dialog" aria-labelledby="confirm-dialog-title">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
@@ -17,6 +41,8 @@
       </div>
       <div class="modal-body">
         <p id="confirm-dialog-message" style="white-space: pre-line;"></p>
+        {# Yalnızca options.hint verilirse gösterilir #}
+        <p id="confirm-dialog-hint" class="text-muted small" style="display: none; white-space: pre-line;"></p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default" id="confirm-dialog-reject-btn">Vazgeç</button>
