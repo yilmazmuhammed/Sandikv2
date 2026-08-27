@@ -1,0 +1,385 @@
+{% extends "intro/_layout.html" %}
+
+{% block page_title %}Yardımlaşma sandığınızı kolayca yönetin{% endblock %}
+{% block page_description %}Sandık v2, imece usulü yardımlaşma sandıklarının aidat, borç ve taksit kayıtlarını tutan takip sistemidir.{% endblock %}
+
+{% block hero_block %}
+  <section class="hero">
+    <div class="wrap">
+      <span class="eyebrow"><i class="fa-solid fa-hand-holding-heart"></i> İmece usulü yardımlaşma</span>
+      <h1>Sandığınızın kaydını defter değil, sistem tutsun.</h1>
+      <p class="hero-sub">
+        <b>Sandık v2</b>, birlikte biriktirip ihtiyacı olana faizsiz borç veren grupların
+        aidatlarını, borçlarını ve taksitlerini takip eder. Kimin ne kadar ödediği, kimin ne kadar
+        borçlu olduğu her an herkesin gözü önündedir.
+      </p>
+      <div class="hero-actions">
+        {% if current_user.is_authenticated %}
+          <a class="btn btn-primary" href="{{ url_for('general_page_bp.index_page') }}">
+            <i class="fa-solid fa-wallet"></i> Sandıklarıma git
+          </a>
+        {% else %}
+          <a class="btn btn-primary" href="{{ url_for('auth_page_bp.register_page') }}">
+            <i class="fa-solid fa-user-plus"></i> Hesap oluştur
+          </a>
+        {% endif %}
+        <a class="btn btn-ghost" href="{{ url_for('intro_page_bp.how_to_use_page') }}">
+          <i class="fa-solid fa-book-open"></i> Nasıl kullanılır?
+        </a>
+        <a class="btn btn-ghost" href="{{ url_for('intro_page_bp.statistics_page') }}">
+          <i class="fa-solid fa-chart-simple"></i> Rakamlarla sistem
+        </a>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block intro_content %}
+
+  <!-- Yardımlaşma sandığı nedir -->
+  <section class="section">
+    <div class="wrap">
+      <div class="grid grid-2" style="align-items: start; gap: 26px;">
+        <div>
+          <div class="section-head" style="margin-bottom: 14px;">
+            <div class="kicker">Kavram</div>
+            <h2>Yardımlaşma sandığı nedir?</h2>
+          </div>
+          <p>
+            Birbirini tanıyan bir grup insanın —bir ailenin, akrabaların, arkadaş çevresinin ya da iş
+            arkadaşlarının— her ay belirledikleri bir tutarı ortak bir kasada biriktirmesidir.
+            İhtiyacı olan üye bu birikimden <b>faizsiz</b> borç alır, aldığı borcu taksitler hâlinde
+            geri öder.
+          </p>
+          <p>
+            Geri ödenen para kasada kalır ve bir sonraki ihtiyaç sahibine verilir. Böylece kimse
+            faizli krediye muhtaç kalmaz, birikim grubun içinde döner ve dayanışma sürekli hâle gelir.
+          </p>
+          <p>
+            Sandık v2 bu düzenin <b>kurallarını değil, kayıtlarını</b> yönetir: aidat miktarını, borç
+            limitini ve taksit sayılarını her sandık kendisi belirler.
+          </p>
+        </div>
+        <div class="card pad-lg">
+          <h3>Sandık v2 ne yapıyor?</h3>
+          <div class="grid" style="gap: 18px; margin-top: 18px;">
+            <div class="feature">
+              <div class="icon"><i class="fa-solid fa-calculator"></i></div>
+              <div>
+                <h4>Hesabı sizin yerinize tutar</h4>
+                <p>Ödenen aidat, verilen borç, ödenen taksit ve kalan bakiye kendiliğinden hesaplanır.</p>
+              </div>
+            </div>
+            <div class="feature">
+              <div class="icon alt"><i class="fa-solid fa-eye"></i></div>
+              <div>
+                <h4>Şeffaflık sağlar</h4>
+                <p>Her üye kendi durumunu istediği an görür; “ben ödemiştim” tartışması bitiyor.</p>
+              </div>
+            </div>
+            <div class="feature">
+              <div class="icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+              <div>
+                <h4>Dağınıklığı toplar</h4>
+                <p>Defterde, Excel'de ve mesajlaşma gruplarında dağılmış kayıtlar tek yerde birikir.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- İşleyiş -->
+  <section class="section soft">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">İşleyiş</div>
+        <h2>Sistem nasıl işler?</h2>
+        <p>Sandık kurulduktan sonra döngü her ay kendini tekrar eder.</p>
+      </div>
+      <div class="card pad-lg">
+        <ol class="steps">
+          <li>
+            <span class="step-title">Sandık kurulur</span>
+            <span class="step-body">Sandığın adı, aylık aidat miktarı ve türü belirlenir. Ardından
+              borç limiti, taksit sayısı ve hisse sayısı için sandık kuralları tanımlanır.</span>
+          </li>
+          <li>
+            <span class="step-title">Üyeler eklenir</span>
+            <span class="step-body">Her üyenin bir veya birden fazla <b>hissesi</b> olabilir. Hisse,
+              aidatın ve borç hakkının katıdır: iki hissesi olan üye her ay iki aidat öder, buna
+              karşılık iki kat borç alabilir.</span>
+          </li>
+          <li>
+            <span class="step-title">Her ay aidat oluşur</span>
+            <span class="step-body">Ayın başında her hisse için o ayın aidatı otomatik olarak
+              oluşturulur; kimsenin tek tek kayıt açmasına gerek kalmaz.</span>
+          </li>
+          <li>
+            <span class="step-title">Üye parasını yatırır</span>
+            <span class="step-body">Üye, sandığın banka hesabına parayı gönderir. Sandık yöneticisi
+              bunu bir <b>para girişi</b> olarak sisteme kaydeder.</span>
+          </li>
+          <li>
+            <span class="step-title">Para ödemelere dağıtılır</span>
+            <span class="step-body">Yatan para, vadesi gelmiş aidat ve taksitlere sırayla otomatik
+              dağıtılır. Artan tutar “işleme konmamış para” olarak üyenin hesabında bekler ve sonraki
+              ödemelerde kullanılır.</span>
+          </li>
+          <li>
+            <span class="step-title">İhtiyaç sahibine borç verilir</span>
+            <span class="step-body">Sandık kurallarının izin verdiği tutar kadar borç verilir. Sistem
+              borcu taksitlere böler ve her taksidin hangi ayda ödeneceğini belirler.</span>
+          </li>
+          <li>
+            <span class="step-title">Borç geri döner</span>
+            <span class="step-body">Üye taksitlerini ödedikçe para sandığa geri döner ve yeniden başka
+              bir üyeye verilebilir hâle gelir.</span>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sandık türleri -->
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">Sandık türleri</div>
+        <h2>İki farklı işleyiş modeli</h2>
+        <p>Sandığınızı kurarken bu iki modelden birini seçersiniz; sonradan da değiştirilebilir.</p>
+      </div>
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="feature" style="margin-bottom: 14px;">
+            <div class="icon"><i class="fa-solid fa-box-open"></i></div>
+            <div><h3 style="margin: 6px 0 0;">Klasik sistem</h3></div>
+          </div>
+          <p>
+            Bütün aidatlar tek bir ortak havuzda toplanır. Bir üyeye verilen borç, sandığın tamamının
+            birikiminden karşılanır.
+          </p>
+          <p>
+            Üyenin alabileceği en fazla borç sandık kurallarıyla belirlenir; uygulamada en çok
+            kullanılan kural <b>ödenen toplam aidatın belirli bir katı</b>dır. Basit ve anlaşılırdır;
+            birbirini iyi tanıyan gruplar için uygundur.
+          </p>
+        </div>
+        <div class="card">
+          <div class="feature" style="margin-bottom: 14px;">
+            <div class="icon alt"><i class="fa-solid fa-circle-nodes"></i></div>
+            <div><h3 style="margin: 6px 0 0;">Güven bağlı sistem</h3></div>
+          </div>
+          <p>
+            Üyeler birbirleriyle <b>güven bağı</b> kurar. Bir üye, yalnızca kendi birikimi ve güven
+            halkasındaki üyelerin birikimi kadar borç alabilir.
+          </p>
+          <p>
+            Verilen her borcun hangi üyenin parasından karşılandığı kayıt altına alınır. Herkesin
+            herkesi tanımadığı, büyüyen sandıklarda riski dağıtmak için tercih edilir.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kurallar -->
+  <section class="section soft">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">Esneklik</div>
+        <h2>Sandık kuralları formüllerle yazılır</h2>
+        <p>
+          Her sandığın işleyişi farklıdır. Bu yüzden borç limiti, taksit sayısı ve hisse sayısı sabit
+          değerler yerine formüllerle tanımlanır. Kurallar sırayla denenir; koşulu sağlayan ilk kural
+          uygulanır.
+        </p>
+      </div>
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="table-scroll">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Kural</th>
+                <th>Örnek koşul</th>
+                <th>Örnek değer</th>
+                <th>Anlamı</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="key">Alınabilecek en fazla borç</td>
+                <td data-label="Örnek koşul"><span style="color: var(--ink-3);">koşulsuz</span></td>
+                <td data-label="Örnek değer"><code>{hisse_toplam_aidat}*3</code></td>
+                <td data-label="Anlamı">Bir hisse, o hisse için ödenmiş toplam aidatın 3 katı kadar borç alabilir.</td>
+              </tr>
+              <tr>
+                <td class="key">En fazla taksit sayısı</td>
+                <td data-label="Örnek koşul"><code>{borc-miktari}&lt;=9999</code></td>
+                <td data-label="Örnek değer"><code>5</code></td>
+                <td data-label="Anlamı">10.000 ₺'nin altındaki borçlar en fazla 5 taksit yapılabilir.</td>
+              </tr>
+              <tr>
+                <td class="key">En fazla hisse sayısı</td>
+                <td data-label="Örnek koşul"><span style="color: var(--ink-3);">koşulsuz</span></td>
+                <td data-label="Örnek değer"><code>4</code></td>
+                <td data-label="Anlamı">Bir üye en fazla 4 hisse açabilir.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kavramlar -->
+  <section class="section">
+    <div class="wrap narrow">
+      <div class="section-head">
+        <div class="kicker">Sözlük</div>
+        <h2>Temel kavramlar</h2>
+        <p>Sitede sık geçen terimlerin ne anlama geldiği.</p>
+      </div>
+      <div class="deflist">
+        <div><div class="dt">Sandık</div><div class="dd">Ortak kasa. Kendi üyeleri, kendi kuralları ve kendi banka hesabı olur.</div></div>
+        <div><div class="dt">Üye</div><div class="dd">Sandığa katılan kişi. Bir kişi aynı hesapla birden fazla sandığa üye olabilir.</div></div>
+        <div><div class="dt">Hisse</div><div class="dd">Üyenin sandıktaki payı. Her hisse için ayrı aidat ödenir ve ayrı borç hakkı doğar.</div></div>
+        <div><div class="dt">Aidat</div><div class="dd">Her hisse için her ay oluşan ödeme. Ödenmediği sürece “vadesi geçmiş” olarak görünür.</div></div>
+        <div><div class="dt">Borç</div><div class="dd">Üyeye sandıktan verilen faizsiz tutar. Verildiği anda taksitlere bölünür.</div></div>
+        <div><div class="dt">Taksit</div><div class="dd">Borcun aylara dağıtılmış parçası. Aidatla birlikte o ayın ödemesini oluşturur.</div></div>
+        <div><div class="dt">Para giriş/çıkışı</div><div class="dd">Üyenin sandığa yatırdığı ya da sandıktan aldığı ham para hareketi. Bu paranın hangi aidata veya taksite sayıldığı ayrıca kaydedilir.</div></div>
+        <div><div class="dt">İşleme konmamış para</div><div class="dd">Üyenin yatırdığı ama henüz bir aidata/taksite dağıtılmamış tutar. Sonraki ödemelerde kullanılır, istenirse üyeye geri verilir.</div></div>
+        <div><div class="dt">Güven bağı</div><div class="dd">Güven bağlı sandıklarda iki üyenin karşılıklı olarak birbirinin birikimini borç için kullanılabilir kılması.</div></div>
+        <div><div class="dt">Sandık kuralı</div><div class="dd">Borç limiti, taksit sayısı ve hisse sayısını belirleyen formüller.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Özellikler -->
+  <section class="section soft">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">Özellikler</div>
+        <h2>Neler yapabilirsiniz?</h2>
+      </div>
+      <div class="grid grid-3">
+        <div class="card">
+          <div class="feature">
+            <div class="icon"><i class="fa-solid fa-calendar-check"></i></div>
+            <div>
+              <h4>Aidatlar kendiliğinden oluşur</h4>
+              <p>Her ayın başında bütün hisseler için o ayın aidatı otomatik açılır.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="feature">
+            <div class="icon alt"><i class="fa-solid fa-shuffle"></i></div>
+            <div>
+              <h4>Ödemeler otomatik dağıtılır</h4>
+              <p>Yatan para, vadesi gelmiş aidat ve taksitlere sırayla işlenir.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="feature">
+            <div class="icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+            <div>
+              <h4>Borç ve taksit takibi</h4>
+              <p>Kalan borç, ödenmemiş taksitler ve vadesi geçmiş ödemeler her an görülebilir.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="feature">
+            <div class="icon alt"><i class="fa-solid fa-list-ol"></i></div>
+            <div>
+              <h4>Borç sıralaması</h4>
+              <p>Sandığa katkısına göre kimin borç almada öncelikli olduğu hesaplanır.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="feature">
+            <div class="icon"><i class="fa-solid fa-circle-nodes"></i></div>
+            <div>
+              <h4>Güven halkası</h4>
+              <p>Güven bağlı sandıklarda üyeler birbirine kefil olur, borç bu halkadan karşılanır.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="feature">
+            <div class="icon alt"><i class="fa-solid fa-key"></i></div>
+            <div>
+              <h4>Yetkilendirme</h4>
+              <p>Sandıkta okuma, yazma ve yöneticilik yetkileri ayrı ayrı verilebilir.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="feature">
+            <div class="icon"><i class="fa-solid fa-bell"></i></div>
+            <div>
+              <h4>Bildirim ve SMS</h4>
+              <p>Üyelik başvurusu, borç ve ödeme hatırlatmaları için bildirim ve toplu SMS.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="feature">
+            <div class="icon alt"><i class="fa-solid fa-building-columns"></i></div>
+            <div>
+              <h4>Banka hesapları</h4>
+              <p>Sandığın ve üyelerin IBAN bilgileri kayıtlı tutulur, ödeme yaparken elde olur.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="feature">
+            <div class="icon"><i class="fa-solid fa-clipboard-list"></i></div>
+            <div>
+              <h4>Seyir defteri ve yedekleme</h4>
+              <p>Her değişiklik iz bırakır; bütün veriler dışa aktarılıp geri yüklenebilir.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kimler için -->
+  <section class="section">
+    <div class="wrap">
+      <div class="cta">
+        <h2>Sandığınızı bugün taşıyın</h2>
+        <p>
+          Aile sandıkları, iş yeri sandıkları, arkadaş grupları ve dernek sandıkları için uygundur.
+          Hesabınızı açın, sandığınızı kurun; ilk ayın kayıtlarını girmek yarım saatinizi alır.
+        </p>
+        <div class="actions">
+          {% if current_user.is_authenticated %}
+            <a class="btn btn-primary" href="{{ url_for('sandik_page_bp.create_sandik_page') }}">
+              <i class="fa-solid fa-plus"></i> Yeni sandık oluştur
+            </a>
+            <a class="btn btn-ghost" href="{{ url_for('sandik_page_bp.apply_for_membership_page') }}">
+              <i class="fa-solid fa-user-plus"></i> Üyelik başvurusu yap
+            </a>
+          {% else %}
+            <a class="btn btn-primary" href="{{ url_for('auth_page_bp.register_page') }}">
+              <i class="fa-solid fa-user-plus"></i> Kayıt ol
+            </a>
+            <a class="btn btn-ghost" href="{{ url_for('auth_page_bp.login_page') }}">
+              <i class="fa-solid fa-arrow-right-to-bracket"></i> Giriş yap
+            </a>
+          {% endif %}
+          <a class="btn btn-ghost" href="{{ url_for('intro_page_bp.how_to_use_page') }}">
+            <i class="fa-solid fa-book-open"></i> Nasıl kullanılır?
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+{% endblock %}

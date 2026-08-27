@@ -1,0 +1,322 @@
+{% extends "intro/_layout.html" %}
+
+{% block page_title %}İstatistikler{% endblock %}
+{% block page_description %}Sandık v2 üzerinde işleyen sandıkların güncel rakamları: aktif sandık sayısı, üye sayısı ve bugüne kadar verilen toplam borç.{% endblock %}
+
+{% block intro_css_block %}
+  <style>
+    /* Hero'nun altına taşan öne çıkan sayılar */
+    .stats-hero { padding: 56px 0 96px; }
+    .stat-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: -58px;
+      position: relative;
+      z-index: 2;
+    }
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+    .stat .stat-icon {
+      width: 38px; height: 38px;
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--brand-soft); color: var(--brand-2);
+      font-size: 16px; margin-bottom: 14px;
+    }
+    .stat .stat-icon.alt { background: var(--accent-soft); color: var(--accent); }
+    .stat .stat-value {
+      font-size: 34px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1;
+      color: var(--ink);
+    }
+    .stat .stat-value .unit { font-size: 20px; font-weight: 700; color: var(--ink-2); }
+    .stat .stat-label { color: var(--ink-2); font-size: 15px; margin-top: 4px; }
+    .stat .stat-hint { color: var(--ink-3); font-size: 13.5px; margin-top: 6px; }
+
+    /* Alt kırılım listeleri */
+    .kv { display: grid; gap: 0; }
+    .kv > div {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .kv > div:last-child { border-bottom: none; }
+    .kv .k { color: var(--ink-2); font-size: 15.5px; }
+    .kv .v { font-weight: 700; white-space: nowrap; text-align: right; }
+
+    /* Yıllara göre çubuk grafik.
+       Tutar ve adet, çubuğun üstüne değil yanına yazılır: dolgu genişledikçe metnin
+       okunaklılığı bozulmasın. */
+    .bars { display: grid; gap: 12px; }
+    .bar-row {
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr) auto;
+      gap: 8px 14px;
+      align-items: center;
+    }
+    .bar-year { font-weight: 700; color: var(--ink-2); font-size: 15px; }
+    .bar-track { background: var(--surface-2); border-radius: 8px; height: 26px; overflow: hidden; }
+    .bar-fill {
+      height: 100%;
+      border-radius: 8px;
+      background: linear-gradient(90deg, var(--brand-2), var(--accent));
+      min-width: 4px;
+    }
+    .bar-value { white-space: nowrap; font-size: 14.5px; text-align: right; }
+    .bar-value .amount { font-weight: 700; }
+    .bar-value .cnt { color: var(--ink-3); font-weight: 600; margin-left: 8px; }
+
+    @media (max-width: 860px) {
+      .stats-hero { padding: 42px 0 74px; }
+      .stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: -46px; }
+      .stat .stat-value { font-size: 27px; }
+      /* Dar ekranda tutar, çubuğun altına ikinci satıra iner */
+      .bar-row { grid-template-columns: 46px minmax(0, 1fr); }
+      .bar-value { grid-column: 2; text-align: left; }
+    }
+    @media (max-width: 700px) {
+      .stats-hero { padding: 32px 0 56px; }
+      .stat-strip { margin-top: -32px; }
+    }
+    @media (max-width: 460px) {
+      .stat-strip { grid-template-columns: minmax(0, 1fr); }
+    }
+  </style>
+{% endblock %}
+
+{% block hero_block %}
+  <section class="hero stats-hero">
+    <div class="wrap">
+      <span class="eyebrow"><i class="fa-solid fa-chart-simple"></i> Güncel veriler</span>
+      <h1>Rakamlarla {{ page_info.website_name }}</h1>
+      <p class="hero-sub">
+        Aşağıdaki sayılar, sistem üzerinde <b>gerçekten işleyen</b> sandıklardan gelir. Deneme
+        amacıyla açılıp bırakılmış sandıklar ve hiçbir sandıkta üyeliği olmayan kullanıcılar hesaba
+        katılmaz.
+      </p>
+    </div>
+  </section>
+{% endblock %}
+
+{% block intro_content %}
+  {% set stats = g.statistics %}
+
+  {% if not stats.has_data %}
+    <section class="section">
+      <div class="wrap narrow">
+        <div class="card pad-lg" style="text-align: center;">
+          <h2>Henüz gösterilecek veri yok</h2>
+          <p style="color: var(--ink-2);">
+            Sistemde, istatistiklere girecek ölçüde işleyen bir sandık bulunmuyor.
+          </p>
+        </div>
+      </div>
+    </section>
+  {% else %}
+
+    <!-- Öne çıkan sayılar -->
+    <div class="wrap">
+      <div class="stat-strip">
+        <div class="stat">
+          <div class="stat-icon"><i class="fa-solid fa-box-open"></i></div>
+          <div class="stat-value">{{ stats.recently_active_sandik_count }}</div>
+          <div class="stat-label">İşleyen sandık</div>
+          <div class="stat-hint">Toplam {{ stats.sandik_count }} sandık kurulmuş durumda</div>
+        </div>
+        <div class="stat">
+          <div class="stat-icon alt"><i class="fa-solid fa-users"></i></div>
+          <div class="stat-value">{{ stats.web_user_count }}</div>
+          <div class="stat-label">Sandık üyesi kullanıcı</div>
+          <div class="stat-hint">Toplam {{ stats.membership_count }} aktif üyelik</div>
+        </div>
+        <div class="stat">
+          <div class="stat-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+          <div class="stat-value">{{ stats.total_debt_amount_short }} <span class="unit">₺</span></div>
+          <div class="stat-label">Bugüne kadar verilen borç</div>
+          <div class="stat-hint">{{ stats.debt_count }} ayrı borç işlemi</div>
+        </div>
+        <div class="stat">
+          <div class="stat-icon alt"><i class="fa-solid fa-clock-rotate-left"></i></div>
+          <div class="stat-value">{{ stats.operating_year_count }} <span class="unit">yıl</span></div>
+          <div class="stat-label">Kesintisiz kayıt</div>
+          <div class="stat-hint">En eski sandık {{ stats.first_date_of_opening.year }} yılında açıldı</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kırılımlar -->
+    <section class="section">
+      <div class="wrap">
+        <div class="grid grid-3">
+
+          <div class="card">
+            <div class="feature" style="margin-bottom: 14px;">
+              <div class="icon"><i class="fa-solid fa-box-open"></i></div>
+              <div><h3 style="margin: 6px 0 0;">Sandıklar</h3></div>
+            </div>
+            <div class="kv">
+              <div><span class="k">Son {{ stats.recently_active_month_count }} ayda hareket gören</span><span class="v">{{ stats.recently_active_sandik_count }}</span></div>
+              <div><span class="k">Toplam sandık</span><span class="v">{{ stats.sandik_count }}</span></div>
+              <div><span class="k">Klasik sistem</span><span class="v">{{ stats.classic_sandik_count }}</span></div>
+              <div><span class="k">Güven bağlı sistem</span><span class="v">{{ stats.trust_relationship_sandik_count }}</span></div>
+              <div><span class="k">En eski sandığın açılışı</span><span class="v">{{ stats.first_date_of_opening.strftime("%d.%m.%Y") }}</span></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="feature" style="margin-bottom: 14px;">
+              <div class="icon alt"><i class="fa-solid fa-users"></i></div>
+              <div><h3 style="margin: 6px 0 0;">Üyeler</h3></div>
+            </div>
+            <div class="kv">
+              <div><span class="k">Sandık üyesi kullanıcı</span><span class="v">{{ stats.web_user_count }}</span></div>
+              <div><span class="k">Aktif üyelik</span><span class="v">{{ stats.membership_count }}</span></div>
+              <div><span class="k">Aktif hisse</span><span class="v">{{ stats.share_count }}</span></div>
+              <div><span class="k">Ortalama aylık aidat</span><span class="v">{{ stats.average_contribution_amount|tr_number_format }} ₺</span></div>
+            </div>
+            <p style="color: var(--ink-3); font-size: 14px; margin-top: 12px;">
+              Bir kişi birden fazla sandığa üye olabildiği için üyelik sayısı kullanıcı sayısından
+              fazladır.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="feature" style="margin-bottom: 14px;">
+              <div class="icon"><i class="fa-solid fa-list-check"></i></div>
+              <div><h3 style="margin: 6px 0 0;">Kayıtlar</h3></div>
+            </div>
+            <div class="kv">
+              <div><span class="k">Para giriş/çıkışı</span><span class="v">{{ stats.money_transaction_count }}</span></div>
+              <div><span class="k">Aidat kaydı</span><span class="v">{{ stats.contribution_count }}</span></div>
+              <div><span class="k">Taksit kaydı</span><span class="v">{{ stats.installment_count }}</span></div>
+              <div><span class="k">Borç kaydı</span><span class="v">{{ stats.debt_count }}</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Para -->
+    <section class="section soft">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="kicker">Para akışı</div>
+          <h2>Sandıklarda dönen para</h2>
+          <p>
+            Sandıkların kuruluşundan bugüne kadarki toplamlar. Aynı para birden fazla kez borç
+            verilip geri ödendiği için “verilen borç”, “yatırılan para”dan yüksek olabilir.
+          </p>
+        </div>
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="kv">
+              <div><span class="k">Bugüne kadar verilen toplam borç</span><span class="v">{{ stats.total_debt_amount|tr_number_format }} ₺</span></div>
+              <div><span class="k">Geri ödenen (taksit) tutarı</span><span class="v">{{ stats.paid_installment_amount|tr_number_format }} ₺</span></div>
+              <div><span class="k">Geri ödenmeyi bekleyen borç</span><span class="v">{{ stats.unpaid_debt_amount|tr_number_format }} ₺</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="kv">
+              <div><span class="k">Ödenen toplam aidat</span><span class="v">{{ stats.paid_contribution_amount|tr_number_format }} ₺</span></div>
+              <div><span class="k">Sandıklara yatırılan toplam para</span><span class="v">{{ stats.total_revenue_amount|tr_number_format }} ₺</span></div>
+              <div><span class="k">Verilen borç sayısı</span><span class="v">{{ stats.debt_count }}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Yıllara göre -->
+    {% if stats.debts_by_year %}
+      <section class="section">
+        <div class="wrap">
+          <div class="section-head">
+            <div class="kicker">Gelişim</div>
+            <h2>Yıllara göre verilen borç</h2>
+            <p>Her yıl üyelere dağıtılan toplam borç tutarı ve borç sayısı.</p>
+          </div>
+          <div class="card pad-lg">
+            <div class="bars">
+              {% for row in stats.debts_by_year %}
+                <div class="bar-row">
+                  <div class="bar-year">{{ row.year }}</div>
+                  <div class="bar-track">
+                    <div class="bar-fill" style="width: {{ row.ratio if row.ratio > 2 else 2 }}%;"></div>
+                  </div>
+                  <div class="bar-value">
+                    <span class="amount">{{ row.amount|tr_number_format }} ₺</span>
+                    <span class="cnt">{{ row.count }} borç</span>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            <p style="color: var(--ink-3); font-size: 14px; margin-top: 16px;">
+              İçinde bulunduğumuz yıl henüz tamamlanmadığı için son sütun eksik kalabilir.
+            </p>
+          </div>
+        </div>
+      </section>
+    {% endif %}
+
+    <!-- Şeffaflık -->
+    <section class="section soft">
+      <div class="wrap narrow">
+        <div class="card pad-lg">
+          <h3><i class="fa-solid fa-filter" style="color: var(--brand);"></i> Bu sayılar nasıl hesaplanıyor?</h3>
+          <p>
+            İstatistiklerin gerçeği yansıtması için denemelik kayıtlar dışarıda bırakılır. Bir sandık
+            ancak şu ölçütlerin <b>hepsini</b> sağlıyorsa sayılara dahil edilir:
+          </p>
+          <ul style="color: var(--ink-2); padding-left: 22px;">
+            <li>Sandık kapatılmamış (aktif) olmalı,</li>
+            <li>en az <b>{{ stats.min_active_member_count }} aktif üyesi</b> bulunmalı,</li>
+            <li>en az <b>{{ stats.min_money_transaction_count }} para giriş/çıkış kaydı</b> olmalı.</li>
+          </ul>
+          <p>
+            “İşleyen sandık” ise bu ölçütleri sağlayan ve son
+            <b>{{ stats.recently_active_month_count }} ay</b> içinde en az bir para hareketi görmüş
+            sandıkları anlatır. Kullanıcı sayısı da aynı mantıkla hesaplanır: yalnızca bu sandıkların
+            en az birinde <b>aktif üyeliği olan</b> kişiler sayılır; kayıt olup hiçbir sandığa
+            katılmamış kullanıcılar sayılara girmez.
+          </p>
+          <p style="color: var(--ink-3); font-size: 14.5px; margin-bottom: 0;">
+            Sayfada kişiye ya da tek bir sandığa ait hiçbir bilgi gösterilmez; hepsi toplam
+            değerlerdir. Son hesaplama: {{ stats.calculated_at.strftime("%d.%m.%Y %H:%M") }}.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  {% endif %}
+
+  <!-- CTA -->
+  <section class="section">
+    <div class="wrap">
+      <div class="cta">
+        <h2>Siz de sandığınızı buraya taşıyın</h2>
+        <p>Kendi sandığınızı kurun ya da üyesi olduğunuz sandığa katılın.</p>
+        <div class="actions">
+          {% if current_user.is_authenticated %}
+            <a class="btn btn-primary" href="{{ url_for('sandik_page_bp.create_sandik_page') }}">
+              <i class="fa-solid fa-plus"></i> Yeni sandık oluştur
+            </a>
+          {% else %}
+            <a class="btn btn-primary" href="{{ url_for('auth_page_bp.register_page') }}">
+              <i class="fa-solid fa-user-plus"></i> Kayıt ol
+            </a>
+          {% endif %}
+          <a class="btn btn-ghost" href="{{ url_for('intro_page_bp.about_page') }}">
+            <i class="fa-solid fa-circle-info"></i> Sandık nedir?
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+{% endblock %}

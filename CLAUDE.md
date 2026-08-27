@@ -47,6 +47,7 @@ Kilit kavramlar:
 |---|---|---|
 | `auth` | `/` | Kayıt/giriş, `WebUser`, yetkiler |
 | `general` | `/` | Ana sayfa, bildirimler, banka hesapları, loglar |
+| `intro` | `/` | Herkese açık tanıtım sayfaları (tanıtım, kullanım kılavuzu, istatistikler) |
 | `sandik` | `/sandik/` | Sandık, üye, hisse, güven bağı, kurallar |
 | `transaction` | `/sandik/<id>/` | Para giriş/çıkışı, aidat, borç, taksit |
 | `website_transaction` | `/websitesi-masraflari/` | Sitenin kendi gider kaydı |
@@ -58,6 +59,90 @@ Kilit kavramlar:
 
 `sandik/utils/clock.py`: her ayın başında çalışacak iş (aidat oluşturma). Procfile'da `clock`
 process'i olarak tanımlı.
+
+## Tanıtım sayfaları (`sandik/intro/`)
+
+Giriş yapmadan görülebilen üç sayfa. Yönetim paneli düzenini (`utils/layout.html`) **kullanmazlar**;
+kendi başına duran modern bir tanıtım sitesi görünümündeler.
+
+| Yol | Şablon | İş |
+|---|---|---|
+| `/tanitim` | `about_page.html` | Sandık sistemi nedir, nasıl işler, kavramlar, sandık türleri |
+| `/nasil-kullanilir` | `how_to_use_page.html` | Üye ve yönetici için adım adım kullanım kılavuzu + SSS |
+| `/istatistikler` | `statistics_page.html` | Sistemin gerçek kullanım rakamları |
+
+- **Ortak kabuk `templates/intro/_layout.html`'dedir**: `<head>`, üst menü, alt bilgi, renk
+  değişkenleri ve bütün bileşen stilleri (kart, adım listesi, tablo, not kutusu, SSS akordiyonu,
+  CTA) yalnızca orada tanımlıdır. Yeni bir tanıtım sayfası eklenirken bunlar kopyalanmaz;
+  `{% extends "intro/_layout.html" %}` ile türetilip `hero_block` / `intro_content` (gerekiyorsa
+  `intro_css_block`, `intro_js_block`) blokları doldurulur.
+- **Tema:** açık palet `:root`, koyu palet `:root[data-theme="dark"]` altındadır; `data-theme`
+  her zaman `<head>`'deki küçük script tarafından **ilk boyamadan önce** yazılır (kullanıcının
+  seçimi varsa `localStorage["sandikv2-tema"]`, yoksa `prefers-color-scheme`). Bu yüzden CSS'te
+  `prefers-color-scheme` medya sorgusu **yoktur** — koyu palet tek yerde durur, ikinci bir kopyayla
+  senkron tutma derdi olmaz. Üst menüdeki `#theme-toggle` düğmesi temayı değiştirip seçimi
+  `localStorage`a yazar; kullanıcı seçim yapmadıysa işletim sistemi teması anlık takip edilir
+  (`matchMedia` change dinleyicisi). Düğmenin simgesi **basınca geçilecek** temayı gösterir
+  (`.to-dark` / `.to-light`).
+- Üzerine **beyaz yazı gelen dolu zeminler** (birincil düğme, logo kutusu) `--brand-2` değil
+  `--brand-solid` kullanır: `--brand-2` karanlık temada açılır ve beyaz yazı okunmaz olur.
+  `color-mix()` kullanılan yerlerde öncesine düz bir değer yazılır (desteklemeyen tarayıcıda kural
+  tamamen düşer).
+- **Sayfa geneli açık tonludur.** Hero ve CTA blokları koyu gradyan değil, `--hero-bg` ile tanımlı
+  hafif renk yıkaması kullanır (karanlık temada koyu karşılığı); yazılar normal metin renginde.
+  Bu yüzden koyu zemin için yazılmış `.btn-white` / `.btn-light` sınıfları **yoktur**; hero ve
+  CTA düğmeleri de `.btn-primary` / `.btn-ghost` kullanır.
+- Hero yüksekliği satır içi `style` ile değil sınıfla ayarlanır (`.hero-sm`, istatistik sayfasında
+  `.stats-hero`): satır içi stil medya sorgularını ezip telefonda düzeltilemez hâle getiriyordu.
+- **Giriş yapmamış ziyaretçi `/` adresinde giriş formu yerine `/tanitim`'e yönlendirilir**
+  (`general/page.py` → `index_page`). Giriş/kayıt sayfalarının ve yönetim panelinin alt bilgisinde
+  de üç sayfaya bağlantı vardır.
+- Sayfalardaki metinler **son kullanıcıya** yazılmıştır: entity adları, ERRCODE mantığı gibi iç
+  ayrıntılar anlatılmaz. Fiyat/ücret iddiası da yoktur (sistemde ödeme akışı yok, söz verilmesin).
+
+### Mobil
+
+**Siteye ağırlıklı olarak telefondan giriliyor; bu sayfalarda mobil görünüm birincil önceliktir.**
+Bir değişiklikten sonra 375 px (ve tercihen 320 px) genişlikte kontrol edilmeli, sayfanın yatay
+kaymadığı doğrulanmalıdır (`document.documentElement.scrollWidth == clientWidth`).
+
+- Kırılım noktaları: `860px` (tek sütuna iner, üst menü hamburger olur) ve `700px` (telefon).
+- **Tablolar telefonda yatay kaydırılmaz, satır satır dizilir** (`@media (max-width: 700px)` içinde
+  `table.tbl` blok'a çevrilir, `thead` gizlenir). Başlık satırının anlamı kaybolmasın diye
+  ikiden fazla sütunlu tablolarda hücrelere `data-label="Sütun adı"` yazılır; CSS bunu `::before`
+  ile üstte küçük etiket olarak gösterir. İki sütunlu "anahtar → açıklama" tablolarında gerekmez.
+- Telefonda hero ve CTA düğmeleri tam genişliğe yayılır, menü bağlantılarının dokunma alanı
+  büyütülür; `code` etiketlerindeki `white-space: nowrap` kaldırılır (formül örnekleri taşıyordu).
+- Tema düğmesi telefonda da hamburger menünün **içinde değil**, üst çubukta hamburgerin yanındadır
+  (menüyü açmadan ulaşılsın diye). Menü telefonda `position: absolute` olduğu için akıştan çıkar;
+  bu iki düğmeyi sağa yaslayan `margin-left: auto` bu yüzden `.theme-toggle` üzerindedir.
+
+### İstatistiklerdeki "çöp veri" elemesi (`intro/utils.py`)
+
+İstatistikler yalnızca **gerçekten kullanılan** sandıkları kapsar; deneme amacıyla açılıp bırakılmış
+sandıklar ve hiçbir sandıkta üyeliği olmayan kullanıcılar sayılmaz. Ölçütler modül başındaki
+sabitlerdedir ve **sayfanın altında kullanıcıya da açıklanır** — biri değişirse metin kendiliğinden
+güncellenir (sabitler şablona veri olarak geçirilir), ama sabitin adı değişirse şablon da
+güncellenmelidir.
+
+| Sabit | Varsayılan | Anlamı |
+|---|---|---|
+| `MIN_ACTIVE_MEMBER_COUNT` | 3 | Sandığın en az bu kadar aktif üyesi olmalı |
+| `MIN_MONEY_TRANSACTION_COUNT` | 20 | Sandıkta en az bu kadar para giriş/çıkışı olmalı |
+| `RECENTLY_ACTIVE_MONTH_COUNT` | 6 | Son hareketi bu kadar ay içinde olan sandık "işleyen" sayılır |
+
+Ayrıca sandığın `is_active` olması gerekir. Kullanıcı sayısı da bu sandıklara bağlıdır: yalnızca
+elemeden geçen sandıkların en az birinde **aktif üyeliği olan** `WebUser`'lar sayılır.
+
+- `collect_sandik_facts()` eleme için gereken üç sayımı sandığa göre gruplanmış üç sorguyla alır
+  (sandık başına ayrı sorgu atmaz).
+- `Debt` üzerinde tarih alanı yoktur; yıllara göre dağılımda borcun tarihi olarak
+  `d.sub_receipt_ref.money_transaction_ref.date` kullanılır.
+- Sonuç `STATISTICS_CACHE_DURATION` (15 dk) boyunca **süreç belleğinde** önbelleğe alınır; sayfa
+  herkese açık olduğu için her istekte toplu sorgu çalışmasın diye. Önbellek her worker için
+  ayrıdır. Site yöneticisi `?yenile=1` ile önbelleği atlayabilir. Dönen sözlük paylaşıldığı için
+  **değiştirilmemelidir**.
+- Sayfada kişiye ya da tek bir sandığa ait bilgi gösterilmez; hepsi toplam değerdir.
 
 ## Dikkat edilmesi gereken yerler
 

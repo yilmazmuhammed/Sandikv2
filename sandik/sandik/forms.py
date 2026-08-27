@@ -339,7 +339,7 @@ class MemberPreferencesForm(CustomFlaskForm):
 
     submit = SubmitField(label="Kaydet")
 
-    def __init__(self, form_title='Hisse ekleme formu', *args, **kwargs):
+    def __init__(self, form_title='Sandık tercihleri', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
 
     def fill_values(self, preferences):
@@ -358,7 +358,7 @@ class SendSmsForm(CustomFlaskForm):
 
     submit = SubmitField(label="Gönder")
 
-    def __init__(self, form_title='Hisse ekleme formu', *args, **kwargs):
+    def __init__(self, form_title='Sms formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.sms_type.choices += list(SmsPackage.TYPE.strings.items())
 

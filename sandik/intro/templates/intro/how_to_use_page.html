@@ -1,0 +1,402 @@
+{% extends "intro/_layout.html" %}
+
+{% block page_title %}Nasıl kullanılır?{% endblock %}
+{% block page_description %}Sandık v2 kullanım kılavuzu: hesap açma, sandığa katılma, aidat ödeme, borç alma ve sandık yöneticiliği.{% endblock %}
+
+{% block intro_css_block %}
+  <style>
+    /* Sayfa içi gezinme: geniş ekranda içerikle yan yana, dar ekranda üstte durur */
+    .guide {
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr);
+      gap: 38px;
+      align-items: start;
+    }
+    .toc {
+      position: sticky;
+      top: 86px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .toc .toc-title {
+      font-size: 12.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--ink-3); margin-bottom: 10px;
+    }
+    .toc ol { margin: 0; padding-left: 20px; }
+    .toc li { margin-bottom: 7px; }
+    .toc a { color: var(--ink-2); font-weight: 600; font-size: 15.5px; }
+    .guide-section + .guide-section { margin-top: 46px; }
+    .guide-section > h2 {
+      display: flex; align-items: center; gap: 12px;
+      padding-bottom: 12px; margin-bottom: 22px;
+      border-bottom: 2px solid var(--line);
+    }
+    .guide-section > h2 .num {
+      flex: none;
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 10px; font-size: 16px;
+      background: var(--brand-soft); color: var(--brand-2);
+    }
+    .guide-section .card + .card { margin-top: 18px; }
+    @media (max-width: 980px) {
+      .guide { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+      .toc { position: static; }
+    }
+  </style>
+{% endblock %}
+
+{% block hero_block %}
+  <section class="hero hero-sm">
+    <div class="wrap">
+      <span class="eyebrow"><i class="fa-solid fa-book-open"></i> Kullanım kılavuzu</span>
+      <h1>Nasıl kullanılır?</h1>
+      <p class="hero-sub">
+        Önce herkesin yapması gereken ilk adımlar, sonra <b>üye</b> olarak günlük kullanım, en sonda
+        da <b>sandık yöneticisi</b> olarak yapılacak işler. Sistemin ne olduğunu merak ediyorsanız
+        önce <a href="{{ url_for('intro_page_bp.about_page') }}">Sandık nedir?</a> sayfasına göz atın.
+      </p>
+    </div>
+  </section>
+{% endblock %}
+
+{% block intro_content %}
+  <section class="section">
+    <div class="wrap">
+      <div class="guide">
+
+        <!-- Sayfa içi gezinme -->
+        <aside class="toc">
+          <div class="toc-title">İçindekiler</div>
+          <ol>
+            <li><a href="#ilk-adimlar">İlk adımlar</a></li>
+            <li><a href="#uye">Üye olarak kullanım</a></li>
+            <li><a href="#yonetici">Yönetici olarak kullanım</a></li>
+            <li><a href="#sss">Sık sorulan sorular</a></li>
+          </ol>
+        </aside>
+
+        <div>
+          <!-- 1. İlk adımlar -->
+          <div class="guide-section" id="ilk-adimlar">
+            <h2><span class="num">1</span> İlk adımlar</h2>
+            <div class="card pad-lg">
+              <ol class="steps">
+                <li>
+                  <span class="step-title">Hesap oluşturun</span>
+                  <span class="step-body">
+                    <a href="{{ url_for('auth_page_bp.register_page') }}">Kayıt ol</a> sayfasından ad,
+                    soyad, e-posta ve parolanızı girerek hesabınızı açın. Aynı hesapla birden fazla
+                    sandığa üye olabilirsiniz; her sandık için ayrı hesap açmanız gerekmez.
+                  </span>
+                </li>
+                <li>
+                  <span class="step-title">Giriş yapın</span>
+                  <span class="step-body">
+                    <a href="{{ url_for('auth_page_bp.login_page') }}">Giriş yap</a> sayfasından
+                    e-posta ve parolanızla girin. Parolanızı unutursanız aynı sayfadaki “Şifremi
+                    unuttum” bağlantısıyla e-posta üzerinden yenileyebilirsiniz.
+                  </span>
+                </li>
+                <li>
+                  <span class="step-title">Banka hesabınızı ekleyin</span>
+                  <span class="step-body">
+                    Sağ üstteki menüden <b>Banka hesaplarım</b> sayfasına girip IBAN'ınızı kaydedin ve
+                    birini <b>birincil</b> olarak işaretleyin. Sandıktan size para çıkışı yapılırken bu
+                    hesap kullanılır; bu yüzden üyelik başvurusu yapabilmek için en az bir birincil
+                    hesap gereklidir.
+                  </span>
+                </li>
+                <li>
+                  <span class="step-title">Bir sandığa katılın ya da kendi sandığınızı kurun</span>
+                  <span class="step-body">
+                    Üst menüdeki <b>Sandıklarım</b> listesinden
+                    <a href="{{ url_for('sandik_page_bp.apply_for_membership_page') }}">Üyelik başvurusu yap</a>
+                    diyerek var olan bir sandığa başvurun — başvurunuzu o sandığın yöneticisi onaylar.
+                    Yeni bir sandık kurmak istiyorsanız
+                    <a href="{{ url_for('sandik_page_bp.create_sandik_page') }}">Yeni sandık oluştur</a>
+                    bağlantısını kullanın; sandığı kuran kişi otomatik olarak yöneticisi olur.
+                  </span>
+                </li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- 2. Üye -->
+          <div class="guide-section" id="uye">
+            <h2><span class="num">2</span> Üye olarak kullanım</h2>
+
+            <div class="card">
+              <h3>Ana sayfayı okumak</h3>
+              <p>
+                Giriş yaptığınızda <a href="{{ url_for('general_page_bp.home_page') }}">ana sayfada</a>
+                üyesi olduğunuz bütün sandıkların özetini iki tabloda görürsünüz. Tek bir sandıkta
+                üyeyseniz sistem sizi doğrudan o sandığın sayfasına götürür.
+              </p>
+              <div class="table-scroll" style="margin: 18px 0;">
+                <table class="tbl">
+                  <tbody>
+                    <tr><td class="key">Ödenen aidat</td><td>Bugüne kadar o sandıkta ödediğiniz toplam aidat.</td></tr>
+                    <tr><td class="key">Alınan borç</td><td>Bugüne kadar aldığınız borçların toplamı.</td></tr>
+                    <tr><td class="key">Ödenen taksit</td><td>Borçlarınız için ödediğiniz toplam tutar.</td></tr>
+                    <tr><td class="key">Kalan borç</td><td>Henüz geri ödemediğiniz borç.</td></tr>
+                    <tr><td class="key">İşleme konmamış</td><td>Yatırdığınız ama henüz bir aidata/taksite işlenmemiş paranız. Sonraki ödemelerde kullanılır.</td></tr>
+                    <tr><td class="key">Mil sonu</td><td>İşleme konmamış paranızdan, ödenmemiş bütün aidat ve taksitler düşüldüğünde kalan tutar. Eksi ise o kadar borcunuz birikmiş demektir.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p>
+                Alttaki <b>Aylık ödemelerim</b> tablosunda ise ödenmemiş aidat ve taksitleriniz ay ay
+                listelenir. Kırmızı satırlar vadesi geçmiş, sarı satır içinde bulunduğumuz ay demektir.
+              </p>
+            </div>
+
+            <div class="card">
+              <h3>Aidatınızı nasıl ödersiniz?</h3>
+              <ol class="steps" style="margin-top: 18px;">
+                <li>
+                  <span class="step-title">Parayı sandığın hesabına gönderin</span>
+                  <span class="step-body">Sandığın IBAN'ını sandık sayfasından görebilirsiniz.
+                    Açıklamaya adınızı yazmanız yöneticinin işini kolaylaştırır.</span>
+                </li>
+                <li>
+                  <span class="step-title">Yönetici işlemi kaydeder</span>
+                  <span class="step-body">Para girişini sisteme sandık yöneticisi girer. Üyeler kendi
+                    işlemlerini kendileri ekleyemez — bu, kayıtların tek elden ve tutarlı tutulması
+                    içindir.</span>
+                </li>
+                <li>
+                  <span class="step-title">Para otomatik dağıtılır</span>
+                  <span class="step-body">Yatan tutar önce vadesi gelmiş aidat ve taksitlerinize
+                    işlenir. Artan olursa “işleme konmamış para” olarak durur; bir sonraki ay
+                    ödemeleriniz buradan karşılanabilir.</span>
+                </li>
+              </ol>
+            </div>
+
+            <div class="card">
+              <h3>Borç almak</h3>
+              <p>
+                Borç talebinizi sandık yöneticisine iletirsiniz; borcu sisteme yönetici kaydeder.
+                Alabileceğiniz en fazla tutar sandık kurallarına göre hesaplanır ve <b>Özet</b>
+                sayfanızda görünür. Güven bağlı sandıklarda bu tutar ayrıca güven halkanızdaki üyelerin
+                birikimiyle sınırlıdır.
+              </p>
+              <p>
+                Borç kaydedildiği anda taksitleriniz oluşur ve <b>İşlemler → Borçlarım</b> sayfasında
+                listelenir. Taksitler, aidatlarınızla birlikte her ayın ödemesi hâline gelir.
+              </p>
+            </div>
+
+            <div class="card">
+              <h3>Sandık menüsündeki sayfalar</h3>
+              <div class="table-scroll" style="margin-top: 16px;">
+                <table class="tbl">
+                  <tbody>
+                    <tr><td class="key">Sandık → Özet</td><td>Birikiminiz, kalan borcunuz ve alabileceğiniz en fazla borç.</td></tr>
+                    <tr><td class="key">Sandık → Sandık detayı</td><td>Sandığın üye listesi, kuralları ve genel durumu.</td></tr>
+                    <tr><td class="key">Sandık → Güven halkam</td><td>Yalnızca güven bağlı sandıklarda görünür. Güven bağı isteği gönderir, gelen istekleri onaylar veya kaldırırsınız.</td></tr>
+                    <tr><td class="key">İşlemler → Borçlarım</td><td>Aldığınız borçlar ve her birinin taksit durumu.</td></tr>
+                    <tr><td class="key">İşlemler → Ödemelerim</td><td>Bütün aidat ve taksitleriniz; ödenen/ödenmeyen ayrımıyla.</td></tr>
+                    <tr><td class="key">İşlemler → Para giriş/çıkışları</td><td>Sandığa yatırdığınız ve sandıktan aldığınız paralar.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Kişisel ayarlarınız</h3>
+              <p>
+                Sağ üstteki adınıza tıklayarak
+                <a href="{{ url_for('auth_page_bp.update_profile_page') }}">profilinizi</a> ve
+                <a href="{{ url_for('auth_page_bp.update_password_page') }}">parolanızı</a>
+                güncelleyebilir,
+                <a href="{{ url_for('general_page_bp.bank_accounts_page') }}">banka hesaplarınızı</a>
+                yönetebilirsiniz. Bir sandığın içindeyken aynı menüde çıkan <b>Sandık tercihlerim</b>
+                ile “ay başında ödemelerim işleme konmamış paramdan otomatik ödensin mi?” tercihini
+                değiştirebilirsiniz.
+              </p>
+            </div>
+          </div>
+
+          <!-- 3. Yönetici -->
+          <div class="guide-section" id="yonetici">
+            <h2><span class="num">3</span> Yönetici olarak kullanım</h2>
+
+            <div class="card pad-lg">
+              <h3>Yeni bir sandığı kurarken</h3>
+              <ol class="steps" style="margin-top: 18px;">
+                <li>
+                  <span class="step-title">Sandığı oluşturun</span>
+                  <span class="step-body">
+                    <a href="{{ url_for('sandik_page_bp.create_sandik_page') }}">Yeni sandık oluştur</a>
+                    sayfasında sandığın adını, aylık aidat miktarını ve türünü (klasik / güven bağlı)
+                    girin.
+                  </span>
+                </li>
+                <li>
+                  <span class="step-title">Sandık kurallarını tanımlayın</span>
+                  <span class="step-body">
+                    <b>Sandık kuralları</b> menüsünden üç kuralı da ekleyin: alınabilecek en fazla borç,
+                    borç tutarına göre en fazla taksit sayısı ve bir üyenin açabileceği en fazla hisse
+                    sayısı. Kurallar sırayla denenir, koşulu sağlayan ilk kural uygulanır; bu yüzden en
+                    dar koşulu en üste koyun.
+                  </span>
+                </li>
+                <li>
+                  <span class="step-title">Sandığın banka hesabını ekleyin</span>
+                  <span class="step-body">Sandığa ait IBAN'ı kaydedin ki üyeler ödemelerini nereye
+                    yapacaklarını görebilsin.</span>
+                </li>
+                <li>
+                  <span class="step-title">Üyeleri ekleyin</span>
+                  <span class="step-body">
+                    <b>Üyeler → Üye ekle</b> ile üyeyi e-posta adresinden ya da kayıtlı kullanıcılar
+                    arasından seçerek ekleyin. Kendisi başvurmuşsa <b>Üyeler → Onay bekleyenler</b>
+                    sayfasından onaylayın. Her üyeye en az bir hisse açılır; daha fazla pay almak
+                    isteyen üyeye üye özetinden yeni hisse eklenir.
+                  </span>
+                </li>
+              </ol>
+              <div class="note warn" style="margin-top: 20px;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <div>
+                  <b>Kural tanımlanmadan borç verilemez.</b> Sandık kuralları eksikse sistem borç
+                  eklerken “geçerli kural bulunamadı” uyarısı verir. Sandığı kurar kurmaz kuralları
+                  yazmak en iyisi.
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Günlük iş: para giriş/çıkışı eklemek</h3>
+              <p>
+                Yöneticinin en sık yaptığı iş budur:
+                <b>Sandık yönetimi → İşlemler → İşlem ekle</b>. Üyeyi, tarihi, işlem türünü (para
+                girişi / para çıkışı) ve tutarı girmeniz yeterlidir; sistem parayı kendisi dağıtır.
+              </p>
+              <div class="table-scroll" style="margin: 16px 0;">
+                <table class="tbl">
+                  <tbody>
+                    <tr>
+                      <td class="key">Para girişi</td>
+                      <td>Üyenin sandığa yatırdığı para. Vadesi gelmiş aidat ve taksitlere sırayla
+                        işlenir. İsterseniz “vadesi gelmemiş ödemeler de ödensin” diyebilirsiniz.</td>
+                    </tr>
+                    <tr>
+                      <td class="key">Para çıkışı</td>
+                      <td>Üyeye sandıktan verilen para. Borç olarak verilebileceği gibi, üyenin işleme
+                        konmamış parasının iadesi de olabilir.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="note">
+                <i class="fa-solid fa-circle-info"></i>
+                <div>
+                  Belirli bir aidata ya da belirli bir borca ödeme işlemek istiyorsanız
+                  <b>Sandık işlemi ekle</b> altındaki <b>Aidat ödemesi ekle</b> ve
+                  <b>Borç ödemesi ekle</b> sayfalarını kullanın. Bunlar parayı otomatik dağıtmak yerine
+                  sizin seçtiğiniz ödemeye işler.
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Yönetim menüsündeki diğer sayfalar</h3>
+              <div class="table-scroll" style="margin-top: 16px;">
+                <table class="tbl">
+                  <tbody>
+                    <tr><td class="key">İşlemler → Borç ekle</td><td>Üyeye borç verildiğini kaydeder. Tutarı, taksit sayısını ve ödemenin başlayacağı ayı seçersiniz; taksitler otomatik oluşur.</td></tr>
+                    <tr><td class="key">İşlemler → Aidat oluştur</td><td>Tek bir hisse için elle aidat açar. Olağan aidatlar her ayın başında kendiliğinden oluştuğu için buna genelde gerek kalmaz.</td></tr>
+                    <tr><td class="key">İşlemler → Eskiye yönelik aidat ekle</td><td>Sandığı sisteme geç taşıdıysanız, geçmiş aylara ait aidatları toplu olarak açar.</td></tr>
+                    <tr><td class="key">İşlemler → Para giriş/çıkışları, Ödemeler, Borçlar</td><td>Sandığın bütün hareketlerini listeler; filtreleyip inceleyebilir, hatalı bir kaydı silebilirsiniz.</td></tr>
+                    <tr><td class="key">Üyeler → Detaylı üye listesi</td><td>Her üyenin birikimi, borcu ve ödenmemiş tutarları tek tabloda.</td></tr>
+                    <tr><td class="key">Üyeler → Borç sıralaması</td><td>Sandığa katkısına göre hangi hissenin borç almada öncelikli olduğunu hesaplar.</td></tr>
+                    <tr><td class="key">Üye yetkileri</td><td>Okuma / yazma / yöneticilik yetkilerini tanımlayıp üyelere atarsınız. Böylece sandığı birden fazla kişi birlikte yönetebilir.</td></tr>
+                    <tr><td class="key">Sms bildirimleri → Sms gönder</td><td>Üyelere toplu bilgilendirme veya hatırlatma mesajı gönderir.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Üye veya hisse kapatmak</h3>
+              <p>
+                Sandıktan ayrılan üyenin üyeliği (ya da yalnızca bir hissesi) üye özet sayfasından
+                kapatılır. Sistem, üyeye iade edilmesi gereken tutarı hesaplayıp para çıkışı olarak
+                kaydeder; işlem sonunda üyenin bakiyesi sıfırlanır.
+              </p>
+              <div class="note warn">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <div>Ayrılan üyenin ödenmemiş borcu varsa önce bu borcun kapatılması gerekir.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. SSS -->
+          <div class="guide-section" id="sss">
+            <h2><span class="num">4</span> Sık sorulan sorular</h2>
+
+            <details class="faq" open>
+              <summary>Parayı yatırdım ama sitede görünmüyor.</summary>
+              <div class="faq-body">
+                Para girişini sisteme sandık yöneticisi kaydeder. Kayıt girilene kadar ödemeniz sitede
+                görünmez; yöneticinize hatırlatmanız yeterlidir.
+              </div>
+            </details>
+            <details class="faq">
+              <summary>Bu ayın aidatı neden oluşmadı?</summary>
+              <div class="faq-body">
+                Aidatlar her ayın başında otomatik oluşur. Oluşmadıysa yönetici, <b>İşlemler</b>
+                menüsünden vadesi gelmiş aidatları elle oluşturabilir.
+              </div>
+            </details>
+            <details class="faq">
+              <summary>“İşleme konmamış para” ne demek?</summary>
+              <div class="faq-body">
+                Yatırdığınız ama henüz bir aidata veya taksite işlenmemiş tutarınızdır. Örneğin
+                aidatınızdan fazla para yatırdıysanız, artan kısım burada bekler ve sonraki
+                ödemelerinizde kullanılır. İstemezseniz yöneticiden geri ödenmesini isteyebilirsiniz.
+              </div>
+            </details>
+            <details class="faq">
+              <summary>Aynı anda birden fazla sandıkta olabilir miyim?</summary>
+              <div class="faq-body">
+                Evet. Tek hesapla istediğiniz kadar sandığa üye olabilirsiniz; ana sayfada hepsinin
+                durumunu bir arada görürsünüz.
+              </div>
+            </details>
+            <details class="faq">
+              <summary>Borç alabileceğim tutarı neye göre hesaplıyor?</summary>
+              <div class="faq-body">
+                Sandığınızın kurallarına göre. En yaygın kural, bir hissenin o hisse için ödenmiş
+                toplam aidatın belirli bir katı kadar borç alabilmesidir. Güven bağlı sandıklarda
+                ayrıca güven halkanızdaki üyelerin birikimi de sınır oluşturur.
+              </div>
+            </details>
+            <details class="faq">
+              <summary>Ekranda “ERRCODE” ile başlayan bir hata gördüm.</summary>
+              <div class="faq-body">
+                Bu, sistemin bir tutarsızlık yakaladığı anlamına gelir. Ekrandaki kodu not alıp site
+                yöneticisine iletin; kaydın elle düzeltilmesi gerekir.
+              </div>
+            </details>
+            <details class="faq">
+              <summary>Verilerimiz güvende mi?</summary>
+              <div class="faq-body">
+                Sandık verileri düzenli olarak yedeklenir ve her yazma işlemi seyir defterine (log)
+                kaydedilir; böylece hangi kaydın kim tarafından ne zaman değiştirildiği geriye dönük
+                olarak görülebilir.
+              </div>
+            </details>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}

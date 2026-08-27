@@ -1,0 +1,624 @@
+{#
+  Tanıtım sayfalarının ortak kabuğu.
+
+  Bu sayfalar herkese açıktır (giriş gerekmez) ve yönetim paneli görünümünü (`utils/layout.html`)
+  kullanmaz: kendi başına duran, modern bir tanıtım sitesi görünümündedir. Ortak kabuk —üst menü,
+  alt bilgi, renk değişkenleri ve bütün bileşen stilleri— yalnızca burada tanımlıdır; yeni bir
+  tanıtım sayfası eklenirken bunlar kopyalanmaz, bu şablondan `{% extends %}` ile türetilir.
+
+  Doldurulacak bloklar: `hero_block` (üstteki büyük başlık alanı), `intro_content` (sayfa gövdesi),
+  `intro_css_block`, `intro_js_block`.
+#}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8"/>
+  <title>{% block page_title %}{{ page_info.title }}{% endblock %} | {{ page_info.website_name }}</title>
+  <meta name="description" content="{% block page_description %}İmece usulü yardımlaşma sandıkları için aidat, borç ve taksit takip sistemi.{% endblock %}"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="shortcut icon" href="{{ url_for('static', filename='my_custom/img/favicon.ico') }}"/>
+
+  <script>
+    /* Tema ilk boyamadan ÖNCE belirlenir, yoksa sayfa bir an yanlış temada görünür.
+       Kullanıcı bir seçim yaptıysa o, yapmadıysa işletim sisteminin tercihi geçerlidir.
+       CSS yalnızca `:root[data-theme="dark"]`e bakar; `prefers-color-scheme` medya sorgusu
+       kullanılmaz, böylece koyu palet tek yerde tanımlı kalır. */
+    (function () {
+      var stored = null;
+      try { stored = localStorage.getItem("sandikv2-tema"); } catch (e) {}
+      var isDark = stored
+        ? stored === "dark"
+        : window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+    })();
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://kit.fontawesome.com/446b0ab66c.js" crossorigin="anonymous"></script>
+
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-soft: #f3f8fb;
+      --surface: #ffffff;
+      --surface-2: #f7fbfd;
+      --ink: #0f2130;
+      --ink-2: #465d6f;
+      --ink-3: #7d94a6;
+      --line: #e2ecf3;
+      --brand: #1a9bd7;
+      --brand-2: #0b6a99;
+      --brand-soft: #e8f5fc;
+      /* Üzerine beyaz yazı gelen dolu zeminler (düğme, logo). --brand-2 karanlık temada
+         açıldığı için ayrı tutulur; aksi hâlde beyaz yazı okunmaz olur. */
+      --brand-solid: #0b6a99;
+      --brand-solid-hover: #1a9bd7;
+      --accent: #0fb39c;
+      --accent-soft: #e4f8f5;
+      --warn: #e8833a;
+      --danger: #dd5b5b;
+      --shadow-sm: 0 1px 2px rgba(15, 33, 48, .05);
+      --shadow: 0 1px 2px rgba(15, 33, 48, .04), 0 10px 30px rgba(15, 33, 48, .07);
+      --radius: 16px;
+      --radius-sm: 10px;
+      /* Hero ve CTA zemini: sayfanın geri kalanıyla aynı açıklıkta kalsın diye koyu gradyan
+         yerine hafif renk yıkaması kullanılır; yazılar normal metin renginde. */
+      --hero-bg: linear-gradient(165deg, #e9f5fc 0%, #e7f6f2 54%, #f8fbfd 100%);
+      --hero-glow-1: rgba(26, 155, 215, .20);
+      --hero-glow-2: rgba(15, 179, 156, .16);
+      color-scheme: light;
+    }
+
+    /* Koyu palet. Tek yerde tanımlıdır; `data-theme` her zaman <head>'deki script tarafından
+       yazılır (kullanıcının seçimi yoksa işletim sisteminin tercihine göre). */
+    :root[data-theme="dark"] {
+      --bg: #0b141d;
+      --bg-soft: #0e1b25;
+      --surface: #122130;
+      --surface-2: #162737;
+      --ink: #e9f2f8;
+      --ink-2: #a9bfcf;
+      --ink-3: #7891a5;
+      --line: #1e3346;
+      --brand: #3fb3ea;
+      --brand-2: #7fd0f5;
+      --brand-soft: #10293a;
+      --brand-solid: #1a7cb0;
+      --brand-solid-hover: #2691c9;
+      --accent: #2dcfb7;
+      --accent-soft: #0f2f2c;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .35);
+      --hero-bg: linear-gradient(165deg, #102633 0%, #0e2a31 54%, #0b141d 100%);
+      --hero-glow-1: rgba(63, 179, 234, .16);
+      --hero-glow-2: rgba(45, 207, 183, .12);
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; scroll-padding-top: 90px; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Figtree", "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      font-size: 17px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    a { color: var(--brand-2); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    p { margin: 0 0 14px; }
+    p:last-child { margin-bottom: 0; }
+
+    h1, h2, h3, h4 { margin: 0 0 12px; line-height: 1.25; letter-spacing: -.02em; font-weight: 800; }
+    h1 { font-size: 44px; }
+    h2 { font-size: 30px; }
+    h3 { font-size: 21px; font-weight: 700; }
+    h4 { font-size: 17px; font-weight: 700; }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .88em;
+      background: var(--brand-soft);
+      color: var(--brand-2);
+      padding: 2px 6px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    .wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 22px; }
+    .narrow { max-width: 900px; }
+
+    /* ---------------------------------------------------------------- üst menü */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: var(--bg);
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      backdrop-filter: saturate(160%) blur(12px);
+      border-bottom: 1px solid var(--line);
+    }
+    .site-header .wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 66px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 18px;
+      color: var(--ink);
+      letter-spacing: -.02em;
+    }
+    .brand:hover { text-decoration: none; }
+    .brand img {
+      width: 32px; height: 32px;
+      border-radius: 9px;
+      background: var(--brand-solid);
+      padding: 3px;
+    }
+    .site-nav { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+    .site-nav a.nav-link {
+      color: var(--ink-2);
+      font-size: 15.5px;
+      font-weight: 600;
+      padding: 8px 13px;
+      border-radius: 999px;
+    }
+    .site-nav a.nav-link:hover { background: var(--surface-2); color: var(--ink); text-decoration: none; }
+    .site-nav a.nav-link.active { background: var(--brand-soft); color: var(--brand-2); }
+    .nav-sep { width: 1px; height: 24px; background: var(--line); margin: 0 8px; }
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      border-radius: 10px;
+      width: 40px; height: 38px;
+      font-size: 17px;
+      cursor: pointer;
+    }
+    /* Açık/koyu tema düğmesi. Mobilde de menünün içinde değil, doğrudan üst çubukta durur. */
+    .theme-toggle {
+      flex: none;
+      background: none;
+      border: 1px solid var(--line);
+      color: var(--ink-2);
+      border-radius: 10px;
+      width: 40px; height: 38px;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background .12s ease, color .12s ease;
+    }
+    .theme-toggle:hover { background: var(--surface-2); color: var(--ink); }
+    /* Simge, basınca geçilecek temayı gösterir */
+    .theme-toggle .to-light { display: none; }
+    :root[data-theme="dark"] .theme-toggle .to-light { display: inline; }
+    :root[data-theme="dark"] .theme-toggle .to-dark { display: none; }
+
+    /* ------------------------------------------------------------------ düğme */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 15.5px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+    }
+    .btn:hover { text-decoration: none; transform: translateY(-1px); }
+    .btn-primary { background: var(--brand-solid); color: #fff; box-shadow: 0 6px 18px rgba(11, 106, 153, .28); }
+    .btn-primary:hover { background: var(--brand-solid-hover); color: #fff; }
+    .btn-ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+    .btn-ghost:hover { background: var(--surface-2); color: var(--ink); }
+    .btn-sm { padding: 7px 15px; font-size: 14.5px; }
+
+    /* ------------------------------------------------------------------- hero */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background: var(--hero-bg);
+      color: var(--ink);
+      border-bottom: 1px solid var(--line);
+      padding: 74px 0 84px;
+    }
+    .hero:before, .hero:after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .hero:before {
+      width: 520px; height: 520px;
+      right: -140px; top: -220px;
+      background: radial-gradient(circle, var(--hero-glow-1), transparent 62%);
+    }
+    .hero:after {
+      width: 420px; height: 420px;
+      left: -160px; bottom: -240px;
+      background: radial-gradient(circle, var(--hero-glow-2), transparent 62%);
+    }
+    /* İçerik sayfalarının daha alçak hero'su. Satır içi stil yerine sınıf: medya sorguları
+       bunu ezebilsin. */
+    .hero.hero-sm { padding: 56px 0 62px; }
+    .hero .wrap { position: relative; z-index: 1; }
+    .hero h1 { color: var(--ink); max-width: 18ch; }
+    .hero .hero-sub {
+      font-size: 19px;
+      color: var(--ink-2);
+      max-width: 62ch;
+      margin-top: 16px;
+    }
+    .hero .hero-actions { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 10px; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13.5px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--brand-2);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      padding: 5px 14px;
+      border-radius: 999px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* --------------------------------------------------------------- bölümler */
+    main { display: block; }
+    .section { padding: 56px 0; }
+    .section.soft { background: var(--bg-soft); }
+    .section-head { margin-bottom: 30px; max-width: 70ch; }
+    .section-head p { color: var(--ink-2); margin-top: -2px; }
+    .section-head .kicker {
+      font-size: 13.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--brand); margin-bottom: 8px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      padding: 26px;
+    }
+    .card.pad-lg { padding: 32px; }
+    .card h3 { margin-bottom: 8px; }
+
+    .grid { display: grid; gap: 18px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    /* --------------------------------------------------------------- adımlar */
+    .steps { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+    .steps > li {
+      position: relative;
+      counter-increment: step;
+      padding: 0 0 26px 60px;
+    }
+    .steps > li:before {
+      content: counter(step);
+      position: absolute; left: 0; top: 0;
+      width: 38px; height: 38px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--brand-2), var(--accent));
+      color: #fff; font-weight: 800; font-size: 16px;
+      box-shadow: 0 4px 12px rgba(11, 106, 153, .25);
+    }
+    .steps > li:after {
+      content: "";
+      position: absolute; left: 19px; top: 44px; bottom: 6px;
+      width: 2px; background: var(--line);
+    }
+    .steps > li:last-child { padding-bottom: 0; }
+    .steps > li:last-child:after { display: none; }
+    .steps .step-title { display: block; font-weight: 700; font-size: 17.5px; margin-bottom: 2px; }
+    .steps .step-body { color: var(--ink-2); font-size: 16px; }
+
+    /* -------------------------------------------------------------- özellikler */
+    .feature { display: flex; gap: 14px; }
+    .feature .icon {
+      flex: none;
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--brand-soft); color: var(--brand-2);
+      font-size: 17px;
+    }
+    .feature .icon.alt { background: var(--accent-soft); color: var(--accent); }
+    .feature h4 { margin-bottom: 2px; }
+    .feature p { color: var(--ink-2); font-size: 15.5px; }
+
+    /* ------------------------------------------------------------------ liste */
+    .deflist { border-top: 1px solid var(--line); }
+    .deflist > div {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr);
+      gap: 18px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .deflist dt, .deflist .dt { font-weight: 700; color: var(--ink); }
+    .deflist dd, .deflist .dd { margin: 0; color: var(--ink-2); font-size: 16px; }
+
+    /* ------------------------------------------------------------------ tablo */
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table.tbl { width: 100%; border-collapse: collapse; font-size: 15.5px; }
+    table.tbl th, table.tbl td {
+      text-align: left;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    table.tbl thead th {
+      font-size: 13px; text-transform: uppercase; letter-spacing: .05em;
+      color: var(--ink-3); font-weight: 700;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+    table.tbl tbody tr:last-child td { border-bottom: none; }
+    table.tbl td.key { font-weight: 700; white-space: nowrap; }
+
+    /* ------------------------------------------------------------------- not */
+    .note {
+      display: flex; gap: 12px;
+      background: var(--brand-soft);
+      border: 1px solid var(--line);
+      border-color: color-mix(in srgb, var(--brand) 22%, transparent);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 15.5px;
+      color: var(--ink-2);
+    }
+    .note i { color: var(--brand-2); margin-top: 4px; }
+    .note.warn {
+      background: var(--surface-2);
+      background: color-mix(in srgb, var(--warn) 10%, var(--surface));
+      border-color: color-mix(in srgb, var(--warn) 32%, transparent);
+    }
+    .note.warn i { color: var(--warn); }
+
+    /* ------------------------------------------------------------------- sss */
+    details.faq {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      padding: 0 18px;
+      margin-bottom: 10px;
+    }
+    details.faq summary {
+      cursor: pointer;
+      list-style: none;
+      font-weight: 700;
+      padding: 15px 30px 15px 0;
+      position: relative;
+    }
+    details.faq summary::-webkit-details-marker { display: none; }
+    details.faq summary:after {
+      content: "\f078";
+      font-family: "Font Awesome 6 Free"; font-weight: 900;
+      position: absolute; right: 2px; top: 16px;
+      font-size: 13px; color: var(--ink-3);
+      transition: transform .18s ease;
+    }
+    details.faq[open] summary:after { transform: rotate(180deg); }
+    details.faq .faq-body { padding: 0 0 16px; color: var(--ink-2); font-size: 16px; }
+
+    /* -------------------------------------------------------------- alt bilgi */
+    .site-footer {
+      background: var(--bg-soft);
+      border-top: 1px solid var(--line);
+      padding: 34px 0;
+      color: var(--ink-3);
+      font-size: 15px;
+    }
+    .site-footer .wrap { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+    .site-footer nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: 18px; }
+    .site-footer nav a { color: var(--ink-2); font-weight: 600; }
+
+    /* ------------------------------------------------------------------- cta */
+    .cta {
+      background: var(--hero-bg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      color: var(--ink);
+      padding: 38px;
+      text-align: center;
+    }
+    .cta h2 { color: var(--ink); }
+    .cta p { color: var(--ink-2); max-width: 62ch; margin: 0 auto 22px; }
+    .cta .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+    /* ---------------------------------------------------------------- responsive */
+    @media (max-width: 860px) {
+      body { font-size: 16.5px; }
+      h1 { font-size: 34px; }
+      h2 { font-size: 25px; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: minmax(0, 1fr); }
+      .deflist > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+      .nav-toggle { display: block; }
+      .theme-toggle { margin-left: auto; width: 44px; height: 42px; }
+      .nav-toggle { width: 44px; height: 42px; }
+      .site-nav {
+        display: none;
+        position: absolute;
+        top: 66px; left: 0; right: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 2px;
+        background: var(--bg);
+        border-bottom: 1px solid var(--line);
+        padding: 12px 18px 18px;
+        box-shadow: var(--shadow);
+      }
+      .site-nav.open { display: flex; }
+      .site-nav a.nav-link, .site-nav .btn {
+        border-radius: 12px;
+        justify-content: flex-start;
+        padding: 12px 14px;   /* parmakla rahat basılabilsin */
+      }
+      .nav-sep { display: none; }
+      .hero { padding: 44px 0 52px; }
+      .hero.hero-sm { padding: 38px 0 44px; }
+      .section { padding: 38px 0; }
+      .card, .card.pad-lg { padding: 20px; }
+      .cta { padding: 28px 20px; }
+      .site-footer .wrap { flex-direction: column; align-items: flex-start; }
+      .site-footer nav { margin-left: 0; }
+    }
+
+    /* -------------------------------------------------------------------- telefon */
+    @media (max-width: 700px) {
+      .wrap { padding: 0 16px; }
+      h1 { font-size: 30px; }
+      h2 { font-size: 23px; }
+      h3 { font-size: 19px; }
+      .hero .hero-sub { font-size: 17px; }
+      .hero.hero-sm { padding: 32px 0 38px; }
+
+      /* Düğmeler tam genişlikte ve daha yüksek: tek elle rahat basılır */
+      .hero-actions { flex-direction: column; align-items: stretch; }
+      .hero-actions .btn, .cta .actions .btn { justify-content: center; }
+      .cta .actions { flex-direction: column; align-items: stretch; }
+      .btn { padding: 12px 18px; }
+
+      /* Adım listesi: dar ekranda numara kutusu küçülür, metne yer açılır */
+      .steps > li { padding-left: 46px; padding-bottom: 22px; }
+      .steps > li:before { width: 32px; height: 32px; font-size: 15px; border-radius: 10px; }
+      .steps > li:after { left: 16px; top: 38px; }
+
+      /* Tablolar yatay kaydırma yerine satır satır dizilir.
+         Başlık satırı gizlenir; gereken yerde sütun adı hücreye `data-label` ile verilir. */
+      table.tbl, table.tbl tbody, table.tbl tr, table.tbl td { display: block; width: 100%; }
+      table.tbl thead { display: none; }
+      table.tbl tr {
+        padding: 14px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      table.tbl tbody tr:last-child { border-bottom: none; }
+      table.tbl td { border: none; padding: 0 0 6px; }
+      table.tbl td:last-child { padding-bottom: 0; }
+      table.tbl td.key { white-space: normal; }
+      table.tbl td[data-label]:before {
+        content: attr(data-label);
+        display: block;
+        font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+        color: var(--ink-3);
+        margin-bottom: 2px;
+      }
+      /* Formül örnekleri dar ekranda satır sonunda bölünebilsin */
+      code { white-space: normal; overflow-wrap: anywhere; }
+
+      .kv > div { gap: 10px; }
+      .site-footer nav { gap: 12px 16px; }
+    }
+  </style>
+  {% block intro_css_block %}{% endblock %}
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="{{ url_for('intro_page_bp.about_page') }}">
+      <img src="{{ url_for('static', filename='my_custom/img/logo.png') }}" alt="">
+      <span>{{ page_info.website_name }}</span>
+    </a>
+
+    <nav class="site-nav" id="site-nav">
+      <a class="nav-link {% if request.endpoint == 'intro_page_bp.about_page' %}active{% endif %}"
+         href="{{ url_for('intro_page_bp.about_page') }}">Sandık nedir?</a>
+      <a class="nav-link {% if request.endpoint == 'intro_page_bp.how_to_use_page' %}active{% endif %}"
+         href="{{ url_for('intro_page_bp.how_to_use_page') }}">Nasıl kullanılır?</a>
+      <a class="nav-link {% if request.endpoint == 'intro_page_bp.statistics_page' %}active{% endif %}"
+         href="{{ url_for('intro_page_bp.statistics_page') }}">İstatistikler</a>
+      <span class="nav-sep"></span>
+      {% if current_user.is_authenticated %}
+        <a class="btn btn-primary btn-sm" href="{{ url_for('general_page_bp.index_page') }}">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Sandıklarıma git
+        </a>
+      {% else %}
+        <a class="nav-link" href="{{ url_for('auth_page_bp.login_page') }}">Giriş yap</a>
+        <a class="btn btn-primary btn-sm" href="{{ url_for('auth_page_bp.register_page') }}">Kayıt ol</a>
+      {% endif %}
+    </nav>
+
+    <button class="theme-toggle" type="button" id="theme-toggle"
+            aria-label="Açık/koyu temayı değiştir" title="Açık/koyu temayı değiştir">
+      <i class="fa-solid fa-moon to-dark" aria-hidden="true"></i>
+      <i class="fa-solid fa-sun to-light" aria-hidden="true"></i>
+    </button>
+
+    <button class="nav-toggle" type="button" aria-label="Menü" aria-expanded="false"
+            onclick="var n=document.getElementById('site-nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'));">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+  </div>
+</header>
+
+{% block hero_block %}{% endblock %}
+
+<main>
+  {% block intro_content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>&copy; {{ page_info.website_name }}, 2022-{{ g.now.date().year }}</span>
+    <nav>
+      <a href="{{ url_for('intro_page_bp.about_page') }}">Sandık nedir?</a>
+      <a href="{{ url_for('intro_page_bp.how_to_use_page') }}">Nasıl kullanılır?</a>
+      <a href="{{ url_for('intro_page_bp.statistics_page') }}">İstatistikler</a>
+      {% if current_user.is_authenticated %}
+        <a href="{{ url_for('general_page_bp.index_page') }}">Sandıklarım</a>
+      {% else %}
+        <a href="{{ url_for('auth_page_bp.login_page') }}">Giriş yap</a>
+      {% endif %}
+    </nav>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+
+    document.getElementById("theme-toggle").addEventListener("click", function () {
+      var next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem("sandikv2-tema", next); } catch (e) {}
+    });
+
+    // Kullanıcı kendi seçimini yapmadıysa işletim sistemi temasını anlık takip et
+    var query = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+    if (query && query.addEventListener) {
+      query.addEventListener("change", function (event) {
+        var stored = null;
+        try { stored = localStorage.getItem("sandikv2-tema"); } catch (e) {}
+        if (!stored) root.setAttribute("data-theme", event.matches ? "dark" : "light");
+      });
+    }
+  })();
+</script>
+
+{% block intro_js_block %}{% endblock %}
+</body>
+</html>

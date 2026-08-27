@@ -1,5 +1,12 @@
 <div class="text-center">
   <p>
+    <a href="{{ url_for('intro_page_bp.about_page') }}">Sandık nedir?</a>
+    &nbsp;·&nbsp;
+    <a href="{{ url_for('intro_page_bp.how_to_use_page') }}">Nasıl kullanılır?</a>
+    &nbsp;·&nbsp;
+    <a href="{{ url_for('intro_page_bp.statistics_page') }}">İstatistikler</a>
+  </p>
+  <p>
     <small class="text-muted">&copy; Sandık v2, 2022-{{ g.now.date().year }}</small>
   </p>
 </div>

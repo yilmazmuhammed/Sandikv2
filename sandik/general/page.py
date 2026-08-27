@@ -20,8 +20,12 @@ general_page_bp = Blueprint(
 
 
 @general_page_bp.route("/")
-@login_required
 def index_page():
+    # Giriş yapmamış ziyaretçi doğrudan giriş formuyla karşılaşmasın; sitenin ne olduğunu
+    # anlatan tanıtım sayfasına yönlendirilir.
+    if not current_user.is_authenticated:
+        return redirect(url_for("intro_page_bp.about_page"))
+
     sandik = None
     if current_user.members_set.count() == 1:
         sandik = current_user.members_set.select().first().sandik_ref
