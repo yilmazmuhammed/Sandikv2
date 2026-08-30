@@ -6,6 +6,7 @@ from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelatio
     MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, ThereIsNotSandikAuthority
 from sandik.utils.db_models import Sandik, Log, SandikAuthorityType, Member, Share, TrustRelationship, \
     get_updated_fields, SmsPackage, SandikRule
+from sandik.utils.sorting import turkish_sort_key
 
 
 def save():
@@ -82,7 +83,7 @@ def get_sandik(**kwargs) -> Sandik:
 
 def sandiks_form_choices():
     choices = [(s.id, s.name) for s in Sandik.select()]
-    return choices
+    return sorted(choices, key=lambda c: turkish_sort_key(c[1]))
 
 
 def update_sandik(sandik, updated_by, **kwargs) -> Sandik:

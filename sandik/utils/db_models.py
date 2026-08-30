@@ -8,6 +8,8 @@ import cexprtk
 from flask_login import UserMixin
 from pony.orm import *
 
+from sandik.utils.sorting import turkish_sort_key
+
 db = Database()
 
 
@@ -392,7 +394,7 @@ class WebUser(db.Entity, UserMixin):
     def my_sandiks(self):
         query1 = select(member.sandik_ref for member in self.members_set)
         query2 = select(sat.sandik_ref for sat in self.sandik_authority_types_set)
-        return sorted(set(query1[:] + query2[:]), key=lambda s: s.name.lower())
+        return sorted(set(query1[:] + query2[:]), key=lambda s: turkish_sort_key(s.name))
 
     def my_unread_notifications(self):
         return self.notifications_set.filter(lambda n: not bool(n.reading_time)).order_by(

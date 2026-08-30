@@ -41,7 +41,8 @@
             </a>
 
             <ul class="dropdown-menu" role="menu">
-              {% for sandik in current_user.my_sandiks() | sort(attribute="name") %}
+              {# my_sandiks() sandıkları türkçe alfabeye göre sıralar #}
+              {% for sandik in current_user.my_sandiks() %}
                 <li><a href="{{ url_for('sandik_page_bp.sandik_index_page', sandik_id=sandik.id) }}">{{ sandik.name }}</a></li>
               {% else %}
                 <li><a style="color: gray; cursor: default;">Hiç bir sandığa üye değilsiniz...</a></li>

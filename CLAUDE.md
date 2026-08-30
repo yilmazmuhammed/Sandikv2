@@ -255,6 +255,20 @@ elemeden geçen sandıkların en az birinde **aktif üyeliği olan** `WebUser`'l
   göstermek yeğlenir: değer beklenmedik şekilde 0/negatif çıktığında ipucunun hiç görünmemesi
   "özellik çalışmıyor" gibi algılanıyor.
 - Veri değiştiren döngülerden sonra sorgu yapmadan önce `flush()` çağırmak güvenlidir.
+- **Alfabetik sıralama `sandik/utils/sorting.py` → `turkish_sort_key` ile yapılır.** Python'un
+  varsayılan sıralaması kod noktasına baktığı için türkçe harfleri (ç, ğ, ı, ö, ş, ü) listenin
+  sonuna atar ("Zeytin" < "Çınar"); `str.lower()` de türkçe bilmez (`"IŞIK".lower()` → "işik",
+  `"İZMİR".lower()` → "i̇zmi̇r" yani i + birleşik nokta), bu yüzden `turkish_lower()` I/İ harflerini
+  önce elle çevirir. Anahtar büyük/küçük harf ayrımı yapmaz; noktalama ve rakamı harflerden önce,
+  türkçede olmayan q/w/x'i latin sıralarında, şapkalı harfleri (â, î, û) aksansız hâllerinin
+  yanında sıralar. Sandık listelerinin hepsi buradan geçer: `db_models.py` →
+  `WebUser.my_sandiks()` (üst menü + ana sayfa), `general/utils.py` → ana sayfa tabloları,
+  `sandik/db.py` → `sandiks_form_choices()` (üyelik başvurusu formu). Şablonda
+  `| sort(attribute="name")` gibi bir filtre eklenirse bu sıra bozulur (jinja'nın `sort`u türkçe
+  bilmez); sıralama python tarafında yapılmalıdır. **Üye adları hâlâ SQL'de sıralanıyor**
+  (`order_by(lambda m: m.web_user_ref.name_surname.lower())`), sıraları veritabanı collation'ına
+  bağlıdır; tablolardaki istemci tarafı (footable) sıralama da türkçe bilmez. Testler:
+  `tests/test_turkish_sorting.py`.
 
 ## Yerelde çalıştırma ve test
 

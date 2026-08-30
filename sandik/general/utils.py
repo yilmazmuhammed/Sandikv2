@@ -5,6 +5,7 @@ from sandik.general.exceptions import BankAccountNotFound, PrimaryBankAccountCan
     UnauthorizedBankAccountOperation
 from sandik.transaction import utils as transaction_utils
 from sandik.utils import period as period_utils
+from sandik.utils.sorting import turkish_sort_key
 
 
 def get_home_page_data(web_user):
@@ -17,7 +18,7 @@ def get_home_page_data(web_user):
     """
     members = sorted(
         web_user.members_set.filter(lambda m: m.is_active)[:],
-        key=lambda m: m.sandik_ref.name.lower()
+        key=lambda m: turkish_sort_key(m.sandik_ref.name)
     )
 
     # --- Tablo 1: Sandık bazında son durum ---
