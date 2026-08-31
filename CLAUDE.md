@@ -60,6 +60,25 @@ Kilit kavramlar:
 `sandik/utils/clock.py`: her ayın başında çalışacak iş (aidat oluşturma). Procfile'da `clock`
 process'i olarak tanımlı.
 
+## E-posta gönderimi (`sandik/bot/email_bot.py`)
+
+`SenderEmail`/`EmailBot` ham SMTP sarmalayıcısıdır; **aynı dosyanın sonundaki** modül seviyesi
+yardımcılar uygulamanın tek kapısıdır:
+
+| Fonksiyon | İş |
+|---|---|
+| `create_email_bot_from_env()` | `SANDIKv2_EMAIL_BOT_*` değişkenlerinden bot kurar |
+| `email_bot_session()` | Toplu iş için tek bağlantı açıp sonunda kapatan context manager |
+| `send_html_email(bot, ...)` | Açık bir bağlantı üzerinden **tek adrese** gönderir |
+| `send_single_html_email(...)` | Tek seferlik: bağlantıyı açar, gönderir, kapatır |
+
+- `SANDIKv2_EMAIL_BOT_*` anahtarları **başka hiçbir yerde** `os.getenv` ile okunmaz.
+- **Her mesajda tek alıcı.** `EmailBot.create_email_message` verilen adresleri virgülle `To:`
+  başlığına dizer; toplu gönderimde bu bütün üyelerin adreslerini birbirine gösterirdi. Bu yüzden
+  `send_html_email` liste değil tek bir adres alır ve aksi hâlde hata fırlatır.
+- Parola sıfırlama e-postasının gövdesi **artık günlüğe yazdırılmıyor**: içinde tek kullanımlık
+  sıfırlama bağlantısı vardı ve sunucu günlüğüne düşüyordu.
+
 ## Tanıtım sayfaları (`sandik/intro/`)
 
 Giriş yapmadan görülebilen üç sayfa. Yönetim paneli düzenini (`utils/layout.html`) **kullanmazlar**;

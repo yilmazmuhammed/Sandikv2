@@ -1,4 +1,3 @@
-import os
 from datetime import datetime, timedelta
 
 import jwt
@@ -7,7 +6,7 @@ from flask_login import LoginManager
 
 from sandik.auth import db
 from sandik.auth.exceptions import WebUserNotFound, AuthException
-from sandik.bot.email_bot import EmailBot
+from sandik.bot import email_bot
 from sandik.general import db as general_db
 
 
@@ -62,18 +61,10 @@ def send_renew_password_email(web_user):
         <a href="{url}">{url}</a></p>
         <p>Eğer parola sıfırlama talebinde bulunmadıysanız bu epostayı önemsemeyiniz.</p>
     """
-    print(email_body)
-
-    email_bot = EmailBot(email_address=os.getenv("SANDIKv2_EMAIL_BOT_EMAIL_ADDRESS"),
-                         password=os.getenv("SANDIKv2_EMAIL_BOT_PASSWORD"),
-                         smtp_server=os.getenv("SANDIKv2_EMAIL_BOT_SMTP_SERVER"),
-                         display_name=os.getenv("SANDIKv2_EMAIL_BOT_DISPLAY_NAME"))
-    email_bot.connect_server()
-    msg = email_bot.create_email_message(to_addresses=web_user.email_address, subject="Parola sıfırlama",
-                                         message=email_body, message_type="html")
-    print(msg.as_string())
-    email_bot.send_email(to_addresses=web_user.email_address, msg=msg)
-    email_bot.disconnect_server()
+    # NOT: e-posta gövdesi ve mesajın tamamı bilerek yazdırılmıyor; içinde tek kullanımlık parola
+    # sıfırlama bağlantısı var ve sunucu günlüğüne düşmemeli.
+    email_bot.send_single_html_email(to_address=web_user.email_address, subject="Parola sıfırlama",
+                                     html=email_body)
 
 
 def get_web_user_from_password_reset_token(token):

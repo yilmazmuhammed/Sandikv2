@@ -1,4 +1,20 @@
+"""E-posta gönderimi: ham SMTP sarmalayıcısı ve onun üstündeki tek giriş kapısı.
+
+`SenderEmail`/`EmailBot` alt seviyedir. Uygulama kodu bunları doğrudan kurmak yerine dosyanın
+sonundaki yardımcıları kullanır; bunlar iki şeyi standartlaştırır:
+
+- **Ayarların tek yerden okunması.** `SANDIKv2_EMAIL_BOT_*` anahtarları başka hiçbir yerde
+  `os.getenv` ile okunmamalıdır.
+- **Her mesajda tek alıcı.** `EmailBot.create_email_message` verilen adresleri virgülle birleştirip
+  `To:` başlığına koyar; toplu gönderimde bu, bütün üyelerin adreslerini birbirine gösterir.
+  `send_html_email` tek bir adres alır, bu yüzden böyle bir sızıntı mümkün değildir.
+
+Toplu iş (ör. aylık hatırlatma) için `email_bot_session()` kullanılır: tek bağlantı açılır, bütün
+mesajlar onun üzerinden gider, sonunda kapatılır.
+"""
+import os
 import smtplib
+from contextlib import contextmanager
 from email.header import Header
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -99,12 +115,55 @@ class EmailBot:
             raise RepetitionsAreOver("E-posta'yı tekrar göndermeyi deneme sayısı tükendi", create_log=True)
 
 
+# --- Uygulamanın kullandığı giriş kapısı ---------------------------------------------------
+
+def create_email_bot_from_env() -> EmailBot:
+    """Ortam değişkenlerinden bir `EmailBot` kurar. Bağlantı `EmailBot.__init__` içinde açılır."""
+    email_address = os.getenv("SANDIKv2_EMAIL_BOT_EMAIL_ADDRESS")
+    password = os.getenv("SANDIKv2_EMAIL_BOT_PASSWORD")
+    if not email_address or not password:
+        raise ValueError("E-posta gönderimi için SANDIKv2_EMAIL_BOT_EMAIL_ADDRESS ve "
+                         "SANDIKv2_EMAIL_BOT_PASSWORD tanımlı olmalıdır")
+    return EmailBot(
+        email_address=email_address,
+        password=password,
+        smtp_server=os.getenv("SANDIKv2_EMAIL_BOT_SMTP_SERVER"),
+        display_name=os.getenv("SANDIKv2_EMAIL_BOT_DISPLAY_NAME"),
+    )
+
+
+@contextmanager
+def email_bot_session():
+    """Tek bağlantı açıp iş bitince kapatır. Çok sayıda mesaj gönderilecekse bunu kullanın."""
+    bot = create_email_bot_from_env()
+    try:
+        yield bot
+    finally:
+        bot.disconnect_server()
+
+
+def send_html_email(bot: EmailBot, to_address: str, subject: str, html: str):
+    """Tek bir adrese HTML e-posta gönderir."""
+    if not isinstance(to_address, str):
+        raise ValueError("send_html_email tek bir adres alır; toplu gönderimde her alıcı için "
+                         "ayrı çağrılmalıdır (adreslerin birbirine görünmemesi için)")
+    msg = bot.create_email_message(to_addresses=to_address, subject=subject, message=html,
+                                   message_type="html")
+    return bot.send_email(to_addresses=to_address, msg=msg)
+
+
+def send_single_html_email(to_address: str, subject: str, html: str):
+    """Tek seferlik gönderim: bağlantıyı açar, gönderir, kapatır."""
+    with email_bot_session() as bot:
+        return send_html_email(bot=bot, to_address=to_address, subject=subject, html=html)
+
+
 if __name__ == '__main__':
     sender_email = ""
     sender_password = ""
     to_email = ""
-    email_bot = EmailBot(email_address=sender_email, password=sender_password, display_name="Görünen isim")
-    msg = email_bot.create_email_message(to_addresses=[to_email], subject="Konu",
-                                         message="<h1>sa</h1>", message_type="html")
-    email_bot.send_email([to_email], msg=msg)
-    email_bot.disconnect_server()
+    bot = EmailBot(email_address=sender_email, password=sender_password, display_name="Görünen isim")
+    msg = bot.create_email_message(to_addresses=[to_email], subject="Konu",
+                                   message="<h1>sa</h1>", message_type="html")
+    bot.send_email([to_email], msg=msg)
+    bot.disconnect_server()
