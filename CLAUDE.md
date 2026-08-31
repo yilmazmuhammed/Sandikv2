@@ -148,14 +148,14 @@ hiçbir yerde** `os.getenv` ile okunmaz.
 - Bir alıcıdaki hata döngüyü kesmez: kayda yazılıp sıradakine geçilir, sonuçta kaç tanesinin
   gönderilemediği raporlanır.
 
-### Kullanıcı tercihi (`/eposta-tercihlerim`, `/eposta-tercihi/<token>`)
+### Kullanıcı tercihi (`/tercihlerim`, `/tercih/<token>`)
 
 Aynı formun iki giriş noktası vardır (`auth/page.py` → `_reminder_preference_page_base`):
 
 | Yol | Kim | Kabuk |
 |---|---|---|
-| `/eposta-tercihlerim` | giriş yapmış kullanıcı (üst menü → "E-posta tercihlerim") | `utils/layout.html` |
-| `/eposta-tercihi/<token>` | e-postadaki bağlantı, **giriş gerektirmez** | `intro/_layout.html` |
+| `/tercihlerim` | giriş yapmış kullanıcı (üst menü → "E-posta tercihlerim") | `utils/layout.html` |
+| `/tercih/<token>` | e-postadaki bağlantı, **giriş gerektirmez** | `intro/_layout.html` |
 
 - Jetonlu sayfa yönetim paneli kabuğunu kullanamaz (`utils/layout.html` `current_user` ister), bu
   yüzden tanıtım kabuğundan türer. Form gövdesi ikisinde ortaktır:
@@ -166,13 +166,13 @@ Aynı formun iki giriş noktası vardır (`auth/page.py` → `_reminder_preferen
   duruyor, aylar sonra da çalışmalı. Karşılığında yetkisi dardır — yalnızca hatırlatma günlerini
   değiştirir, hiçbir kişisel veri göstermez. Yükteki `email_address` doğrulanır, yani adres
   değişirse eski bağlantılar düşer (`auth/utils.py` → `get_web_user_from_reminder_preference_token`).
-- **İsimlendirme geçicidir.** Sayfa, rota ve etiketlerin hepsi ("E-posta ... tercihlerim",
-  `/eposta-tercihlerim`, `reminder_preference_*`) bilerek e-postaya özeldir; sayfada bugün
-  yalnızca hatırlatma günleri var. Verinin durduğu yer ise genel (`WebUser.preferences`).
-  **E-postayla ilgisi olmayan ilk tercih eklendiğinde** bunlar "Kullanıcı tercihlerim" /
-  `/tercihlerim` olarak yeniden adlandırılmalıdır. Yeniden adlandırmanın asıl bedeli
-  `/eposta-tercihi/<token>` adresidir: o bağlantı gönderilmiş e-postaların içinde, kullanıcıların
-  posta kutusunda süresiz durur — değiştirilirse eski adres kalıcı olarak yenisine yönlendirilmeli.
+- **Adresler genel, etiketler geçici.** Sayfada bugün yalnızca hatırlatma günleri olduğu için
+  kullanıcıya görünen etiketler ve fonksiyon adları ("E-posta ... tercihlerim",
+  `reminder_preference_*`) e-postaya özeldir; **e-postayla ilgisi olmayan ilk tercih eklendiğinde**
+  bunlar "Kullanıcı tercihlerim" / `preference_*` olarak yeniden adlandırılmalıdır. İkisi de ucuz.
+  **Adresler ise (`/tercihlerim`, `/tercih/<token>`) bilerek baştan genel tutuldu, çünkü sonradan
+  değiştirilemezler**: `/tercih/<token>` gönderilmiş e-postaların içinde, kullanıcıların posta
+  kutusunda süresiz durur. Zorunlu kalınırsa eski adres kalıcı olarak yenisine yönlendirilmeli.
 - **Veritabanında tek sayı, arayüzde iki seçenek.** Çeviri yalnızca `auth/forms.py` →
   `ReminderPreferenceForm.to_days()` / `fill_from_days()` içindedir; sayfa katmanı iki temsili
   birbirine karıştırmaz. Kutu işaretsizken gün seçici JS ile soluklaşıp `disabled` olur; gönderim

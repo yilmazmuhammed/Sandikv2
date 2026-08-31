@@ -156,8 +156,8 @@ def update_profile_page():
 def _reminder_preference_page_base(web_user, title, template):
     """Hatırlatma tercihi formunun ortak gövdesi.
 
-    İki giriş noktası paylaşır: giriş yapmış kullanıcı (`/eposta-tercihlerim`) ve e-postadaki
-    jetonlu bağlantı (`/eposta-tercihi/<token>`). Fark yalnızca kullanıcıya nasıl ulaşıldığı ve
+    İki giriş noktası paylaşır: giriş yapmış kullanıcı (`/tercihlerim`) ve e-postadaki
+    jetonlu bağlantı (`/tercih/<token>`). Fark yalnızca kullanıcıya nasıl ulaşıldığı ve
     hangi kabuğun kullanıldığıdır; form ve kaydetme mantığı aynıdır.
     """
     form = forms.ReminderPreferenceForm()
@@ -175,24 +175,24 @@ def _reminder_preference_page_base(web_user, title, template):
     return render_template(template, page_info=FormPI(title=title, form=form))
 
 
-# İSİMLENDİRME NOTU — buradaki her şey ("E-posta ... tercihlerim", `/eposta-tercihlerim`,
-# `reminder_preference_*`) bilerek e-postaya özeldir, çünkü sayfada bugün yalnızca ödeme
-# hatırlatma e-postalarının günü var. Verinin durduğu yer ise genel: `WebUser.preferences`.
-# **E-postayla ilgisi olmayan ilk tercih eklendiğinde** bunlar "Kullanıcı tercihlerim" /
-# `/tercihlerim` olarak yeniden adlandırılmalıdır.
+# İSİMLENDİRME NOTU — sayfada bugün yalnızca ödeme hatırlatma e-postalarının günü var, bu yüzden
+# kullanıcıya görünen etiketler ve fonksiyon adları ("E-posta ... tercihlerim",
+# `reminder_preference_*`) e-postaya özeldir. **E-postayla ilgisi olmayan ilk tercih eklendiğinde**
+# bunlar "Kullanıcı tercihlerim" / `preference_*` olarak yeniden adlandırılmalıdır; ikisi de
+# ucuzdur (etiket metni ve `url_for` çağrıları).
 #
-# DİKKAT: yeniden adlandırmada asıl bedel `/eposta-tercihi/<token>` adresindedir. O bağlantı
-# gönderilmiş e-postaların içinde, kullanıcıların posta kutusunda süresiz durur; adres değişirse
-# eski e-postalardaki bağlantılar kırılır. Değiştirilecekse eski adres kalıcı olarak yeni adrese
-# yönlendirilmelidir (ikinci bir route + redirect yeter).
-@auth_page_bp.route("/eposta-tercihlerim", methods=["GET", "POST"])
+# **Adresler bilerek şimdiden genel tutuldu** (`/tercihlerim`, `/tercih/<token>`): bunlar sonradan
+# değiştirilemez. `/tercih/<token>` gönderilmiş e-postaların içinde, kullanıcıların posta
+# kutusunda süresiz durur; adres değişirse eski e-postalardaki bağlantılar kırılır. Zorunlu
+# kalınırsa eski adres kalıcı olarak yenisine yönlendirilmelidir (ikinci bir route + redirect).
+@auth_page_bp.route("/tercihlerim", methods=["GET", "POST"])
 @login_required
 def reminder_preference_page():
     return _reminder_preference_page_base(web_user=current_user, title="E-posta hatırlatma tercihlerim",
                                           template="auth/reminder_preference_page.html")
 
 
-@auth_page_bp.route("/eposta-tercihi/<string:token>", methods=["GET", "POST"])
+@auth_page_bp.route("/tercih/<string:token>", methods=["GET", "POST"])
 def reminder_preference_by_token_page(token):
     """E-postadaki bağlantı. Giriş yapmayı gerektirmez; jeton tek başına yeterlidir."""
     template = "auth/reminder_preference_by_token_page.html"
