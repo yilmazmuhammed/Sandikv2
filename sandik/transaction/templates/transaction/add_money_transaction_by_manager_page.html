@@ -144,11 +144,13 @@
 
       showConfirmDialog() (custom.js) confirm()'in aksine asenkrondur (Promise döner). Soru
       sorulacaksa e.preventDefault() ile tarayıcının normal (senkron) form gönderimi durdurulur;
-      kullanıcı cevaplayınca form.submit() ile (jQuery'nin "submit" olayını tekrar tetiklemeden,
-      doğrudan DOM üzerinden) form gönderilir. Soru sorulmayan durumda preventDefault hiç çağrılmaz
-      ve form, bu handler bittikten sonra tarayıcı tarafından normal şekilde gönderilir
-      (form_layout.html'deki telefon alanı biçimlendirme handler'ı da bu sırada araya girer) —
-      böylece iki akış da aynı sırayı izler.
+      kullanıcı cevaplayınca form submitFormDirectly() ile (jQuery'nin "submit" olayını tekrar
+      tetiklemeden, doğrudan DOM üzerinden) gönderilir. `form.submit()` BURADA ÇAĞRILAMAZ: form
+      içindeki SubmitField `name="submit"` ile render edildiği için `form.submit` metodu değil o
+      input'u döndürür (ayrıntı: custom.js -> submitFormDirectly). Soru sorulmayan durumda
+      preventDefault hiç çağrılmaz ve form, bu handler bittikten sonra tarayıcı tarafından normal
+      şekilde gönderilir; o akışta sayfadaki diğer submit handler'ları da çalışır (bu formda tel
+      alanı olmadığı için fark yaratmaz).
     #}
     const CANCEL_HINT = "İşlemi hiç eklemek istemiyorsanız pencereyi (X) ile kapatınız.";
 
@@ -161,7 +163,7 @@
         if (result === CONFIRM_DIALOG_RESULT.CONFIRM) {
           on_confirm();
         }
-        form.submit();
+        submitFormDirectly(form);
       });
     }
 

@@ -119,6 +119,27 @@ function showConfirmDialog(message, options) {
   });
 }
 
+/**
+ * Formu, jQuery "submit" olaylarını tekrar tetiklemeden doğrudan gönderir. Soru sorup cevabı
+ * bekledikten sonra (bkz. showConfirmDialog) gönderilen formlarda kullanılır: tarayıcının kendi
+ * gönderimi e.preventDefault() ile durdurulduğu için form elle gönderilmelidir.
+ *
+ * DİKKAT: `form.submit()` DOĞRUDAN ÇAĞRILAMAZ. Formlarımızda WTForms'un SubmitField'i
+ * `name="submit"` ile render edilir (bkz. utils/parts/form.html); HTML form elemanlarına alan
+ * adlarıyla da erişilebildiği ve alan adları metotları GÖLGELEDİĞİ için `form.submit` metodu değil
+ * o input'u döndürür, çağrı da "form.submit is not a function" ile patlar. Bu yüzden metot
+ * prototipten alınır.
+ *
+ * Not: Bu gönderim "submit" olayını tetiklemez, yani sayfadaki diğer submit handler'ları (ör.
+ * form_layout.html'deki telefon alanı biçimlendirmesi) ÇALIŞMAZ. Böyle bir alanı olan formda
+ * kullanılacaksa o iş buradan önce yapılmalıdır.
+ *
+ * @param {HTMLFormElement} form
+ */
+function submitFormDirectly(form) {
+  HTMLFormElement.prototype.submit.call(form);
+}
+
 $(document)
   .on("click", "a.dialog-confirm", function (e) {
     e.preventDefault();

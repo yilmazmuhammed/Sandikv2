@@ -435,10 +435,20 @@ elemeden geçen sandıkların en az birinde **aktif üyeliği olan** `WebUser`'l
     (`askAndSubmit()`): iki düğme de formu gönderir (yalnızca gizli alanın `true` olup olmaması
     değişir), X ise formu **hiç göndermez**. `showConfirmDialog()` Promise döndüğü için submit
     handler'ında **soru sorulacağı anda** `e.preventDefault()` çağrılır, kullanıcı cevaplayınca
-    `form.submit()` (native, jQuery "submit" olayını tekrar tetiklemeden) ile gönderilir. Soru
-    sorulmayan durumda `preventDefault` hiç çağrılmamalı ki `form_layout.html`'deki telefon alanı
-    biçimlendirme gibi diğer submit handler'ları ve tarayıcının normal gönderimi eskisi gibi
-    işlemeye devam etsin.
+    `custom.js` → **`submitFormDirectly(form)`** ile (native, jQuery "submit" olayını tekrar
+    tetiklemeden) gönderilir. Soru sorulmayan durumda `preventDefault` hiç çağrılmamalı ki
+    `form_layout.html`'deki telefon alanı biçimlendirme gibi diğer submit handler'ları ve
+    tarayıcının normal gönderimi eskisi gibi işlemeye devam etsin.
+
+    **`form.submit()` ÇAĞRILMAZ, `submitFormDirectly(form)` kullanılır.** `CustomFlaskForm`
+    türevlerinde alan adı `submit` olan bir `SubmitField` bulunur ve `utils/parts/form.html` bunu
+    `name="submit"` ile render eder; HTML form elemanlarına alan adlarıyla da erişilebildiği ve
+    alan adları metotları **gölgelediği** için `form.submit` metodu değil o input'u döndürür.
+    `form.submit()` bu yüzden `TypeError: form.submit is not a function` verir — hata konsolda
+    kalır, kullanıcıya yalnızca "hangi seçeneği seçersem seçeyim işlem tamamlanmıyor" olarak
+    görünür. `submitFormDirectly()` metodu `HTMLFormElement.prototype`ten alır. Bu gönderim
+    "submit" olayını tetiklemediği için tel alanı olan bir formda kullanılacaksa telefon
+    biçimlendirmesi elle yapılmalıdır.
 
   **Soru metni yazarken:** iki seçeneğin de birer işlem yaptığı (yani reddetmenin "iptal" olmadığı)
   durumlarda soru "... yapılsın mı?" diye sorulup cevaplar "Evet/Hayır"a yüklenmez — bu, "Hayır ne
