@@ -3,7 +3,8 @@
 
 `family_tree/family_tree/utils/migrations/` ile aynı tasarımdır; her uygulama kendi klasörünün
 dışına bağımlı olmadığı (ve Sandıkv2 ayrı bir submodule olduğu) için kod paylaşılmaz, kopyalanır.
-Birinde düzeltilen bir hata diğerine de taşınmalıdır.
+Birinde düzeltilen bir hata diğerine de taşınmalıdır — iki dosya, yalnızca ortam değişkeni öneki
+ve import yolu farkıyla aynı olmalıdır.
 
 Pony `generate_mapping(create_tables=True)` ile eksik **tabloları** kendisi oluşturur ama var olan
 tablolara **sütun eklemez**; modelde bir alan değiştiğinde uygulama eksik sütun yüzünden açılamaz.
