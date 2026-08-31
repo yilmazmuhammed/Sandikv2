@@ -1,0 +1,88 @@
+{#
+  Ödeme hatırlatma tercihi formunun gövdesi.
+
+  İki kabuk paylaşır: giriş yapmış kullanıcının sayfası (`utils/layout.html`) ve e-postadaki
+  jetonlu bağlantının sayfası (`intro/_layout.html`). İki kabuğun CSS'i ortak olmadığı için
+  buradaki stiller **bu parçanın içinde** durur; genel form partial'ı (`utils/parts/form.html`)
+  kullanılmaz çünkü alanları "istiyorum + hangi gün" şeklinde ikişerli gruplamak gerekiyor.
+#}
+<style>
+  .rp-card { border: 1px solid #dfe3e8; border-radius: 8px; padding: 16px 18px; margin-bottom: 14px; }
+  .rp-card + .rp-card { margin-top: 0; }
+  .rp-title { font-weight: bold; font-size: 15px; margin: 0 0 4px 0; }
+  .rp-desc { color: #6b7280; font-size: 13px; margin: 0 0 12px 0; line-height: 1.6; }
+  .rp-check { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+  .rp-check input[type="checkbox"] { margin: 3px 0 0 0; width: 16px; height: 16px; flex: none; }
+  .rp-check label { font-weight: normal; margin: 0; cursor: pointer; }
+  .rp-day { padding-left: 26px; }
+  .rp-day label { display: block; font-weight: normal; font-size: 13px; margin-bottom: 4px; }
+  .rp-day select { max-width: 260px; width: 100%; padding: 6px 8px; border: 1px solid #cbd2d9;
+                   border-radius: 4px; background-color: #fff; }
+  .rp-day.rp-off { opacity: .45; }
+  .rp-note { color: #6b7280; font-size: 13px; line-height: 1.7; margin: 0 0 18px 0; }
+  .rp-actions { margin-top: 18px; }
+</style>
+
+<p class="rp-note">
+  Ödeme hatırlatma e-postalarını almak istemiyorsanız ilgili kutunun işaretini kaldırınız.
+  Almak istiyorsanız e-postanın ayın hangi gününde gönderileceğini seçebilirsiniz.
+  <strong>Ödemesi olmayan aylarda e-posta gönderilmez.</strong>
+</p>
+
+{{ form.open|safe }}
+  {{ form.csrf_token }}
+
+  {% for enabled_field, day_field, title, desc in [
+      (form.month_start_enabled, form.month_start_day, "Ay başı hatırlatması",
+       "Geçmiş aylardan kalan ve içinde bulunulan ayın ödemelerini listeler."),
+      (form.next_month_enabled, form.next_month_day, "Ay sonu hatırlatması",
+       "Yukarıdakilere ek olarak gelecek ayın ödemelerini de listeler; önden hazırlanmak için.")
+  ] %}
+    <div class="rp-card">
+      <p class="rp-title">{{ title }}</p>
+      <p class="rp-desc">{{ desc }}</p>
+      <div class="rp-check">
+        {{ enabled_field(class="rp-toggle", **{"data-target": day_field.id}) }}
+        <label for="{{ enabled_field.id }}">Bu e-postayı almak istiyorum</label>
+      </div>
+      <div class="rp-day" id="{{ day_field.id }}-wrap">
+        <label for="{{ day_field.id }}">{{ day_field.label.text }}</label>
+        {{ day_field() }}
+      </div>
+    </div>
+  {% endfor %}
+
+  <div class="rp-actions">
+    {{ form.submit(class="btn btn-primary") }}
+  </div>
+{{ form.close|safe }}
+
+<script>
+  (function () {
+    // Kapalı seçenekte gün kutusu soluklaşır ve devre dışı kalır: veritabanında tek sayı tutuluyor
+    // (0 = istemiyorum), kullanıcı bunu "iki ayrı seçenek" olarak görmeli.
+    function sync(toggle) {
+      var wrap = document.getElementById(toggle.getAttribute("data-target") + "-wrap");
+      var select = document.getElementById(toggle.getAttribute("data-target"));
+      if (!wrap || !select) return;
+      wrap.classList.toggle("rp-off", !toggle.checked);
+      select.disabled = !toggle.checked;
+    }
+
+    var toggles = document.querySelectorAll(".rp-toggle");
+    for (var i = 0; i < toggles.length; i++) {
+      sync(toggles[i]);
+      toggles[i].addEventListener("change", function () { sync(this); });
+    }
+
+    // disabled select gönderilmez; kapalıyken zaten gün değeri kullanılmıyor (0 yazılıyor),
+    // ama formun eksik alanla gitmemesi için gönderim anında hepsi tekrar açılır.
+    var form = document.querySelector("form[name='reminder_preference_form']");
+    if (form) {
+      form.addEventListener("submit", function () {
+        var selects = form.querySelectorAll("select");
+        for (var j = 0; j < selects.length; j++) selects[j].disabled = false;
+      });
+    }
+  })();
+</script>

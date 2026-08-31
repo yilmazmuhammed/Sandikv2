@@ -40,6 +40,14 @@ Kilit kavramlar:
 - **SandikRule**: borç limiti / taksit sayısı / hisse sayısı formülleri. `cexprtk` ile değerlendirilir,
   `{uye_toplam_aidat}` gibi değişkenler içerir. Kural yoksa `NoValidRuleFound` atılır.
 - **Log**: neredeyse her yazma işlemi `db.py` katmanında bir `Log` satırı da oluşturur.
+- **`WebUser.preferences`**: kişiye ait tercihler, `Member.preferences` ile aynı kalıpta bir Json
+  sütunu. Şimdilik yalnızca ödeme hatırlatma günlerini tutar; yeni tercihler için sütun/tablo
+  eklemek gerekmez, Json'a anahtar eklenir. Anahtar adları ve doğrulama `ReminderPreference`
+  sınıfındadır — **bu bir entity değildir**, yalnızca sabit ve yardımcı taşır. Açık/kapalı için
+  ayrı anahtar **yoktur**: `0` = istemiyorum, `1`-`28` = ayın o günü. Anahtarı olmayan kullanıcı
+  varsayılanları (1 ve 25) kullanır, yani mevcut ve yeni kullanıcılar baştan mail alır.
+  Yazma yalnızca `auth/db.py` → `update_reminder_preference` üzerinden yapılır; o da
+  `update_member_preferences` gibi Json'daki diğer anahtarlara dokunmaz.
 
 ## Modüller (`sandik/`)
 
@@ -57,10 +65,126 @@ Kilit kavramlar:
 | `bugfixs` | — | Tek seferlik veri düzeltme scriptleri (`.env`'i, yani **gerçek veritabanını** kullanır) |
 | `blueprint_template` | — | Yeni modül açarken kopyalanacak iskelet |
 
-`sandik/utils/clock.py`: her ayın başında çalışacak iş (aidat oluşturma). Procfile'da `clock`
-process'i olarak tanımlı.
+`sandik/utils/clock.py`: **her gece 01:01'de** çalışıp biten zamanlanmış görev (PythonAnywhere
+Tasks). Aidat oluşturur ve sırası gelen ödeme hatırlatma e-postalarını gönderir — bkz.
+"Gecelik işler ve hatırlatma e-postaları". (Procfile'daki `clock` satırı Heroku dönemindendir;
+PythonAnywhere Procfile'ı yok sayar.)
 
-## Şema taşımaları (`sandik/utils/migrations/`)
+## Gecelik işler ve hatırlatma e-postaları
+
+`sandik/utils/clock.py` PythonAnywhere'de zamanlanmış görev olarak **her gece 01:01'de** çalışır ve
+biter. PythonAnywhere web uygulamalarında **thread desteklenmez** ve istek/yanıt döngüsünden uzun
+yaşayan alt süreçler öldürülür; bu yüzden dönemsel işlerin yeri Flask sürecinin içi değil bu
+betiktir. Betik her gece çalıştığı için "hangi işin sırası geldi" kararı da burada verilir.
+
+| İş | Ne zaman | Nerede |
+|---|---|---|
+| Vadesi gelmiş aidatları oluşturma | her çalıştırmada (idempotent) | `clock.beginning_of_each_month` |
+| Ay başı hatırlatması — bu ayın ödemeleri | kişinin seçtiği gün (varsayılan **1**) | `reminder.KIND_MONTH_START` |
+| Ay sonu hatırlatması — bu ay + gelecek ay | kişinin seçtiği gün (varsayılan **25**) | `reminder.KIND_NEXT_MONTH` |
+
+**Gün, kullanıcı tercihidir** (`ReminderPreference`); herkes iki hatırlatmayı da ayın istediği
+gününde alabilir ya da hiç almayabilir. Tercihi olmayan kullanıcı varsayılanları kullanır, yani
+sistem baştan herkese gönderir.
+
+**Mükerrer gönderim, gün karşılaştırmasının tam eşitlik olmasıyla engellenir; veritabanında "bu
+dönem gönderildi" kaydı tutulmaz.** Kişinin seçtiği gün ayda bir kez geldiği için iş o kişi için
+ayda bir kez koşar. Karşılaştırma **aralığa çevrilmemelidir**: aralık, işin aynı ay içinde arka
+arkaya birkaç gece koşması demektir ve o zaman kayıt tutmak zorunlu hâle gelir. Gün seçenekleri
+**1-28** ile sınırlıdır (`ReminderPreference.MAX_DAY`): 29-31 seçilebilseydi o gün olmayan aylarda
+hatırlatma hiç gitmezdi. İki hatırlatma aynı güne denk gelirse **tek e-posta** gönderilir (gelecek
+ay dahil edilir).
+
+Bunun bedeli, o gece görev hiç çalışmazsa o ayın hatırlatmasının kaçmasıdır. İki şey bu riski
+küçültür: `clock.py` adımları birbirinden yalıtır (aidat oluşturma patlasa bile hatırlatma koşar,
+bkz. `_step`) ve herhangi bir adım hata verince betik sıfırdan farklı çıkar — PythonAnywhere görev
+çıktısını e-postayla gönderdiği için arıza görünür olur. Kaçan bir ay elle telafi edilir:
+`python sandik/utils/clock.py --hatirlatma-ay-basi`.
+
+**Görev saati gün sınırından uzak tutulmalıdır.** PythonAnywhere süreçleri UTC çalışır ve gün
+kontrolü `date.today()` ile yapılır; 01:01 seçilmesi, görev birkaç dakika gecikse bile günün
+değişmemesi içindir. `period_utils.current_period()` de aynı `date.today()`yi kullanır, böylece
+e-postadaki "bu ay" üyenin sitede gördüğü "bu ay" ile aynı kalır.
+
+### `sandik/utils/reminder.py`
+
+- **Kişi başına tek e-posta.** Bir kişi birden fazla sandıkta üyeyse hepsi tek mailde bölüm bölüm
+  listelenir (`general/utils.py` → `get_home_page_data` ile aynı yaklaşım).
+- **Yalnızca ödemesi olan üyeye gönderilir.** `collect_reminder_data` hiç ödeme satırı bulamazsa
+  `None` döner ve o kişi atlanır.
+- Yeni sorgu yazılmaz: `transaction_utils.get_payments`, `member.total_of_undistributed_amount()`,
+  `member.get_active_shares()` gibi mevcut yardımcılar kullanılır. `Member.web_user_ref`
+  **`Optional`**'dır — `None` olan üyeler atlanmalıdır (`get_payments`'ın `order_by`'ı
+  `p.member_ref.web_user_ref.name_surname` dereference eder ve patlar).
+- **Gelecek ayın aidatı hesaplanır, veritabanına yazılmaz.** `create_due_contributions_for_share`
+  aidatları yalnızca içinde bulunulan aya kadar oluşturur; ayın 25'inde gelecek ayın `Contribution`
+  satırları henüz yoktur. Tutar `member.contribution_amount × aktif hisse` ile bulunur — bu,
+  `transaction_db.create_contribution`'ın varsayılanıyla aynı formüldür, yani ayın 1'inde oluşacak
+  kayıtla aynı sonucu verir. Kayıt zaten varsa (ör. elle oluşturulmuş) o hisse için satır üretilmez.
+- Akış iki evrelidir: önce `db_session` içinde bütün veri **entity içermeyen düz sözlüklere**
+  çevrilir (`collect_recipients`), sonra oturum kapalıyken şablon basılıp SMTP'ye çıkılır. Böylece
+  `EmailBot`'un hata hâlindeki 60 sn'lik beklemeleri boyunca uzun bir veritabanı işlemi açık kalmaz.
+- **`run_payment_reminder` kendisi mükerrer kontrolü yapmaz**, her çağrıldığında seçilen kişilere
+  gönderir; engel `reminder_for_today()` içindeki tam gün eşitliğidir.
+- İki kip vardır: `kind` verilmezse **gecelik kip** (`reminder_for_today`, herkesin kendi günü),
+  verilirse **elle kip** (`reminder_for_kind`, günü yok sayar ama **kapatmış kullanıcıya yine
+  göndermez**).
+- E-postanın altındaki tercih bağlantısının adresi de `url_builder` gibi dışarıdan enjekte edilir
+  (`preference_url_builder`); jeton üretmek uygulama bağlamı ister, testlerde `None` kalır.
+- `render` ve `send` dışarıdan verilir; testler bu sayede Flask ve SMTP olmadan çalışır
+  (`tests/test_payment_reminder.py`).
+
+### E-posta gönderimi (`sandik/bot/email_bot.py`)
+
+`SenderEmail`/`EmailBot` ham SMTP sarmalayıcısıdır; **aynı dosyanın sonundaki** modül seviyesi
+yardımcılar (`create_email_bot_from_env`, `email_bot_session`, `send_html_email`,
+`send_single_html_email`) uygulamanın tek kapısıdır. `SANDIKv2_EMAIL_BOT_*` anahtarları **başka
+hiçbir yerde** `os.getenv` ile okunmaz.
+
+- **Her mesajda tek alıcı.** `EmailBot.create_email_message` verilen adresleri virgülle `To:` başlığına
+  dizer; toplu gönderimde bu bütün üyelerin adreslerini birbirine gösterirdi.
+- Toplu iş için `email_bot_session()` / `_LazyEmailSender`: tek bağlantı açılır, hepsi onun üzerinden
+  gider. Bağlantı **ilk gönderimde** açılır — betik her gece çalışıp çoğu gece hiç mail göndermez.
+- Bir alıcıdaki hata döngüyü kesmez: kayda yazılıp sıradakine geçilir, sonuçta kaç tanesinin
+  gönderilemediği raporlanır.
+
+### Kullanıcı tercihi (`/eposta-tercihlerim`, `/eposta-tercihi/<token>`)
+
+Aynı formun iki giriş noktası vardır (`auth/page.py` → `_reminder_preference_page_base`):
+
+| Yol | Kim | Kabuk |
+|---|---|---|
+| `/eposta-tercihlerim` | giriş yapmış kullanıcı (üst menü → "E-posta tercihlerim") | `utils/layout.html` |
+| `/eposta-tercihi/<token>` | e-postadaki bağlantı, **giriş gerektirmez** | `intro/_layout.html` |
+
+- Jetonlu sayfa yönetim paneli kabuğunu kullanamaz (`utils/layout.html` `current_user` ister), bu
+  yüzden tanıtım kabuğundan türer. Form gövdesi ikisinde ortaktır:
+  `auth/parts/reminder_preference_form.html`. Genel form partial'ı (`utils/parts/form.html`)
+  kullanılmaz, çünkü alanları "istiyorum + hangi gün" diye ikişerli gruplamak gerekiyor; iki kabuğun
+  CSS'i ortak olmadığı için stiller o parçanın içindedir.
+- **Jetonun süresi yoktur** (parola sıfırlamanın aksine): bağlantı kullanıcının posta kutusunda
+  duruyor, aylar sonra da çalışmalı. Karşılığında yetkisi dardır — yalnızca hatırlatma günlerini
+  değiştirir, hiçbir kişisel veri göstermez. Yükteki `email_address` doğrulanır, yani adres
+  değişirse eski bağlantılar düşer (`auth/utils.py` → `get_web_user_from_reminder_preference_token`).
+- **İsimlendirme geçicidir.** Sayfa, rota ve etiketlerin hepsi ("E-posta ... tercihlerim",
+  `/eposta-tercihlerim`, `reminder_preference_*`) bilerek e-postaya özeldir; sayfada bugün
+  yalnızca hatırlatma günleri var. Verinin durduğu yer ise genel (`WebUser.preferences`).
+  **E-postayla ilgisi olmayan ilk tercih eklendiğinde** bunlar "Kullanıcı tercihlerim" /
+  `/tercihlerim` olarak yeniden adlandırılmalıdır. Yeniden adlandırmanın asıl bedeli
+  `/eposta-tercihi/<token>` adresidir: o bağlantı gönderilmiş e-postaların içinde, kullanıcıların
+  posta kutusunda süresiz durur — değiştirilirse eski adres kalıcı olarak yenisine yönlendirilmeli.
+- **Veritabanında tek sayı, arayüzde iki seçenek.** Çeviri yalnızca `auth/forms.py` →
+  `ReminderPreferenceForm.to_days()` / `fill_from_days()` içindedir; sayfa katmanı iki temsili
+  birbirine karıştırmaz. Kutu işaretsizken gün seçici JS ile soluklaşıp `disabled` olur; gönderim
+  anında tekrar açılır (disabled alan gönderilmez).
+- **Bu sayfadaki göster/gizle JS'i bilerek jQuery değil, düz JavaScript'tir.** Depodaki alışılmış
+  kalıp, sayfanın `js_block2` bloğunda jQuery ile `.toggle()` çağırmaktır (ör.
+  `transaction/add_money_transaction_by_manager_page.html`), ama o kalıp burada kullanılamaz: form
+  gövdesi iki kabukta paylaşılıyor ve **`intro/_layout.html` jQuery yüklemez** (yalnızca
+  `utils/layout.html` yükler), dolayısıyla jQuery kullanılsa jetonlu sayfada sessizce çalışmazdı.
+  Ortak, yeniden kullanılabilir bir göster/gizle yardımcısı `custom.js`'te yoktur.
+
+### Şema taşımaları (`sandik/utils/migrations/`)
 
 Pony eksik **tabloyu** oluşturur ama var olan tabloya **sütun eklemez**; dahası eksik sütunu görünce
 `generate_mapping()`in **kendisi** `OperationalError: no such column` fırlatır. Bu çağrı `db_models`
@@ -88,11 +212,10 @@ Böylece deploy **elle bir adım gerektirmez**: `/paw` → git pull → reload y
 - Hata **yukarı fırlatılır**: uygulamanın yarım şemayla açılmaması gerekir.
 - `database_target_from_env()` hem `db.bind()` hem taşımalar tarafından kullanılır; ikisinin farklı
   veritabanına bakması "taşıma çalıştı ama uygulama eski şemayı görüyor" hatasına yol açardı.
-- `AddColumn`ın `column_type`/`default` alanları **sağlayıcıya göre sözlük** de alabilir; tip
-  sağlayıcıdan sağlayıcıya değiştiğinde (ör. Pony `Json` → mysql/sqlite `JSON`, postgres `JSONB`)
-  gerekir. Bir sağlayıcı `default` sözlüğünde yoksa orada DEFAULT yazılmaz — **MySQL JSON sütununa
-  DEFAULT kabul etmez**, orada sütun NULL eklenip satırlar `RunSql` ile doldurulur ve sonra NOT NULL
-  yapılır. (Bu iki eklenti `family_tree`deki sürümde yoktur.)
+- `AddColumn`ın `column_type`/`default` alanları **sağlayıcıya göre sözlük** de alabilir. Pony `Json`
+  mysql/sqlite'ta `JSON`, postgres'te `JSONB`'dir; ayrıca **MySQL JSON sütununa DEFAULT kabul etmez**,
+  bu yüzden orada sütun NULL eklenip satırlar `RunSql` ile doldurulur ve sonra NOT NULL yapılır.
+  (Bu iki eklenti `family_tree`deki sürümde yoktur.)
 - Kapatmak için `SANDIKv2_AUTO_MIGRATE='0'`; o zaman elle: `python scripts/migrate.py`
   (`--durum` / `--kuru-calistir` seçenekleri vardır).
 - **Testlerde kapalıdır**: `tests/conftest.py` `SANDIKv2_AUTO_MIGRATE=0` yazar. `Database.bind`
@@ -103,24 +226,41 @@ Paket `family_tree/family_tree/utils/migrations/` ile aynı tasarımdır. Her uy
 dışına bağımlı olmadığı (ve Sandıkv2 ayrı bir submodule olduğu) için kod paylaşılmaz, **kopyalanır**;
 birinde düzeltilen bir hata diğerine de taşınmalıdır.
 
-## E-posta gönderimi (`sandik/bot/email_bot.py`)
+### E-posta şablonları (`sandik/utils/templates/email/`)
 
-`SenderEmail`/`EmailBot` ham SMTP sarmalayıcısıdır; **aynı dosyanın sonundaki** modül seviyesi
-yardımcılar uygulamanın tek kapısıdır:
+Ortak kabuk **yalnızca `email/_layout.html`'de** tanımlıdır; yeni bir e-posta eklenirken kopyalanmaz,
+`{% extends "email/_layout.html" %}` ile türetilip `email_content` bloğu doldurulur
+(`intro/_layout.html` ile aynı kalıp). E-posta istemcilerinde harici CSS/JS ve
+`url_for('static', ...)` çalışmadığı için: bütün stiller **satır içi**, düzen **tablo tabanlı**,
+bağlantılar `_external=True` ile mutlaktır.
 
-| Fonksiyon | İş |
-|---|---|
-| `create_email_bot_from_env()` | `SANDIKv2_EMAIL_BOT_*` değişkenlerinden bot kurar |
-| `email_bot_session()` | Toplu iş için tek bağlantı açıp sonunda kapatan context manager |
-| `send_html_email(bot, ...)` | Açık bir bağlantı üzerinden **tek adrese** gönderir |
-| `send_single_html_email(...)` | Tek seferlik: bağlantıyı açar, gönderir, kapatır |
+Tutarlar `tr_number_format` filtresiyle basılır; bu filtre `sandik/app.py` içinde tanımlı olduğu için
+`clock.py` şablonu **kendi `create_app()` örneğinin app context'i içinde** basar. O örneğe
+`SERVER_NAME` verilir (`_external=True` için gerekli) — web sürecine verilmez, yönlendirmeyi bozar.
 
-- `SANDIKv2_EMAIL_BOT_*` anahtarları **başka hiçbir yerde** `os.getenv` ile okunmaz.
-- **Her mesajda tek alıcı.** `EmailBot.create_email_message` verilen adresleri virgülle `To:`
-  başlığına dizer; toplu gönderimde bu bütün üyelerin adreslerini birbirine gösterirdi. Bu yüzden
-  `send_html_email` liste değil tek bir adres alır ve aksi hâlde hata fırlatır.
-- Parola sıfırlama e-postasının gövdesi **artık günlüğe yazdırılmıyor**: içinde tek kullanımlık
-  sıfırlama bağlantısı vardı ve sunucu günlüğüne düşüyordu.
+### Elle çalıştırma
+
+```bash
+FLASK_DEBUG=1 ../venv/bin/python sandik/utils/clock.py --yardim
+FLASK_DEBUG=1 ../venv/bin/python sandik/utils/clock.py --hatirlatma-ay-sonu --kuru --html=/tmp/onizleme.html
+```
+
+`--kuru` hiçbir şey göndermez ve **kapatma valfinden etkilenmez** (önizleme her zaman çalışsın diye);
+`--html=<dosya>` üretilen e-postaların HTML'ini gözle kontrol için dosyaya yazar. Hatırlatma
+seçenekleri (`--hatirlatma-ay-basi` / `--hatirlatma-ay-sonu`) gün kontrolünü atlar, yani ayın
+herhangi bir gününde çalıştırılabilir — ama hatırlatmayı **kapatmış kullanıcılara yine gönderilmez**. `.env_debug`'da
+`SANDIKv2_REMINDER_EMAIL_ENABLED="0"`dır: yerel çalıştırma yanlışlıkla gerçek üyelere mail atmasın.
+
+### İlgili ortam değişkenleri
+
+| Anahtar | Varsayılan | İş |
+|---|---|---|
+| `SANDIKv2_REMINDER_EMAIL_ENABLED` | `1` | Acil kapatma valfi (gerçek gönderimi durdurur) |
+| `SANDIKv2_REMINDER_EMAIL_TEST_ADDRESS` | — | Doluysa bütün mailler bu adrese gider, konuya `[TEST]` eklenir |
+| `SANDIKv2_REMINDER_EMAIL_SLEEP_SECONDS` | `2` | Gönderimler arası bekleme (Gmail hız sınırı) |
+| `SANDIKv2_SERVER_NAME` | `sandikv2.myilmaz.tr` | `clock.py`'de mutlak adres üretmek için |
+| `SANDIKv2_AUTO_MIGRATE` | `1` | `0` yapılırsa açılışta şema taşımaları çalışmaz (elle: `scripts/migrate.py`) |
+| `SANDIKv2_EMAIL_BOT_SMTP_SERVER` | — | Boşsa adrese göre tahmin edilir (`SenderEmail.smtpserver_finder`) |
 
 ## Tanıtım sayfaları (`sandik/intro/`)
 
@@ -361,6 +501,10 @@ Yavaş yavaş büyütülen bir pytest paketi var (2026-08'de başladı). Kurulum
   oluşturma dahil), böylece testler uygulamanın gerçek yoluna yakın kalır. Yeni bir senaryo
   kurarken önce burada uygun bir fabrika olup olmadığına bak, yoksa ekle.
 - Testler `@db_session` dekoratörüyle yazılır (Pony sorguları bir session içinde olmalı).
+- **Dış dünyaya çıkan işleri enjekte edilebilir yaz.** `reminder.run_payment_reminder` şablon basma
+  (`render`), gönderme (`send`) ve adres üretme (`url_builder`) işlerini parametre olarak alır;
+  `tests/test_payment_reminder.py` bu sayede Flask ve SMTP olmadan koşar. Yeni bir dış bağımlılık
+  eklerken aynı kalıbı izle.
 - Yeni bir modülü test ederken bu kalıbı izle: `tests/test_<modül>.py`, `factories`'ten fabrika
   kullan/gerekirse ekle, `assert` ile Decimal değerleri doğrudan karşılaştır (`==`, `int()`/`round()`
   kullanma — bkz. "Dikkat edilmesi gereken yerler").

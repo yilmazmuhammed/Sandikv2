@@ -9,7 +9,6 @@ from flask_login import UserMixin
 from pony.orm import *
 
 from sandik.utils import migrations
-
 from sandik.utils.sorting import turkish_sort_key
 
 db = Database()
@@ -371,6 +370,7 @@ class WebUser(db.Entity, UserMixin):
     sandik_authority_types_set = Set('SandikAuthorityType')
     members_set = Set(Member)
     notifications_set = Set('Notification')
+    preferences = Required(Json, default={"reminder_month_start_day": 1, "reminder_next_month_day": 25})
     sms_packages_set = Set('SmsPackage')
 
     @property
@@ -426,6 +426,45 @@ class WebUser(db.Entity, UserMixin):
 
     def get_primary_bank_account(self):
         return self.bank_accounts_set.select(is_primary=True).get()
+
+    def get_reminder_days(self):
+        """Ödeme hatırlatma e-postalarının istendiği günler: `(ay_basi, gelecek_ay)`.
+
+        Anahtarı olmayan kullanıcı varsayılanları kullanır (herkes baştan mail alır). `0` = istemiyor.
+        Sütun sonradan eklendiği için eski satırlarda `preferences` boş olabilir; `get` bu yüzden
+        varsayılanla çağrılır.
+        """
+        return (self.preferences.get(ReminderPreference.MONTH_START_KEY,
+                                     ReminderPreference.DEFAULT_MONTH_START_DAY),
+                self.preferences.get(ReminderPreference.NEXT_MONTH_KEY,
+                                     ReminderPreference.DEFAULT_NEXT_MONTH_DAY))
+
+
+class ReminderPreference:
+    """**Entity değildir**: `WebUser.preferences` Json'undaki hatırlatma anahtarlarının sabitleri.
+
+    Tercih, `Member.preferences` ile aynı kalıpta kullanıcı satırının üzerinde Json olarak durur;
+    böylece sonraki tercihler için yeni sütun/tablo gerekmez.
+
+    Açık/kapalı için ayrı bir anahtar **yoktur**: `0` "bu maili istemiyorum", `1`-`28` arası bir
+    değer ise "ayın bu gününde istiyorum" demektir. Arayüz bunu iki ayrı alan gibi gösterir
+    (`auth/forms.py` → `ReminderPreferenceForm`).
+
+    Üst sınır `28`'dir: 29-31 seçilebilseydi o gün olmayan aylarda (şubat) hatırlatma hiç
+    gönderilmezdi.
+    """
+    MONTH_START_KEY = "reminder_month_start_day"
+    NEXT_MONTH_KEY = "reminder_next_month_day"
+
+    OFF = 0
+    MIN_DAY = 1
+    MAX_DAY = 28
+    DEFAULT_MONTH_START_DAY = 1
+    DEFAULT_NEXT_MONTH_DAY = 25
+
+    @classmethod
+    def is_valid_day(cls, day):
+        return day == cls.OFF or cls.MIN_DAY <= day <= cls.MAX_DAY
 
 
 class Log(db.Entity):

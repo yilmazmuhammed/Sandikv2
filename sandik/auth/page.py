@@ -153,6 +153,59 @@ def update_profile_page():
     return update_web_user_page_base(web_user_id=current_user.id)
 
 
+def _reminder_preference_page_base(web_user, title, template):
+    """Hatırlatma tercihi formunun ortak gövdesi.
+
+    İki giriş noktası paylaşır: giriş yapmış kullanıcı (`/eposta-tercihlerim`) ve e-postadaki
+    jetonlu bağlantı (`/eposta-tercihi/<token>`). Fark yalnızca kullanıcıya nasıl ulaşıldığı ve
+    hangi kabuğun kullanıldığıdır; form ve kaydetme mantığı aynıdır.
+    """
+    form = forms.ReminderPreferenceForm()
+
+    if form.validate_on_submit():
+        month_start_day, next_month_day = form.to_days()
+        db.update_reminder_preference(web_user=web_user, updated_by=web_user,
+                                      month_start_day=month_start_day, next_month_day=next_month_day)
+        flash("E-posta hatırlatma tercihleriniz kaydedildi", "success")
+        form.fill_from_days(month_start_day=month_start_day, next_month_day=next_month_day)
+    elif not form.is_submitted():
+        month_start_day, next_month_day = web_user.get_reminder_days()
+        form.fill_from_days(month_start_day=month_start_day, next_month_day=next_month_day)
+
+    return render_template(template, page_info=FormPI(title=title, form=form))
+
+
+# İSİMLENDİRME NOTU — buradaki her şey ("E-posta ... tercihlerim", `/eposta-tercihlerim`,
+# `reminder_preference_*`) bilerek e-postaya özeldir, çünkü sayfada bugün yalnızca ödeme
+# hatırlatma e-postalarının günü var. Verinin durduğu yer ise genel: `WebUser.preferences`.
+# **E-postayla ilgisi olmayan ilk tercih eklendiğinde** bunlar "Kullanıcı tercihlerim" /
+# `/tercihlerim` olarak yeniden adlandırılmalıdır.
+#
+# DİKKAT: yeniden adlandırmada asıl bedel `/eposta-tercihi/<token>` adresindedir. O bağlantı
+# gönderilmiş e-postaların içinde, kullanıcıların posta kutusunda süresiz durur; adres değişirse
+# eski e-postalardaki bağlantılar kırılır. Değiştirilecekse eski adres kalıcı olarak yeni adrese
+# yönlendirilmelidir (ikinci bir route + redirect yeter).
+@auth_page_bp.route("/eposta-tercihlerim", methods=["GET", "POST"])
+@login_required
+def reminder_preference_page():
+    return _reminder_preference_page_base(web_user=current_user, title="E-posta hatırlatma tercihlerim",
+                                          template="auth/reminder_preference_page.html")
+
+
+@auth_page_bp.route("/eposta-tercihi/<string:token>", methods=["GET", "POST"])
+def reminder_preference_by_token_page(token):
+    """E-postadaki bağlantı. Giriş yapmayı gerektirmez; jeton tek başına yeterlidir."""
+    template = "auth/reminder_preference_by_token_page.html"
+    try:
+        web_user = utils.get_web_user_from_reminder_preference_token(token=token)
+    except AuthException as e:
+        flash(f"{e}", "danger")
+        return render_template(template, page_info=FormPI(title="E-posta hatırlatma tercihi", form=None))
+
+    return _reminder_preference_page_base(web_user=web_user, title="E-posta hatırlatma tercihi",
+                                          template=template)
+
+
 @auth_page_bp.route("/parola-guncelle", methods=["GET", "POST"])
 @login_required
 def update_password_page():

@@ -111,6 +111,9 @@
                 <a href="{{ url_for('auth_page_bp.update_password_page') }}">Parolamı güncelle</a>
               </li>
               <li><a href="{{ url_for('general_page_bp.bank_accounts_page') }}">Banka hesaplarım</a></li>
+              <li>
+                <a href="{{ url_for('auth_page_bp.reminder_preference_page') }}">E-posta tercihlerim</a>
+              </li>
               <li class="divider"></li>
               {% if g.sandik %}
               <li><a href="{{ url_for('sandik_page_bp.update_member_preferences_page', sandik_id=g.sandik.id) }}">Sandık tercihlerim</a></li>

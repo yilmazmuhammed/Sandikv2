@@ -1,7 +1,8 @@
-from wtforms import PasswordField, SubmitField, BooleanField, StringField, EmailField, TelField
+from wtforms import PasswordField, SubmitField, BooleanField, StringField, EmailField, TelField, SelectField
 from wtforms.validators import Email, Optional, EqualTo
 
 from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator, PhoneNumberValidator
+from sandik.utils.db_models import ReminderPreference
 
 
 class WebUserForm(CustomFlaskForm):
@@ -177,3 +178,68 @@ class PasswordResetForm(UpdatePasswordForm):
 
     def __init__(self, form_title='Parola sıfırlama formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
+
+
+class ReminderPreferenceForm(CustomFlaskForm):
+    """Ödeme hatırlatma e-postalarının açık/kapalı ve gün tercihi.
+
+    Veritabanında tek bir sayı tutulur (`0` = istemiyorum, `1`-`28` = o gün), ama kullanıcıya iki
+    ayrı soru olarak gösterilir: "istiyor musunuz?" ve "hangi gün?". Çeviri `to_days()` /
+    `fill_from_days()` içindedir; sayfa katmanı iki temsili birbirine karıştırmaz.
+    """
+    month_start_enabled = BooleanField(
+        label="Ay başı hatırlatması: bu ayın ödemeleri",
+        default=True
+    )
+    month_start_day = SelectField(
+        label="Ayın kaçında gönderilsin?",
+        choices=[(str(d), f"Her ayın {d}. günü") for d in
+                 range(ReminderPreference.MIN_DAY, ReminderPreference.MAX_DAY + 1)],
+        default=str(ReminderPreference.DEFAULT_MONTH_START_DAY),
+        coerce=str,
+    )
+
+    next_month_enabled = BooleanField(
+        label="Ay sonu hatırlatması: bu ay + gelecek ayın ödemeleri",
+        default=True
+    )
+    next_month_day = SelectField(
+        label="Ayın kaçında gönderilsin?",
+        choices=[(str(d), f"Her ayın {d}. günü") for d in
+                 range(ReminderPreference.MIN_DAY, ReminderPreference.MAX_DAY + 1)],
+        default=str(ReminderPreference.DEFAULT_NEXT_MONTH_DAY),
+        coerce=str,
+    )
+
+    submit = SubmitField(label="Kaydet")
+
+    def __init__(self, form_title='E-posta hatırlatma tercihlerim', *args, **kwargs):
+        # form_name/form_id şablondaki JS seçicisiyle eşleşmeli (parts/reminder_preference_form.html)
+        kwargs.setdefault("form_name", "reminder_preference_form")
+        kwargs.setdefault("form_id", "reminder_preference_form")
+        super().__init__(form_title=form_title, *args, **kwargs)
+
+    def fill_from_days(self, month_start_day, next_month_day):
+        """`(0|1-28, 0|1-28)` -> form alanları. Kapalıysa gün kutusu varsayılanda bırakılır."""
+        self.month_start_enabled.data = month_start_day != ReminderPreference.OFF
+        self.next_month_enabled.data = next_month_day != ReminderPreference.OFF
+        if month_start_day != ReminderPreference.OFF:
+            self.month_start_day.data = str(month_start_day)
+        if next_month_day != ReminderPreference.OFF:
+            self.next_month_day.data = str(next_month_day)
+
+    def to_days(self):
+        """Form alanları -> `(month_start_day, next_month_day)`; kapalı olan `0` olur."""
+        def day_of(enabled_field, day_field, default):
+            if not enabled_field.data:
+                return ReminderPreference.OFF
+            try:
+                day = int(day_field.data)
+            except (TypeError, ValueError):
+                return default
+            return day if ReminderPreference.is_valid_day(day) and day != ReminderPreference.OFF else default
+
+        return (day_of(self.month_start_enabled, self.month_start_day,
+                       ReminderPreference.DEFAULT_MONTH_START_DAY),
+                day_of(self.next_month_enabled, self.next_month_day,
+                       ReminderPreference.DEFAULT_NEXT_MONTH_DAY))

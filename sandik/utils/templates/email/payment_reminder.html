@@ -1,0 +1,150 @@
+{#
+  Aylık ödeme hatırlatma e-postası. Veriyi `sandik/utils/reminder.py` hazırlar; buraya entity değil,
+  düz sözlükler gelir (`collect_reminder_data`).
+
+  `include_next_month` ayın 25'inde gönderilen e-postada `True`'dur; yalnızca o zaman gelecek ay
+  bölümü çıkar.
+#}
+{% extends "email/_layout.html" %}
+
+{% block email_title %}{{ data.current_term_text }} ödemeleriniz{% endblock %}
+{% block email_header %}Ödeme hatırlatması{% endblock %}
+
+{% macro payment_table(rows, total) %}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="width:100%; border-collapse:collapse; font-size:14px; margin:0 0 4px 0;">
+        <tr>
+            <th align="left" style="padding:6px 8px; border-bottom:2px solid #e1e4e8; color:#7b8794;
+                                    font-size:12px; text-transform:uppercase; font-weight:600;">Ay</th>
+            <th align="left" style="padding:6px 8px; border-bottom:2px solid #e1e4e8; color:#7b8794;
+                                    font-size:12px; text-transform:uppercase; font-weight:600;">Ödeme</th>
+            <th align="right" style="padding:6px 8px; border-bottom:2px solid #e1e4e8; color:#7b8794;
+                                     font-size:12px; text-transform:uppercase; font-weight:600;">Tutar</th>
+        </tr>
+        {% for row in rows %}
+            <tr>
+                <td style="padding:8px; border-bottom:1px solid #eef0f2;">{{ row.term_text }}</td>
+                <td style="padding:8px; border-bottom:1px solid #eef0f2;">
+                    {{ row.type }}{% if row.share %} <span style="color:#7b8794;">({{ row.share }})</span>{% endif %}
+                </td>
+                <td align="right" style="padding:8px; border-bottom:1px solid #eef0f2; white-space:nowrap;">
+                    {{ row.amount|tr_number_format }} ₺
+                </td>
+            </tr>
+        {% endfor %}
+        <tr>
+            <td colspan="2" align="right" style="padding:8px; font-weight:bold;">Ara toplam</td>
+            <td align="right" style="padding:8px; font-weight:bold; white-space:nowrap;">
+                {{ total|tr_number_format }} ₺
+            </td>
+        </tr>
+    </table>
+{% endmacro %}
+
+{% macro section_title(text) %}
+    <p style="margin:20px 0 8px 0; font-size:15px; font-weight:bold; color:#2f3640;">{{ text }}</p>
+{% endmacro %}
+
+{% block email_content %}
+    <p style="margin:0 0 12px 0; font-size:16px;">Sayın {{ data.name_surname }},</p>
+    <p style="margin:0 0 4px 0; font-size:14px; line-height:1.6;">
+        {% if data.include_next_month %}
+            {{ data.current_term_text }} ve {{ data.next_term_text }} dönemlerine ait ödemeleriniz aşağıdadır.
+        {% else %}
+            {{ data.current_term_text }} dönemine ait ödemeleriniz aşağıdadır.
+        {% endif %}
+    </p>
+
+    {% for sandik in data.sandiks %}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="width:100%; margin:24px 0 0 0; border:1px solid #e1e4e8; border-radius:6px;">
+            <tr>
+                <td style="padding:16px 16px 20px 16px;">
+                    <p style="margin:0 0 4px 0; font-size:16px; font-weight:bold; color:#2c6fbb;">
+                        {{ sandik.sandik_name }}
+                    </p>
+
+                    {% if sandik.overdue %}
+                        {{ section_title("Geçmiş aylardan kalan") }}
+                        {{ payment_table(sandik.overdue, sandik.overdue_total) }}
+                    {% endif %}
+
+                    {% if sandik.this_month %}
+                        {{ section_title(data.current_term_text) }}
+                        {{ payment_table(sandik.this_month, sandik.this_month_total) }}
+                    {% endif %}
+
+                    {% if sandik.next_month %}
+                        {{ section_title(data.next_term_text) }}
+                        {{ payment_table(sandik.next_month, sandik.next_month_total) }}
+                    {% endif %}
+
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                           style="width:100%; margin:16px 0 0 0; border-top:2px solid #e1e4e8; font-size:14px;">
+                        <tr>
+                            <td style="padding:8px;">Toplam</td>
+                            <td align="right" style="padding:8px; white-space:nowrap;">
+                                {{ sandik.total|tr_number_format }} ₺
+                            </td>
+                        </tr>
+                        {% if sandik.undistributed > 0 %}
+                            <tr>
+                                <td style="padding:8px; color:#2e7d32;">Hesabınızda bekleyen tutar</td>
+                                <td align="right" style="padding:8px; color:#2e7d32; white-space:nowrap;">
+                                    − {{ sandik.undistributed|tr_number_format }} ₺
+                                </td>
+                            </tr>
+                        {% endif %}
+                        <tr>
+                            <td style="padding:8px; font-weight:bold; font-size:15px;">
+                                {% if sandik.remaining > 0 %}Ödemeniz gereken{% else %}Ödemeniz gereken tutar yok{% endif %}
+                            </td>
+                            <td align="right" style="padding:8px; font-weight:bold; font-size:15px; white-space:nowrap;
+                                       color:{% if sandik.remaining > 0 %}#c0392b{% else %}#2e7d32{% endif %};">
+                                {% if sandik.remaining > 0 %}{{ sandik.remaining|tr_number_format }} ₺{% else %}—{% endif %}
+                            </td>
+                        </tr>
+                    </table>
+
+                    {% if sandik.iban and sandik.remaining > 0 %}
+                        <p style="margin:16px 0 0 0; padding:12px; background-color:#f4f8fc; border-radius:4px;
+                                  font-size:13px; line-height:1.7; color:#2f3640;">
+                            <strong>Ödeme için:</strong><br>
+                            <span style="font-family:monospace; font-size:13px;">{{ sandik.iban }}</span>
+                            {% if sandik.iban_holder %}<br>{{ sandik.iban_holder }}{% endif %}
+                        </p>
+                    {% endif %}
+
+                    <p style="margin:16px 0 0 0;">
+                        <a href="{{ sandik.summary_url }}"
+                           style="display:inline-block; padding:10px 18px; background-color:#2c6fbb; color:#ffffff;
+                                  text-decoration:none; border-radius:4px; font-size:14px;">
+                            Ödemelerimi görüntüle
+                        </a>
+                    </p>
+                </td>
+            </tr>
+        </table>
+    {% endfor %}
+
+    {% if data.sandiks|length > 1 %}
+        <p style="margin:24px 0 0 0; padding:12px; background-color:#fafbfc; border:1px solid #e1e4e8;
+                  border-radius:6px; font-size:15px;">
+            <strong>Bütün sandıklar için ödemeniz gereken:</strong>
+            {% if data.grand_remaining > 0 %}{{ data.grand_remaining|tr_number_format }} ₺{% else %}—{% endif %}
+        </p>
+    {% endif %}
+{% endblock %}
+
+{% block email_footer %}
+    Bu e-posta Sandık uygulaması tarafından otomatik olarak gönderilmiştir. Lütfen yanıtlamayınız.
+    {% if data.preference_url %}
+        <br><br>
+        Ödeme hatırlatma e-postalarını almak istemiyorsanız ya da ayın başka bir gününde almak
+        istiyorsanız tercihinizi buradan değiştirebilirsiniz:
+        <br>
+        <a href="{{ data.preference_url }}" style="color:#2c6fbb;">E-posta hatırlatma tercihlerim</a>
+        <br><br>
+        <span style="word-break:break-all;">{{ data.preference_url }}</span>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,38 @@
+{# E-postadaki bağlantının açtığı sayfa: giriş gerektirmez, bu yüzden yönetim paneli kabuğunu
+   (`utils/layout.html`, `current_user` ister) değil tanıtım kabuğunu kullanır. #}
+{% extends "intro/_layout.html" %}
+
+{% block page_title %}{{ page_info.title }}{% endblock %}
+
+{% block intro_css_block %}
+  <style>
+    .rp-wrap { max-width: 640px; margin: 40px auto 64px auto; padding: 0 16px; }
+    .rp-wrap h1 { font-size: 24px; margin: 0 0 6px 0; }
+    .rp-wrap .rp-lead { color: var(--muted, #6b7280); margin: 0 0 24px 0; line-height: 1.7; }
+  </style>
+{% endblock %}
+
+{% block intro_content %}
+  <div class="rp-wrap">
+    <h1>{{ page_info.title }}</h1>
+    <p class="rp-lead">
+      Bu sayfaya e-postanızdaki bağlantıdan geldiniz; giriş yapmanıza gerek yok.
+      Seçiminiz kaydedildikten sonra bu sayfayı kapatabilirsiniz.
+    </p>
+
+    {% for category, msg in get_flashed_messages(with_categories=true) %}
+      <div class="note note-{{ category }}" role="alert"
+           style="padding:12px 14px; border-radius:6px; margin-bottom:18px;
+                  background-color:{% if category == 'success' %}#e8f5e9{% else %}#fdecea{% endif %};
+                  color:{% if category == 'success' %}#1b5e20{% else %}#b71c1c{% endif %};">
+        {{ msg|safe }}
+      </div>
+    {% endfor %}
+
+    {% if page_info.form %}
+      {% with form = page_info.form %}
+        {% include 'auth/parts/reminder_preference_form.html' %}
+      {% endwith %}
+    {% endif %}
+  </div>
+{% endblock %}

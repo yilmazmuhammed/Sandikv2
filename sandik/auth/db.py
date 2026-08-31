@@ -2,7 +2,7 @@ from passlib.hash import pbkdf2_sha256 as hasher
 from pony.orm import flush
 
 from sandik.auth.exceptions import EmailAlreadyExist
-from sandik.utils.db_models import WebUser, Log, get_updated_fields
+from sandik.utils.db_models import WebUser, Log, ReminderPreference, get_updated_fields
 
 
 def get_web_user(password=None, web_user=None, **kwargs) -> WebUser:
@@ -48,6 +48,40 @@ def update_web_user(web_user, updated_by, email_address=None, log_type=Log.TYPE.
     if updated_by:
         Log(web_user_ref=updated_by, type=log_type, logged_web_user_ref=web_user, detail=str(updated_fields))
     web_user.set(**kwargs)
+    return web_user
+
+
+def update_reminder_preference(web_user, updated_by, month_start_day, next_month_day) -> WebUser:
+    """Hatırlatma günlerini `WebUser.preferences` Json'una yazar.
+
+    Günler `ReminderPreference.is_valid_day` ile doğrulanır (`0` ya da 1-28); geçersiz değer
+    `ValueError` fırlatır — formdan gelmeyen bir çağrının sessizce bozuk gün yazmasını engeller.
+
+    `sandik/db.py` → `update_member_preferences` ile aynı kalıp: yalnızca verilen anahtarlar
+    güncellenir, Json'daki diğer tercihler korunur.
+    """
+    for day in (month_start_day, next_month_day):
+        if not ReminderPreference.is_valid_day(day):
+            raise ValueError(f"Geçersiz hatırlatma günü: {day}")
+
+    preferences = {
+        ReminderPreference.MONTH_START_KEY: month_start_day,
+        ReminderPreference.NEXT_MONTH_KEY: next_month_day,
+    }
+
+    updated_fields = {}
+    for key, value in preferences.items():
+        if key not in web_user.preferences.keys():
+            updated_fields[f"preferences.{key}"] = {"new": value}
+        elif value != web_user.preferences[key]:
+            updated_fields[f"preferences.{key}"] = {"new": value, "old": web_user.preferences[key]}
+
+    if updated_by:
+        Log(web_user_ref=updated_by, type=Log.TYPE.WEB_USER.UPDATE, logged_web_user_ref=web_user,
+            detail=str(updated_fields)[:1000])
+
+    web_user.preferences.update(preferences)
+    flush()
     return web_user
 
 

@@ -67,6 +67,43 @@ def send_renew_password_email(web_user):
                                      html=email_body)
 
 
+REMINDER_PREFERENCE_TOKEN_PURPOSE = "reminder_preference"
+
+
+def create_reminder_preference_token(web_user):
+    """Hatırlatma e-postalarındaki "tercihimi değiştir" bağlantısının jetonu.
+
+    Parola sıfırlamanın aksine **süresi yoktur**: bağlantı kullanıcının posta kutusunda duruyor ve
+    aylar sonra tıklandığında da çalışmalı. Karşılığında yetkisi de dardır — yalnızca hatırlatma
+    günlerini değiştirir, hiçbir kişisel veri göstermez.
+
+    `email_address` yüke konur ve kullanılırken doğrulanır: adres değişirse eski bağlantılar düşer.
+    """
+    return jwt.encode({"purpose": REMINDER_PREFERENCE_TOKEN_PURPOSE, "web_user_id": web_user.id,
+                       "email_address": web_user.email_address},
+                      current_app.secret_key, algorithm="HS256")
+
+
+def get_web_user_from_reminder_preference_token(token):
+    try:
+        data = jwt.decode(token, current_app.secret_key, algorithms=["HS256"])
+    except jwt.PyJWTError:
+        raise AuthException("Bağlantı geçersiz. Lütfen siteye giriş yaparak tercihlerinizi güncelleyiniz.")
+
+    if data.get("purpose") != REMINDER_PREFERENCE_TOKEN_PURPOSE:
+        raise AuthException("Bağlantı geçersiz.")
+
+    web_user = db.get_web_user(id=data.get("web_user_id"))
+    if not web_user:
+        raise WebUserNotFound("Kullanıcı bulunamadı.")
+
+    if web_user.email_address != data.get("email_address"):
+        raise AuthException("E-posta adresi değiştiği için bağlantı geçerliliğini yitirdi. "
+                            "Lütfen siteye giriş yaparak tercihlerinizi güncelleyiniz.")
+
+    return web_user
+
+
 def get_web_user_from_password_reset_token(token):
     data = jwt.decode(token, current_app.secret_key, algorithms=["HS256"])
 

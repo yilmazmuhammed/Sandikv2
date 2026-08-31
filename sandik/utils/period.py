@@ -18,6 +18,16 @@ def date_to_period(period_date):
     return period_date.strftime(PERIOD_FORMAT_STRING)
 
 
+TR_MONTH_NAMES = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+                  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+
+
+def period_to_tr_text(period):
+    """'2026-08' -> 'Ağustos 2026'. Kullanıcıya gösterilen metinlerde (e-posta konusu vb.) kullanılır."""
+    period_date = period_to_date(period)
+    return f"{TR_MONTH_NAMES[period_date.month - 1]} {period_date.year}"
+
+
 def previous_period(prev_count=1):
     return get_period_by_difference(start_period=current_period(), diff_count=-prev_count)
 
