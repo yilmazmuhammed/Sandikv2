@@ -26,10 +26,15 @@ MIGRATIONS = [
                       default={"postgres": "'{}'", "sqlite": "'{}'"}),
             # Var olan satırlar boş sözlük alır; `WebUser.get_reminder_days()` eksik anahtarda
             # varsayılana düştüğü için bu, "herkes eskisi gibi mail almaya devam etsin" demektir.
-            RunSql("UPDATE `WebUser` SET `preferences` = '{}' WHERE `preferences` IS NULL",
-                   description="mevcut kullanıcılara boş tercih yazıldı", only_for="mysql"),
-            RunSql("ALTER TABLE `WebUser` MODIFY `preferences` JSON NOT NULL",
-                   description="preferences NOT NULL yapıldı", only_for="mysql"),
+            # Tanımlayıcılar `qname` ile yazılıyor: MySQL'de tablo adı `webuser`dır.
+            RunSql(lambda b: "UPDATE " + b.qname("WebUser") + " SET " + b.qname("preferences")
+                             + " = '{}' WHERE " + b.qname("preferences") + " IS NULL",
+                   description="mevcut kullanıcılara boş tercih yazıldı",
+                   only_for="mysql", table="WebUser"),
+            RunSql(lambda b: "ALTER TABLE " + b.qname("WebUser") + " MODIFY "
+                             + b.qname("preferences") + " JSON NOT NULL",
+                   description="preferences NOT NULL yapıldı",
+                   only_for="mysql", table="WebUser"),
         ],
     ),
 ]

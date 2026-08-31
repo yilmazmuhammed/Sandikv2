@@ -97,9 +97,25 @@ class Backend:
             return f"`{name}`"
         return f'"{name}"'
 
+    def normalize(self, name):
+        """Pony'nin bu sağlayıcıda kullandığı tanımlayıcı yazımı.
+
+        **MySQL sağlayıcısı bütün tanımlayıcıları küçük harfe çevirir**
+        (`pony/orm/dbproviders/mysql.py` → `normalize_name`), yani `WebUser` entity'sinin tablosu
+        MySQL'de `webuser`dır; sqlite ve postgres'te ad olduğu gibi kalır. Taşımalar tabloya adıyla
+        eriştiği için burada aynı kuralı uygulamak zorundayız — yoksa MySQL'de tablo "yok" görünür,
+        işlemler sessizce atlanır ve taşıma uygulanmış işaretlenir.
+        """
+        return name.lower() if self.provider == "mysql" else name
+
+    def qname(self, name):
+        """Doğru yazımla tırnaklanmış tanımlayıcı. SQL üretilirken `quote` yerine bu kullanılır."""
+        return self.quote(self.normalize(name))
+
     # -- şema bilgisi ----------------------------------------------------------------
 
     def table_exists(self, table) -> bool:
+        table = self.normalize(table)
         if self.provider == "sqlite":
             rows = self.fetchall(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,))
@@ -114,6 +130,7 @@ class Backend:
         return bool(rows)
 
     def columns(self, table):
+        table = self.normalize(table)
         if self.provider == "sqlite":
             return [row[1] for row in self.fetchall(f'PRAGMA table_info("{table}")')]
         if self.provider == "mysql":
@@ -127,7 +144,7 @@ class Backend:
         return [row[0] for row in rows]
 
     def column_exists(self, table, column) -> bool:
-        return column in self.columns(table)
+        return self.normalize(column) in self.columns(table)
 
     def supports_drop_column(self) -> bool:
         """SQLite 3.35'ten önce ALTER TABLE ... DROP COLUMN yoktur"""
@@ -208,15 +225,15 @@ class AddColumn(Operation):
         default = (self.default.get(backend.provider) if isinstance(self.default, dict)
                    else self.default)
 
-        definition = f"{backend.quote(self.column)} {column_type}"
+        definition = f"{backend.qname(self.column)} {column_type}"
         if default is not None:
             definition += f" DEFAULT {default}"
         if self.references and backend.provider != "mysql":
             table, column = self.references
-            definition += (f" REFERENCES {backend.quote(table)} ({backend.quote(column)})"
+            definition += (f" REFERENCES {backend.qname(table)} ({backend.qname(column)})"
                            f" ON DELETE {self.on_delete}")
 
-        sql = f"ALTER TABLE {backend.quote(self.table)} ADD COLUMN {definition}"
+        sql = f"ALTER TABLE {backend.qname(self.table)} ADD COLUMN {definition}"
         if dry_run:
             return f"eklenecek: {sql}"
 
@@ -246,7 +263,7 @@ class DropColumn(Operation):
 
         if backend.supports_drop_column():
             backend.execute(
-                f"ALTER TABLE {backend.quote(self.table)} DROP COLUMN {backend.quote(self.column)}")
+                f"ALTER TABLE {backend.qname(self.table)} DROP COLUMN {backend.qname(self.column)}")
             return f"{self.table}.{self.column} çıkarıldı"
 
         rebuild_sqlite_table_without_column(backend, self.table, self.column)
@@ -254,19 +271,31 @@ class DropColumn(Operation):
 
 
 class RunSql(Operation):
-    """Elle yazılmış SQL. `only_for` verilirse yalnızca o sağlayıcıda çalışır."""
+    """
+    Elle yazılmış SQL. `only_for` verilirse yalnızca o sağlayıcıda çalışır.
 
-    def __init__(self, sql, description=None, only_for=None):
+    `table` verilirse tablo yoksa atlanır. **Tablo adı geçen her `RunSql`de verilmelidir**: aksi
+    hâlde sıfırdan kurulan veritabanında (henüz hiçbir tablo yokken) SQL körlemesine çalışır ve
+    "table doesn't exist" ile patlar. `AddColumn`/`DropColumn` bu kontrolü kendiliğinden yapar.
+
+    `sql`, backend alan bir fonksiyon da olabilir; tanımlayıcıları `backend.qname()` ile yazmak
+    için gerekir (MySQL'de tablo/sütun adları küçük harftir, bkz. `Backend.normalize`).
+    """
+
+    def __init__(self, sql, description=None, only_for=None, table=None):
         self.sql = sql
-        self.description = description or sql
+        self.description = description or (sql if isinstance(sql, str) else "SQL")
         self.only_for = only_for
+        self.table = table
 
     def apply(self, backend, dry_run=False):
         if self.only_for and backend.provider != self.only_for:
             return f"{self.only_for} dışında atlandı"
+        if self.table and not backend.table_exists(self.table):
+            return f"{self.table} tablosu yok, atlandı"
         if dry_run:
             return f"çalıştırılacak: {self.description}"
-        backend.execute(self.sql)
+        backend.execute(self.sql(backend) if callable(self.sql) else self.sql)
         return self.description
 
 

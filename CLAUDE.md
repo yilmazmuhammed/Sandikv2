@@ -212,6 +212,17 @@ Böylece deploy **elle bir adım gerektirmez**: `/paw` → git pull → reload y
 - Hata **yukarı fırlatılır**: uygulamanın yarım şemayla açılmaması gerekir.
 - `database_target_from_env()` hem `db.bind()` hem taşımalar tarafından kullanılır; ikisinin farklı
   veritabanına bakması "taşıma çalıştı ama uygulama eski şemayı görüyor" hatasına yol açardı.
+- **MySQL'de tablo/sütun adları küçük harftir.** Pony'nin MySQL sağlayıcısı bütün tanımlayıcıları
+  `lower()`lar (`pony/orm/dbproviders/mysql.py` → `normalize_name`), yani `WebUser` entity'sinin
+  tablosu MySQL'de `webuser`dır; sqlite ve postgres'te ad olduğu gibi kalır. Taşımalar tabloya
+  adıyla eriştiği için `Backend.normalize()` / `qname()` aynı kuralı uygular ve **üretilen bütün
+  SQL `qname()` ile yazılır**. Bu atlanırsa MySQL'de tablo "yok" görünür, işlemler sessizce
+  atlanır, taşıma uygulanmış işaretlenir ve sütun hiç eklenmediği için uygulama
+  `generate_mapping`de patlar. `steps.py`de elle SQL yazarken `RunSql`in fonksiyon biçimi
+  kullanılmalıdır (`lambda b: ... b.qname("WebUser") ...`).
+- **`RunSql`e `table=` verilmelidir.** `AddColumn`/`DropColumn` tablo yoksa kendiliğinden atlar ama
+  `RunSql` körlemesine çalışır; sıfırdan kurulan veritabanında (henüz hiç tablo yokken) "table
+  doesn't exist" ile patlar. `tests/test_migrations.py` her `RunSql` adımında bunu kontrol eder.
 - `AddColumn`ın `column_type`/`default` alanları **sağlayıcıya göre sözlük** de alabilir. Pony `Json`
   mysql/sqlite'ta `JSON`, postgres'te `JSONB`'dir; ayrıca **MySQL JSON sütununa DEFAULT kabul etmez**,
   bu yüzden orada sütun NULL eklenip satırlar `RunSql` ile doldurulur ve sonra NOT NULL yapılır.
