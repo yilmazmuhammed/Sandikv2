@@ -8,6 +8,8 @@ import cexprtk
 from flask_login import UserMixin
 from pony.orm import *
 
+from sandik.utils import migrations
+
 from sandik.utils.sorting import turkish_sort_key
 
 db = Database()
@@ -1163,19 +1165,18 @@ class WebsiteTransaction(db.Entity):
             return self.web_user_ref.name_surname if self.web_user_ref else self.payer
 
 
-DATABASE_PROVIDER = os.getenv("SANDIKv2_DATABASE_PROVIDER")
+# Bağlantı hedefi tek yerden üretilir: `db.bind()` ile taşımaların farklı veritabanına bakması,
+# "taşıma çalıştı ama uygulama hâlâ eski şemayı görüyor" gibi hatalara yol açardı.
+DATABASE_PROVIDER, DATABASE_PARAMS = migrations.database_target_from_env()
 
-if DATABASE_PROVIDER == "postgres":
-    DATABASE_URL = os.getenv("SANDIKv2_DATABASE_URL")
-    db.bind(provider="postgres", dsn=DATABASE_URL)
-elif DATABASE_PROVIDER == "mysql":
-    DATABASE_HOST = os.getenv("SANDIKv2_DATABASE_HOST")
-    DATABASE_USER = os.getenv("SANDIKv2_DATABASE_USER")
-    DATABASE_PASSWORD = os.getenv("SANDIKv2_DATABASE_PASSWORD")
-    DATABASE_DB = os.getenv("SANDIKv2_DATABASE_DB")
-    db.bind(provider="mysql", host=DATABASE_HOST, user=DATABASE_USER, passwd=DATABASE_PASSWORD, db=DATABASE_DB)
-else:
-    db.bind(provider="sqlite", filename='database.sqlite', create_db=True)
+db.bind(provider=DATABASE_PROVIDER, **DATABASE_PARAMS)
+
+# Şema taşımaları burada, mapping'den ÖNCE çalışır: Pony eksik tabloyu oluşturur ama var olan
+# tabloya sütun eklemez, dahası eksik sütunu görünce `generate_mapping`in kendisi patlar.
+# Kapatmak için: SANDIKv2_AUTO_MIGRATE='0' (o zaman elle: python scripts/migrate.py)
+if migrations.is_enabled():
+    migrations.run_migrations(provider=DATABASE_PROVIDER, params=DATABASE_PARAMS,
+                              log=lambda message: print(f"[taşıma] {message}"))
 
 db.generate_mapping(create_tables=True)
 

@@ -60,6 +60,49 @@ Kilit kavramlar:
 `sandik/utils/clock.py`: her ayın başında çalışacak iş (aidat oluşturma). Procfile'da `clock`
 process'i olarak tanımlı.
 
+## Şema taşımaları (`sandik/utils/migrations/`)
+
+Pony eksik **tabloyu** oluşturur ama var olan tabloya **sütun eklemez**; dahası eksik sütunu görünce
+`generate_mapping()`in **kendisi** `OperationalError: no such column` fırlatır. Bu çağrı `db_models`
+import edilirken çalıştığı ve ana depodaki `app.py` dört uygulamayı da eager import ettiği için,
+sütun eklenmeden kod güncellenirse **bütün site (myilmaz.tr dahil) açılmazdı**. Bu yüzden taşımalar
+`db.bind()` ile `db.generate_mapping()` **arasında**, uygulama her açıldığında kendiliğinden çalışır:
+
+```python
+DATABASE_PROVIDER, DATABASE_PARAMS = migrations.database_target_from_env()
+db.bind(provider=DATABASE_PROVIDER, **DATABASE_PARAMS)
+if migrations.is_enabled():
+    migrations.run_migrations(provider=DATABASE_PROVIDER, params=DATABASE_PARAMS, log=...)
+db.generate_mapping(create_tables=True)
+```
+
+Böylece deploy **elle bir adım gerektirmez**: `/paw` → git pull → reload yeter.
+
+- **Yeni taşıma `steps.py` listesinin sonuna eklenir**, var olanlar değiştirilmez. `db_models.py`
+  içindeki model de güncellenmelidir: taşıma var olan veritabanlarını, model sıfırdan kurulanları
+  belirler; ikisi aynı sonucu vermelidir.
+- Uygulananlar `schema_migration` tablosunda tutulur, her taşıma bir kez çalışır. İşlemler ayrıca
+  kendi kontrolünü de yapar (sütun varsa eklemez, tablo yoksa atlar), yani elle müdahale edilmiş
+  veya sıfırdan kurulmuş veritabanlarında da güvenlidir.
+- Çok işçili sunucuda iki süreç aynı anda taşıma denerse, kaybeden kaydı görüp sessizce atlar.
+- Hata **yukarı fırlatılır**: uygulamanın yarım şemayla açılmaması gerekir.
+- `database_target_from_env()` hem `db.bind()` hem taşımalar tarafından kullanılır; ikisinin farklı
+  veritabanına bakması "taşıma çalıştı ama uygulama eski şemayı görüyor" hatasına yol açardı.
+- `AddColumn`ın `column_type`/`default` alanları **sağlayıcıya göre sözlük** de alabilir; tip
+  sağlayıcıdan sağlayıcıya değiştiğinde (ör. Pony `Json` → mysql/sqlite `JSON`, postgres `JSONB`)
+  gerekir. Bir sağlayıcı `default` sözlüğünde yoksa orada DEFAULT yazılmaz — **MySQL JSON sütununa
+  DEFAULT kabul etmez**, orada sütun NULL eklenip satırlar `RunSql` ile doldurulur ve sonra NOT NULL
+  yapılır. (Bu iki eklenti `family_tree`deki sürümde yoktur.)
+- Kapatmak için `SANDIKv2_AUTO_MIGRATE='0'`; o zaman elle: `python scripts/migrate.py`
+  (`--durum` / `--kuru-calistir` seçenekleri vardır).
+- **Testlerde kapalıdır**: `tests/conftest.py` `SANDIKv2_AUTO_MIGRATE=0` yazar. `Database.bind`
+  yaması yalnızca Pony'nin bağlantısını yönlendirir; taşımalar kendi bağlantısını açar ve o,
+  geliştiricinin gerçek `database.sqlite` dosyasına giderdi.
+
+Paket `family_tree/family_tree/utils/migrations/` ile aynı tasarımdır. Her uygulama kendi klasörünün
+dışına bağımlı olmadığı (ve Sandıkv2 ayrı bir submodule olduğu) için kod paylaşılmaz, **kopyalanır**;
+birinde düzeltilen bir hata diğerine de taşınmalıdır.
+
 ## E-posta gönderimi (`sandik/bot/email_bot.py`)
 
 `SenderEmail`/`EmailBot` ham SMTP sarmalayıcısıdır; **aynı dosyanın sonundaki** modül seviyesi
