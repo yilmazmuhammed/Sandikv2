@@ -4,8 +4,10 @@ from wtforms import SelectField, StringField, DateField, DecimalField, SubmitFie
 from wtforms.validators import Optional, NumberRange
 
 from sandik.auth import db as auth_db
+from sandik.utils import money
 from sandik.utils.db_models import WebsiteTransaction
-from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator
+from sandik.utils.forms import CustomFlaskForm, apply_currency_to_amount_field, input_required_validator, \
+    max_length_validator
 
 
 class WebsiteTransactionForm(CustomFlaskForm):
@@ -87,4 +89,6 @@ class WebsiteTransactionForm(CustomFlaskForm):
         self.type.choices += [(key, value) for key, value in WebsiteTransaction.TYPE.strings.items()]
         self.web_user.choices += auth_db.web_users_form_choices(only_active_user=True)
         self.category_list.choices += [(t, t) for t in categories]
+        # Sitenin kendi masrafları bir sandığa bağlı değil; varsayılan para birimi kullanılır.
+        apply_currency_to_amount_field(self.amount, money.Currency.DEFAULT)
         self.category_list.choices += [("", "<divider>"), ("new", "Yeni işlem kategorisi ekle")]

@@ -13,7 +13,8 @@ from decimal import Decimal
 from sandik.auth import db as auth_db
 from sandik.sandik import db as sandik_db
 from sandik.transaction import db as transaction_db
-from sandik.utils.db_models import MoneyTransaction, Sandik, WebUser, Member, Share
+from sandik.utils import period as period_utils
+from sandik.utils.db_models import MoneyTransaction, Sandik, TrustRelationship, WebUser, Member, Share
 
 _counter = itertools.count(1)
 
@@ -81,3 +82,31 @@ def pay_contribution_partially(share, term, paid_amount, created_by, contributio
         make_sub_receipt(money_transaction=mt, amount=distributed, created_by=created_by,
                          contribution_ref=contribution)
     return contribution, mt
+
+
+def make_debt(share, amount, created_by, number_of_installment, start_period=None, money_transaction=None):
+    """Bir hisseye borç verir (para çıkışı + borç + taksitler).
+
+    `create_debt` taksitleri ve — güven bağlı sandıkta — borç paylarını kendisi oluşturur, yani
+    yuvarlama mantığının tamamı bu tek çağrının içindedir.
+    """
+    money_transaction = money_transaction or make_money_transaction(
+        member=share.member_ref, amount=amount, created_by=created_by,
+        type=MoneyTransaction.TYPE.EXPENSE)
+    return transaction_db.create_debt(
+        amount=amount, share=share, money_transaction=money_transaction, created_by=created_by,
+        start_period=start_period or period_utils.current_period(),
+        number_of_installment=number_of_installment)
+
+
+def make_trust_relationship(requester_member, receiver_member, created_by):
+    """İki üye arasında kabul edilmiş güven bağı kurar (güven bağlı sandık senaryoları için)."""
+    return sandik_db.create_trust_relationship(
+        requester_member=requester_member, receiver_member=receiver_member, created_by=created_by,
+        status=TrustRelationship.STATUS.ACCEPTED)
+
+
+def make_sandik_rule(sandik, created_by, type, value_formula, condition_formula="", order=1):
+    """Sandık kuralı ekler (borç limiti, taksit sayısı, hisse sayısı formülleri)."""
+    return sandik_db.create_sandik_rule(sandik=sandik, created_by=created_by, type=type, order=order,
+                                        condition_formula=condition_formula, value_formula=value_formula)

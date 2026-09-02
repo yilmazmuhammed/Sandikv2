@@ -136,7 +136,7 @@
         </div>
         <div class="stat">
           <div class="stat-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
-          <div class="stat-value">{{ stats.total_debt_amount_short }} <span class="unit">₺</span></div>
+          <div class="stat-value">{{ stats.main_money.total_debt_amount_short }} <span class="unit">{{ stats.main_money.currency_symbol }}</span></div>
           <div class="stat-label">Bugüne kadar verilen borç</div>
           <div class="stat-hint">{{ stats.debt_count }} ayrı borç işlemi</div>
         </div>
@@ -177,7 +177,9 @@
               <div><span class="k">Sandık üyesi kullanıcı</span><span class="v">{{ stats.web_user_count }}</span></div>
               <div><span class="k">Aktif üyelik</span><span class="v">{{ stats.membership_count }}</span></div>
               <div><span class="k">Aktif hisse</span><span class="v">{{ stats.share_count }}</span></div>
-              <div><span class="k">Ortalama aylık aidat</span><span class="v">{{ stats.average_contribution_amount|tr_number_format }} ₺</span></div>
+              {% for group in stats.money_by_currency %}
+                <div><span class="k">Ortalama aylık aidat{% if stats.money_by_currency|length > 1 %} ({{ group.currency_name }}){% endif %}</span><span class="v">{{ group.average_contribution_amount|money(group.currency) }}</span></div>
+              {% endfor %}
             </div>
             <p style="color: var(--ink-3); font-size: 14px; margin-top: 12px;">
               Bir kişi birden fazla sandığa üye olabildiği için üyelik sayısı kullanıcı sayısından
@@ -213,27 +215,36 @@
             verilip geri ödendiği için “verilen borç”, “yatırılan para”dan yüksek olabilir.
           </p>
         </div>
-        <div class="grid grid-2">
-          <div class="card">
-            <div class="kv">
-              <div><span class="k">Bugüne kadar verilen toplam borç</span><span class="v">{{ stats.total_debt_amount|tr_number_format }} ₺</span></div>
-              <div><span class="k">Geri ödenen (taksit) tutarı</span><span class="v">{{ stats.paid_installment_amount|tr_number_format }} ₺</span></div>
-              <div><span class="k">Geri ödenmeyi bekleyen borç</span><span class="v">{{ stats.unpaid_debt_amount|tr_number_format }} ₺</span></div>
+        {# Farklı para birimlerindeki tutarlar toplanamaz: her birim kendi kart çiftinde
+           gösterilir. Tek birim varsa başlık yazılmaz, bölüm eskisi gibi görünür. #}
+        {% for group in stats.money_by_currency %}
+          {% if stats.money_by_currency|length > 1 %}
+            <h3 style="margin: 24px 0 12px 0;">{{ group.currency_name }}</h3>
+          {% endif %}
+          <div class="grid grid-2">
+            <div class="card">
+              <div class="kv">
+                <div><span class="k">Bugüne kadar verilen toplam borç</span><span class="v">{{ group.total_debt_amount|money(group.currency) }}</span></div>
+                <div><span class="k">Geri ödenen (taksit) tutarı</span><span class="v">{{ group.paid_installment_amount|money(group.currency) }}</span></div>
+                <div><span class="k">Geri ödenmeyi bekleyen borç</span><span class="v">{{ group.unpaid_debt_amount|money(group.currency) }}</span></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="kv">
+                <div><span class="k">Ödenen toplam aidat</span><span class="v">{{ group.paid_contribution_amount|money(group.currency) }}</span></div>
+                <div><span class="k">Sandıklara yatırılan toplam para</span><span class="v">{{ group.total_revenue_amount|money(group.currency) }}</span></div>
+                {% if stats.money_by_currency|length == 1 %}
+                  <div><span class="k">Verilen borç sayısı</span><span class="v">{{ stats.debt_count }}</span></div>
+                {% endif %}
+              </div>
             </div>
           </div>
-          <div class="card">
-            <div class="kv">
-              <div><span class="k">Ödenen toplam aidat</span><span class="v">{{ stats.paid_contribution_amount|tr_number_format }} ₺</span></div>
-              <div><span class="k">Sandıklara yatırılan toplam para</span><span class="v">{{ stats.total_revenue_amount|tr_number_format }} ₺</span></div>
-              <div><span class="k">Verilen borç sayısı</span><span class="v">{{ stats.debt_count }}</span></div>
-            </div>
-          </div>
-        </div>
+        {% endfor %}
       </div>
     </section>
 
     <!-- Yıllara göre -->
-    {% if stats.debts_by_year %}
+    {% if stats.main_money.debts_by_year %}
       <section class="section">
         <div class="wrap">
           <div class="section-head">
@@ -242,20 +253,25 @@
             <p>Her yıl üyelere dağıtılan toplam borç tutarı ve borç sayısı.</p>
           </div>
           <div class="card pad-lg">
-            <div class="bars">
-              {% for row in stats.debts_by_year %}
+            {% for group in stats.money_by_currency %}
+              {% if stats.money_by_currency|length > 1 %}
+                <h3 style="margin: 24px 0 12px 0;">{{ group.currency_name }}</h3>
+              {% endif %}
+              <div class="bars">
+              {% for row in group.debts_by_year %}
                 <div class="bar-row">
                   <div class="bar-year">{{ row.year }}</div>
                   <div class="bar-track">
                     <div class="bar-fill" style="width: {{ row.ratio if row.ratio > 2 else 2 }}%;"></div>
                   </div>
                   <div class="bar-value">
-                    <span class="amount">{{ row.amount|tr_number_format }} ₺</span>
+                    <span class="amount">{{ row.amount|money(group.currency) }}</span>
                     <span class="cnt">{{ row.count }} borç</span>
                   </div>
                 </div>
               {% endfor %}
-            </div>
+              </div>
+            {% endfor %}
             <p style="color: var(--ink-3); font-size: 14px; margin-top: 16px;">
               İçinde bulunduğumuz yıl henüz tamamlanmadığı için son sütun eksik kalabilir.
             </p>

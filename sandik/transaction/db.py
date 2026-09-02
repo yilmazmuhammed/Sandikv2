@@ -1,9 +1,7 @@
-from math import ceil
-
 from pony.orm import select, flush, distinct
 
-from sandik.transaction.exceptions import InvalidRemoveOperation, TransactionException
-from sandik.utils import period as period_utils, sandik_preferences
+from sandik.transaction.exceptions import InvalidRemoveOperation, TransactionException, MaximumInstallmentExceeded
+from sandik.utils import money, period as period_utils, sandik_preferences
 from sandik.utils.db_models import Contribution, Share, Member, Installment, MoneyTransaction, Log, SubReceipt, Debt, \
     PieceOfDebt, Retracted, Sandik
 from sandik.utils.exceptions import UnexpectedValue
@@ -79,17 +77,33 @@ def create_installments_of_debt(debt, created_by):
     debt_amount = debt.amount
     number_of_installment = debt.number_of_installment
     start_period = debt.starting_term
+    sandik = debt.share_ref.member_ref.sandik_ref
+    # Sandığın para biriminin en küçük parçası: TL'de 1 ₺, altında 0,1 gr
+    unit = sandik.unit()
+
+    if debt_amount < number_of_installment * unit:
+        raise MaximumInstallmentExceeded(
+            f"{sandik.amount_str(debt_amount)} borç {number_of_installment} taksite bölünemez. "
+            f"Taksit sayısını azaltınız."
+        )
 
     remaining_amount = debt_amount
-    installment_amount = ceil(debt_amount / number_of_installment)
     for i in range(1, number_of_installment + 1):
-        if remaining_amount <= 0:
-            raise UnexpectedValue(f"RA: {remaining_amount}, "
-                                  f"MSG: Beklenmedik bir hata ile karşılaşıldı. Düzeltilmesi için "
-                                  f"lütfen site yöneticisi ile iletişime geçerek ERRCODE'u ve RA'yı söyleyiniz.",
-                                  errcode=15, create_log=True)
+        remaining_installment_count = number_of_installment - i + 1
 
-        temp_amount = installment_amount if remaining_amount >= installment_amount else remaining_amount
+        if remaining_installment_count == 1:
+            temp_amount = remaining_amount
+        else:
+            # Taksit tutarı en küçük parçaya yuvarlanır, küsurat sona bırakılır. Yuvarlama her
+            # adımda KALAN tutar üzerinden yeniden yapılmalıdır; sabit bir taksit tutarı
+            # kullanılırsa yukarı yuvarlama borcu son taksitlere sıra gelmeden bitirebilir
+            # (ör. 100 ₺ / 30 taksit).
+            temp_amount = min(
+                money.ceil_to_unit(remaining_amount / remaining_installment_count, unit),
+                # Kalan taksitlerin her birine en az bir parça bırakılmalıdır
+                remaining_amount - (remaining_installment_count - 1) * unit,
+            )
+
         installment_term = period_utils.get_last_installment_period(start_period, i)
         create_installment(amount=temp_amount, term=installment_term, debt=debt, created_by=created_by)
         remaining_amount -= temp_amount
@@ -106,6 +120,8 @@ def create_installments_of_debt(debt, created_by):
 def create_piece_of_debts(debt, created_by, debt_amount=None):
     member = debt.share_ref.member_ref
     remaining_amount = debt_amount or debt.amount
+    # Paylar da taksitler gibi para biriminin en küçük parçasına yuvarlanır
+    unit = member.sandik_ref.unit()
 
     # 1. Aşama: Önce kendinden borç almalı
     if member.get_balance() > 0:
@@ -144,7 +160,9 @@ def create_piece_of_debts(debt, created_by, debt_amount=None):
                             f"lütfen site yöneticisi ile iletişime geçerek ERRCODE'u ve RA'yı söyleyiniz.")
 
         remaining_people = len(sorted_trusted_links) - i
-        temp_amount = remaining_amount // remaining_people
+        # Tam sayı bölmesi (`//`) küsuratı düşürüp ERRCODE 0017'ye yol açıyordu; pay da
+        # taksitler gibi para biriminin en küçük parçasına yuvarlanır.
+        temp_amount = money.floor_to_unit(remaining_amount / remaining_people, unit)
         temp_amount = min(temp_amount, item['balance'], remaining_amount)
 
         if temp_amount > 0:

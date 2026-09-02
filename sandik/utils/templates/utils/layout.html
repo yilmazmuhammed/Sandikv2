@@ -84,6 +84,13 @@
   <script src="{{ url_for('static', filename='my_custom/js/footable.js') }}"></script>
   <script src="{{ url_for('static', filename='my_custom/js/custom.js') }}"></script>
   <script>
+    {#
+      Sayfadaki JS'in para birimini bilmesi için tek kaynak. Sandık bağlamı olmayan sayfalarda
+      (sitenin kendi masrafları gibi) varsayılan birim kullanılır.
+      `places`: birimin gerektirdiği en az ondalık basamak sayısı (TL 0, altın 1).
+    #}
+    window.SANDIK_CURRENCY = {% if g.get("sandik") %}{"symbol": "{{ g.sandik.currency_symbol() }}", "places": {{ g.sandik.currency_places() }}}{% else %}{"symbol": "₺", "places": 0}{% endif %};
+
     {% if page_info.active_dropdown %}
       setTimeout(function() {
         $('#{{ page_info.active_dropdown }}'+'-dropdown').addClass('active');

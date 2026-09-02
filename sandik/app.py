@@ -19,7 +19,7 @@ from sandik.sandik.api import sandik_api_bp
 from sandik.sandik.page import sandik_page_bp
 from sandik.transaction.api import transaction_api_bp
 from sandik.transaction.page import transaction_page_bp
-from sandik.utils import CustomJSONEncoder, sandik_preferences, set_parameters_of_url
+from sandik.utils import CustomJSONEncoder, money, sandik_preferences, set_parameters_of_url
 from sandik.utils.db_models import MoneyTransaction, Installment, Contribution, SandikRule
 from sandik.website_transaction.page import website_transaction_page_bp
 
@@ -84,13 +84,21 @@ def jinja2_integration(flask_app: Flask) -> Flask:
 
     @flask_app.template_filter('tr_number_format')
     def tr_number_format(value):
-        # Ondalık kısım yoksa sadece tam kısmı döndür
-        if value == int(value):
-            return f"{int(value):,}".replace(",", ".")
-        # Ondalık kısım varsa, iki basamak göster
-        else:
-            integer_part, decimal_part = f"{value:,.2f}".split(".")
-            return f"{integer_part.replace(',', '.')}," + decimal_part
+        """Sayıyı Türkçe biçimde gösterir. Para birimi eklemez; tutarlar için `money` kullanın."""
+        return money.format_number(value)
+
+    @flask_app.template_filter('money')
+    def money_filter(value, sandik=None):
+        """Tutarı sandığın para birimiyle gösterir: `{{ x|money(g.sandik) }}` -> "1.500 ₺".
+
+        `Sandik` nesnesi yerine para birimi kodu da verilebilir; e-posta şablonları gibi entity
+        taşımayan verilerde bu gerekiyor. Hiçbiri verilmezse (sitenin kendi masrafları gibi
+        sandığa bağlı olmayan tutarlar) varsayılan para birimi kullanılır.
+        """
+        currency = getattr(sandik, "currency", sandik)
+        if currency is None:
+            currency = money.Currency.DEFAULT
+        return money.format_amount(value, currency=currency)
 
     return flask_app
 

@@ -11,6 +11,7 @@ from decimal import Decimal
 from dateutil.relativedelta import relativedelta
 
 from sandik.intro import db
+from sandik.utils import money
 
 # Bir sandığın "gerçekten kullanılıyor" sayılması için gereken en az değerler.
 # Sandık tek başına açılıp denenmiş olabilir ya da birkaç deneme kaydından sonra bırakılmış
@@ -76,6 +77,46 @@ def collect_sandik_facts() -> list:
     return facts
 
 
+def group_sandiks_by_currency(sandiks) -> list:
+    """Sandıkları para birimine göre gruplar; en çok sandığı olan grup başa gelir."""
+    groups = {}
+    for sandik in sandiks:
+        groups.setdefault(sandik.currency, []).append(sandik)
+    return sorted(groups.values(), key=len, reverse=True)
+
+
+def collect_money_statistics(sandiks) -> dict:
+    """Aynı para birimindeki bir sandık grubunun parasal toplamları."""
+    currency = sandiks[0].currency
+    total_debt_amount = db.sum_of_debts(sandiks=sandiks) or Decimal(0)
+    paid_installment_amount = db.sum_of_paid_installments(sandiks=sandiks) or Decimal(0)
+
+    debts_by_year = [
+        {"year": year, "amount": amount or Decimal(0), "count": debt_count}
+        for year, amount, debt_count in db.debt_statistics_by_year(sandiks=sandiks)
+    ]
+    max_amount_of_years = max([row["amount"] for row in debts_by_year], default=Decimal(0))
+
+    return {
+        "currency": currency,
+        "currency_name": money.name_of(currency),
+        "currency_symbol": money.symbol_of(currency),
+        "sandik_count": len(sandiks),
+        "total_debt_amount": total_debt_amount,
+        "total_debt_amount_short": short_amount_string(total_debt_amount),
+        "paid_installment_amount": paid_installment_amount,
+        "paid_contribution_amount": db.sum_of_paid_contributions(sandiks=sandiks) or Decimal(0),
+        "unpaid_debt_amount": max(total_debt_amount - paid_installment_amount, Decimal(0)),
+        "total_revenue_amount": db.sum_of_revenue_money_transactions(sandiks=sandiks) or Decimal(0),
+        "average_contribution_amount": db.average_contribution_amount(sandiks=sandiks) or Decimal(0),
+        # Yıllara göre dağılım (basit çubuk grafik için oran da hesaplanır)
+        "debts_by_year": [
+            dict(row, ratio=int(row["amount"] / max_amount_of_years * 100) if max_amount_of_years else 0)
+            for row in debts_by_year
+        ],
+    }
+
+
 def calculate_statistics() -> dict:
     """İstatistik sayfasının bütün verisini hesaplar. Önbellek için `get_statistics()` kullanın."""
     facts = collect_sandik_facts()
@@ -85,16 +126,15 @@ def calculate_statistics() -> dict:
     if not sandiks:
         return {"has_data": False, "calculated_at": datetime.now()}
 
-    total_debt_amount = db.sum_of_debts(sandiks=sandiks) or Decimal(0)
-    paid_installment_amount = db.sum_of_paid_installments(sandiks=sandiks) or Decimal(0)
-    paid_contribution_amount = db.sum_of_paid_contributions(sandiks=sandiks) or Decimal(0)
-
     first_date_of_opening = min(sandik.date_of_opening for sandik in sandiks)
-    debts_by_year = [
-        {"year": year, "amount": amount or Decimal(0), "count": debt_count}
-        for year, amount, debt_count in db.debt_statistics_by_year(sandiks=sandiks)
-    ]
-    max_amount_of_years = max([row["amount"] for row in debts_by_year], default=Decimal(0))
+
+    # Parasal toplamlar para birimi başına ayrı hesaplanır: farklı birimlerdeki tutarlar
+    # toplanamaz. Bütün sandıklar aynı birimdeyse (bugün olağan durum) tek grup çıkar ve sayfa
+    # eskisi gibi görünür. Sorgular zaten sandık listesi aldığı için grup başına bir kez çağrılır.
+    money_by_currency = [collect_money_statistics(group)
+                         for group in group_sandiks_by_currency(sandiks)]
+    # Öne çıkan kutu, en çok sandığı olan para birimini gösterir.
+    main_money = max(money_by_currency, key=lambda group: group["sandik_count"])
 
     return {
         "has_data": True,
@@ -112,27 +152,16 @@ def calculate_statistics() -> dict:
         "web_user_count": db.count_web_users_of_sandiks(sandiks=sandiks),
         "membership_count": db.count_active_members(sandiks=sandiks),
         "share_count": db.count_active_shares(sandiks=sandiks),
-        "average_contribution_amount": db.average_contribution_amount(sandiks=sandiks) or Decimal(0),
 
-        # Para
-        "total_debt_amount": total_debt_amount,
-        "total_debt_amount_short": short_amount_string(total_debt_amount),
+        # Para — birim başına bir grup; `main_money` en çok sandığı olan birimdir
+        "money_by_currency": money_by_currency,
+        "main_money": main_money,
         "debt_count": db.count_debts(sandiks=sandiks),
-        "paid_contribution_amount": paid_contribution_amount,
-        "paid_installment_amount": paid_installment_amount,
-        "unpaid_debt_amount": max(total_debt_amount - paid_installment_amount, Decimal(0)),
-        "total_revenue_amount": db.sum_of_revenue_money_transactions(sandiks=sandiks) or Decimal(0),
 
         # Kayıt sayıları
         "money_transaction_count": db.count_money_transactions(sandiks=sandiks),
         "contribution_count": db.count_contributions(sandiks=sandiks),
         "installment_count": db.count_installments(sandiks=sandiks),
-
-        # Yıllara göre dağılım (basit çubuk grafik için oran da hesaplanır)
-        "debts_by_year": [
-            dict(row, ratio=int(row["amount"] / max_amount_of_years * 100) if max_amount_of_years else 0)
-            for row in debts_by_year
-        ],
 
         # Sayfanın altında açıklanan eleme ölçütleri
         "min_active_member_count": MIN_ACTIVE_MEMBER_COUNT,

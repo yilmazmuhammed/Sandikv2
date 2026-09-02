@@ -181,6 +181,9 @@ def collect_member_section(member, include_next_month, url_builder):
     return {
         "sandik_id": sandik.id,
         "sandik_name": sandik.name,
+        # Tutarlar şablonda `|money(...)` ile basılır; veri entity taşımadığı için birim kodu
+        # burada düz sayı olarak gider.
+        "currency": sandik.currency,
         "summary_url": url_builder(sandik.id),
         "iban": bank_account.get_iban_string() if bank_account else None,
         "iban_holder": (bank_account.holder or bank_account.title) if bank_account else None,
@@ -230,6 +233,9 @@ def collect_reminder_data(web_user: WebUser, include_next_month: bool, url_build
         "sandiks": sections,
         "grand_total": sum((s["total"] for s in sections), Decimal(0)),
         "grand_remaining": sum((s["remaining"] for s in sections), Decimal(0)),
+        # Sandıklar farklı para birimlerindeyse genel toplam anlamsızdır; şablon onu göstermez.
+        "is_single_currency": len({s["currency"] for s in sections}) <= 1,
+        "currency": sections[0]["currency"] if sections else None,
         "current_term": current_term,
         "next_term": next_term,
         "current_term_text": period_utils.period_to_tr_text(current_term),

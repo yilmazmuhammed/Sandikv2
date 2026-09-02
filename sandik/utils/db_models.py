@@ -8,7 +8,7 @@ import cexprtk
 from flask_login import UserMixin
 from pony.orm import *
 
-from sandik.utils import migrations
+from sandik.utils import migrations, money
 from sandik.utils.sorting import turkish_sort_key
 
 db = Database()
@@ -348,7 +348,9 @@ class Member(db.Entity):
                 total -= mt.amount * (date.today() - mt.date).days
             else:
                 raise Exception("Ne alaka şimdi")
-        return int(total / 1000)
+        # Bölen para birimine göredir: altın gramı gibi küçük tutarlarda sabit 1000 böleni
+        # puanı her zaman 0 yapardı.
+        return int(total / money.point_divisor_of(self.sandik_ref.currency))
 
 
 class WebUser(db.Entity, UserMixin):
@@ -634,12 +636,19 @@ class Sandik(db.Entity):
     sms_packages_set = Set('SmsPackage')
     type = Required(int)
     sandik_rules_set = Set('SandikRule')
+    # Sandığın para birimi. `default` şart: yedekten geri yüklemede eski yedeklerde bu anahtar
+    # bulunmaz ve `restore_table` yalnızca JSON'daki alanları verir (bkz. backup/db.py).
+    currency = Required(int, default=money.Currency.DEFAULT)
 
     class TYPE:
         CLASSIC = 1
         WITH_TRUST_RELATIONSHIP = 2
 
         strings = {CLASSIC: "Klasik sistem", WITH_TRUST_RELATIONSHIP: "Güven bağlı sistem"}
+
+    # Para birimi tablosu `utils/money.py`dedir; buradaki takma ad `TYPE` ile aynı kalıpta
+    # (`Sandik.CURRENCY.TRY`, `Sandik.CURRENCY.strings`) kullanılabilsin diyedir.
+    CURRENCY = money.Currency
 
     def is_type_with_trust_relationship(self):
         return self.type == self.TYPE.WITH_TRUST_RELATIONSHIP
@@ -649,6 +658,27 @@ class Sandik(db.Entity):
 
     def type_str(self):
         return self.TYPE.strings.get(self.type, "UNKNOWN")
+
+    def currency_str(self):
+        return money.name_of(self.currency)
+
+    def currency_symbol(self):
+        return money.symbol_of(self.currency)
+
+    def unit(self):
+        """Para biriminin en küçük parçası: TL'de 1 ₺, altında 0,1 gr.
+
+        Sandıktaki bütün tutarlar bunun katı olmalıdır; taksite bölme ve borç paylarının dağıtımı
+        da bu değere göre yapılır.
+        """
+        return money.unit_of(self.currency)
+
+    def currency_places(self):
+        """Birimin gerektirdiği en az ondalık basamak sayısı; JS tarafı da bunu kullanır."""
+        return money.places_of(self.currency)
+
+    def amount_str(self, amount):
+        return money.format_amount(amount, currency=self.currency)
 
     def get_active_members(self):
         return self.members_set.filter(lambda m: m.is_active)
@@ -851,35 +881,46 @@ class Debt(db.Entity):
             for piece in self.piece_of_debts_set:
                 piece.paid_amount = piece.amount
         else:
+            # "En büyük küsurat" yöntemiyle oransal dağıtım. Adım, para biriminin en küçük
+            # parçasıdır (TL'de 1 ₺, altında 0,1 gr); eskiden sabit 1 birim kullanılıyordu ve
+            # küsuratlı ödemelerde toplam tutmayıp ERR U-POD-02 fırlatıyordu.
+            unit = self.share_ref.member_ref.sandik_ref.unit()
+
             distribution_info = []
-            # Adım 1 & 2: Oransal payları ve tam sayı kısımlarını bul
+            # Adım 1 & 2: Oransal payları ve bunların birimin katına inen kısmını bul
             for piece in self.piece_of_debts_set:
                 exact_share = paid_amount * (piece.amount / total_amount)
-                int_share = int(exact_share)
-                remainder = exact_share - int_share
+                base_share = money.floor_to_unit(exact_share, unit)
 
                 # Veritabanı nesnesini ve hesapları geçici bir listede tutuyoruz
                 distribution_info.append({
                     'piece': piece,
-                    'int_share': int_share,
-                    'remainder': remainder
+                    'share': base_share,
+                    'remainder': exact_share - base_share
                 })
 
             # Adım 3: Şu ana kadar dağıtılan miktarı ve kalanı bul
-            distributed_amount = sum(item['int_share'] for item in distribution_info)
-            remaining_to_distribute = int(paid_amount - distributed_amount)
+            distributed_amount = sum(item['share'] for item in distribution_info)
+            remaining_units = int((paid_amount - distributed_amount) / unit)
 
             # Adım 4: Küsuratları büyükten küçüğe sırala
             distribution_info.sort(key=lambda x: x['remainder'], reverse=True)
 
-            # Adım 5: Kalan ödemeyi küsuratı en büyük olanlara 1'er 1'er dağıt
-            for i in range(remaining_to_distribute):
-                distribution_info[i]['int_share'] += 1
+            # Adım 5: Kalan ödemeyi küsuratı en büyük olanlara birer parça dağıt
+            for i in range(remaining_units):
+                distribution_info[i]['share'] += unit
 
-            # Adım 6: Hesaplanan değerleri asıl nesnelere (veritabanına) kaydet
+            # Adım 6: Birimden küçük artık yalnızca ödemenin kendisi birimin katı değilken
+            # oluşur (eski kayıtlar). Toplamın ödemeye tam eşit olması şart olduğu için bu
+            # artık, küsuratı en büyük paya eklenir.
+            residue = paid_amount - sum(item['share'] for item in distribution_info)
+            if residue:
+                distribution_info[0]['share'] += residue
+
+            # Adım 7: Hesaplanan değerleri asıl nesnelere (veritabanına) kaydet
             for i, item in enumerate(distribution_info):
                 piece = item['piece']
-                piece.paid_amount = item['int_share']
+                piece.paid_amount = item['share']
                 distribution_info[i]['piece'] = piece.id
 
         if select(pod.amount for pod in self.piece_of_debts_set).sum() != self.amount:

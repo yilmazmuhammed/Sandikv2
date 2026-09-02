@@ -17,6 +17,7 @@ import pytest
 
 from sandik.utils import migrations
 from sandik.utils.migrations.steps import MIGRATIONS
+from sandik.utils.money import Currency
 
 
 class FakeBackend(migrations.Backend):
@@ -159,3 +160,20 @@ def test_a_brand_new_database_skips_everything_and_marks_applied(sqlite_db):
     applied, pending = migrations.migration_status(provider="sqlite", params={"filename": sqlite_db})
     assert [m.name for m in applied] == [m.name for m in MIGRATIONS]
     assert pending == []
+
+
+def test_currency_column_is_added_to_existing_sandiks(sqlite_db):
+    """Var olan sandıklar taşımadan sonra TL (1) olmalı — modeldeki `default` ile aynı değer."""
+    con = sqlite3.connect(sqlite_db)
+    con.execute('CREATE TABLE "Sandik" ("id" INTEGER PRIMARY KEY, "name" TEXT NOT NULL, '
+                '"type" INTEGER NOT NULL)')
+    con.execute('INSERT INTO "Sandik" ("name", "type") VALUES (\'Eski sandık\', 1)')
+    con.commit()
+    con.close()
+
+    migrations.run_migrations(provider="sqlite", params={"filename": sqlite_db})
+
+    con = sqlite3.connect(sqlite_db)
+    assert "currency" in [c[1] for c in con.execute('PRAGMA table_info("Sandik")')]
+    assert con.execute('SELECT currency FROM "Sandik"').fetchone()[0] == Currency.TRY
+    con.close()

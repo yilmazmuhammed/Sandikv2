@@ -43,6 +43,9 @@
 		],
 		"rows": [
     {% for p in payments %}
+      {# Makro yeniden kullanılabilir kalsın diye para birimi `g.sandik`ten değil ödemenin
+         kendisinden bulunur; bu sayfalarda ikisi zaten aynı sandıktır. #}
+      {% set sandik = p.share_ref.member_ref.sandik_ref %}
       {% if isinstance(p, Contribution) %}
         {% set id_prefix='c' %}
         {% set transaction_type='Aidat' %}
@@ -87,10 +90,10 @@
                   {% set remaining_amount=p.amount-sr_amounts | sum() %}
                   <tr>
                     <td title='{% if sr.money_transaction_ref.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}Manuel{% elif sr.money_transaction_ref.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}Banka işlemi{% endif %}'>{{ sr.money_transaction_ref.date.strftime("%Y-%m-%d") }}</td>
-                    <td>{{ sr.money_transaction_ref.amount|tr_number_format }} ₺</td>
+                    <td>{{ sr.money_transaction_ref.amount|money(sandik) }}</td>
                     <td title='{% if sr.is_auto %}Otomatik{% else %}Manuel{% endif %}'>{{ sr.creation_time.strftime("%Y-%m-%d") }}</td>
-                    <td>{{ sr.amount|tr_number_format }} ₺</td>
-                    <td>{{ remaining_amount|tr_number_format }} ₺</td>
+                    <td>{{ sr.amount|money(sandik) }}</td>
+                    <td>{{ remaining_amount|money(sandik) }}</td>
                   </tr>
                 {% endfor %}
               </table>
@@ -171,6 +174,9 @@
                 <th></th>
               </tr>
               {% for p in pg["payments"] %}
+                {# Makro yeniden kullanılabilir kalsın diye para birimi `g.sandik`ten değil ödemenin
+         kendisinden bulunur; bu sayfalarda ikisi zaten aynı sandıktır. #}
+                {% set sandik = p.share_ref.member_ref.sandik_ref %}
                 {% if isinstance(p, Contribution) %}
                   {% set id_prefix='c' %}
                   {% set transaction_type='Aidat' %}
@@ -188,8 +194,8 @@
                   <td title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.index }}</td>
                   <td>{{ transaction_type }}</td>
                   <td>Hisse {{ p.share_ref.share_order_of_member }}</td>
-                  <td class="{% if p.is_fully_paid %}text-success{% else %}text-danger{% endif %}">{{ p.get_unpaid_amount()|tr_number_format }} ₺</td>
-                  <td>{{ p.amount|tr_number_format }} ₺</td>
+                  <td class="{% if p.is_fully_paid %}text-success{% else %}text-danger{% endif %}">{{ p.get_unpaid_amount()|money(sandik) }}</td>
+                  <td>{{ p.amount|money(sandik) }}</td>
                   <td>{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}</td>
                   <td>{{ detail }}</td>
                   <td>

@@ -12,7 +12,7 @@ try:
 except ImportError:
     phonenumbers = None
 
-from sandik.utils import LayoutPI
+from sandik.utils import LayoutPI, money
 
 
 class FormPI(LayoutPI):
@@ -208,3 +208,52 @@ def min_length_validator(field, min: int):
 
 def min_number_validator(field, min: int):
     return NumberRange(min=min, message=f"{field.capitalize()}, en az {min} olmalıdır.")
+
+
+class AmountUnitValidator:
+    """Tutarın para biriminin **en küçük parçasının** katı olmasını şart koşar.
+
+    Her para biriminin bir en küçük parçası vardır (TL'de 1 ₺, altında 0,1 gr); sistemdeki bütün
+    tutarlar bunun katı olmak zorundadır, aksi hâlde taksite bölme ve borç paylarının dağıtımı
+    bölünemeyen bir küsurat bırakır (bkz. `utils/money.py`).
+    """
+
+    def __init__(self, currency, field_name=None):
+        self.currency = currency
+        self.field_name = field_name
+
+    def __call__(self, form, field):
+        if field.data is None:
+            return
+        if not money.is_multiple_of_unit(field.data, money.unit_of(self.currency)):
+            name = self.field_name or field.label.text.rstrip(":")
+            raise ValidationError(
+                f"{name} {money.format_amount(money.unit_of(self.currency), self.currency)}"
+                f" ve katları şeklinde girilmelidir"
+            )
+
+
+def apply_currency_to_amount_field(field, currency, field_name=None):
+    """Bir tutar alanını sandığın para birimine göre ayarlar.
+
+    Tarayıcı tarafında `step`/`min`/`placeholder`, sunucu tarafında `AmountUnitValidator`; ondalık
+    basamak sayısı da birimden gelir (`DecimalField.places`, alan yeniden çizilirken kullanılır).
+    Form sınıfının `__init__`'inden çağrılır: alan tanımları sınıf düzeyindedir ve para biriminden
+    habersizdir, birim ise ancak sandık belli olunca bilinir.
+    """
+    unit = money.unit_of(currency)
+    # `input type=number` binlik ayraçsız, noktalı ondalık ister (bkz. CLAUDE.md)
+    unit_text = format(unit.normalize(), "f")
+    name = field_name or field.label.text.rstrip(":")
+
+    field.places = money.places_of(currency)
+    field.render_kw = dict(field.render_kw or {}, step=unit_text, min=unit_text,
+                           placeholder=unit_text)
+    # Birimden gelen alt sınır, elle yazılmış NumberRange'in yerini alır
+    field.validators = [v for v in field.validators if not isinstance(v, NumberRange)]
+    field.validators += [
+        NumberRange(min=float(unit),
+                    message=f"{name} {money.format_amount(unit, currency)}'den küçük olamaz"),
+        AmountUnitValidator(currency=currency, field_name=name),
+    ]
+    return field

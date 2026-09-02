@@ -64,9 +64,13 @@ class Sandikv2Exception(Exception):
         for frame_info in inspect.stack():
             # Kaynak kodu okunamayan frame'lerde (exec ile üretilen kod, template vs.) code_context None gelir
             for line in frame_info[4] or []:
-                if "raise" in line:
+                # "raise" kelimesi satırda geçse de bir fırlatma olmayabilir: `pytest.raises(...)`
+                # ya da `x.raises(` gibi satırlarda `split` boş liste döndürüp asıl istisnayı
+                # IndexError ile maskeliyordu. Bu yüzden yalnızca ayrıştırılabilen satır kullanılır.
+                parts = line.split("(")[0].split("raise ")
+                if len(parts) > 1:
                     self.caller_function_name = frame_info[3]
-                    self.exception_class = line.split("(")[0].split("raise")[1].strip()
+                    self.exception_class = parts[1].strip()
 
 
 class Sandikv2UtilsException(Sandikv2Exception):

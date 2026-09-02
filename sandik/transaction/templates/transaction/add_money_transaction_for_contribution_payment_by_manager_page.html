@@ -24,7 +24,7 @@
           console.log("i:", i, "contribution:", contribution)
             $('#contribution').append($('<option>', {
               value: contribution.id,
-              text : contribution.term + " (Kalan: " + contribution.unpaid_amount + "₺)"
+              text : contribution.term + " (Kalan: " + formatMoneyWithSymbol(contribution.unpaid_amount) + ")"
             }));
           });
         },

@@ -6,7 +6,8 @@ from wtforms.validators import NumberRange, Optional
 
 from sandik.sandik import db as sandik_db
 from sandik.utils.db_models import MoneyTransaction
-from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator, min_number_validator
+from sandik.utils.forms import CustomFlaskForm, apply_currency_to_amount_field, input_required_validator, \
+    max_length_validator, min_number_validator
 
 
 class MoneyTransactionForm(CustomFlaskForm):
@@ -63,6 +64,8 @@ class MoneyTransactionForm(CustomFlaskForm):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.type.choices += [(key, value) for key, value in MoneyTransaction.TYPE.strings.items()]
         self.member.choices += sandik_db.members_form_choices(sandik=sandik)
+        # Tutar alanı sandığın para birimine bağlanır (step/min/ondalık + birim doğrulaması).
+        apply_currency_to_amount_field(self.amount, sandik.currency)
 
 
 class DebtPaymentForm(CustomFlaskForm):
@@ -116,6 +119,8 @@ class DebtPaymentForm(CustomFlaskForm):
     def __init__(self, sandik, form_title='Borç ödeme', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.member.choices += sandik_db.members_form_choices(sandik=sandik)
+        # Tutar alanı sandığın para birimine bağlanır (step/min/ondalık + birim doğrulaması).
+        apply_currency_to_amount_field(self.amount, sandik.currency)
 
 
 class ContributionPaymentForm(CustomFlaskForm):
@@ -169,6 +174,8 @@ class ContributionPaymentForm(CustomFlaskForm):
     def __init__(self, sandik, form_title='Aidat ödemesi', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.member.choices += sandik_db.members_form_choices(sandik=sandik)
+        # Tutar alanı sandığın para birimine bağlanır (step/min/ondalık + birim doğrulaması).
+        apply_currency_to_amount_field(self.amount, sandik.currency)
 
 
 class ContributionForm(CustomFlaskForm):
@@ -214,6 +221,8 @@ class ContributionForm(CustomFlaskForm):
     def __init__(self, sandik, form_title='Aidat formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.member.choices += sandik_db.members_form_choices(sandik=sandik)
+        # Tutar alanı sandığın para birimine bağlanır (step/min/ondalık + birim doğrulaması).
+        apply_currency_to_amount_field(self.amount, sandik.currency)
 
 
 class DebtForm(CustomFlaskForm):
@@ -285,6 +294,8 @@ class DebtForm(CustomFlaskForm):
     def __init__(self, sandik, form_title='Para işlemi formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.member.choices += sandik_db.members_form_choices(sandik=sandik)
+        # Tutar alanı sandığın para birimine bağlanır (step/min/ondalık + birim doğrulaması).
+        apply_currency_to_amount_field(self.amount, sandik.currency)
 
 
 class AddOldContributionsForm(CustomFlaskForm):

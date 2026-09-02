@@ -1,4 +1,4 @@
-import math
+from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
 
@@ -18,7 +18,8 @@ def base_sandik_rule_function(sandik, rule_type, no_rule_msg, result_cast=None, 
 
 
 def max_number_of_installment(sandik, amount):
-    no_rule_msg = f"\"{amount}₺\" borç için kaç taksit yapılacağını tespit etmek için geçerli kural bulunamadı!" \
+    no_rule_msg = f"\"{sandik.amount_str(amount)}\" borç için kaç taksit yapılacağını tespit etmek için " \
+                  f"geçerli kural bulunamadı!" \
                   f"<br>Lütfen önce borç miktarı için kaç taksit yapılacağına dair sandık kuralı ekleyiniz."
     return base_sandik_rule_function(sandik=sandik, rule_type=SandikRule.TYPE.MAX_NUMBER_OF_INSTALLMENT,
                                      no_rule_msg=no_rule_msg, result_cast=int, amount=amount)
@@ -32,15 +33,15 @@ def get_start_period(sandik, debt_date):
 def remaining_debt_balance(sandik, whose):
     if isinstance(whose, Share):
         if not whose.is_active:
-            return 0
+            return Decimal(0)
         no_rule_msg = f"Hissenin alabileceği borç miktarını tespit etmek için geçerli kural bulunamadı." \
                       f"<br>Lütfen önce açılabilecek en fazla hisse sayısı için sandık kuralı ekleyiniz." \
                       f"<br>Üye: {whose.name_surname} <br>Hisse: {whose.id}" \
-                      f"<br>Aidat miktarı: {whose.total_amount_of_paid_contribution()}"
+                      f"<br>Aidat miktarı: {sandik.amount_str(whose.total_amount_of_paid_contribution())}"
         max_debt_of_share = base_sandik_rule_function(sandik=sandik, rule_type=SandikRule.TYPE.MAX_AMOUNT_OF_DEBT,
                                                       no_rule_msg=no_rule_msg, whose=whose)
-        max_debt_balance = math.ceil(max_debt_of_share / 1000) * 1000
-        max_debt_balance = max_debt_balance if max_debt_balance != 0 else 1000
+        # `cexprtk` float döndürdüğü için Decimal'a str üzerinden çevrilir (ikilik artık kalmasın).
+        max_debt_balance = Decimal(str(max_debt_of_share))
         unpaid_installments_amount = whose.total_amount_unpaid_installments()
         return max_debt_balance - unpaid_installments_amount
     elif isinstance(whose, Member):

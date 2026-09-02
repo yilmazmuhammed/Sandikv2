@@ -5,6 +5,7 @@ from sandik.sandik.exceptions import NoValidRuleFound
 from sandik.sandik.requirement import sandik_authorization_required, member_required
 from sandik.transaction import utils
 from sandik.transaction.exceptions import MaximumDebtAmountExceeded
+from sandik.utils import money
 from sandik.utils.db_models import MoneyTransaction
 
 transaction_api_bp = Blueprint('transaction_api_bp', __name__)
@@ -45,7 +46,10 @@ def get_debt_distribution_api(sandik_id, member_id):
     amount = request.args.get("amount")
     if not amount:
         return jsonify(result=False, msg="'amount' parametresi ile borç alınacak miktarın girilmesi gerekmektedir.")
-    if not amount.isnumeric():
+    # `isnumeric()` ondalıklı tutarları ("0.5") reddediyordu; altın gibi birimlerde bu, borç
+    # dağılımının hiç hesaplanamaması demekti.
+    amount = money.parse_amount(amount)
+    if amount is None:
         return jsonify(result=False, msg="Borç alınacak miktarın sayısal olarak girilmesi gerekmektedir.")
 
     # 'share' parametresi, üyenin hissesine ait bir entity'ye çevrilmelidir;
@@ -60,7 +64,6 @@ def get_debt_distribution_api(sandik_id, member_id):
             return jsonify(result=False, msg="Hisse bulunamadı")
 
     try:
-        amount = int(amount)
         utils.validate_money_transaction_for_expense(
             mt_type=MoneyTransaction.TYPE.EXPENSE, use_untreated_amount=False,
             amount=amount, whose=share or g.member

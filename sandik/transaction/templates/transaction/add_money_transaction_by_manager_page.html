@@ -4,20 +4,6 @@
   <script>
     let member_financial_status = null;
 
-    function formatMoney(value) {
-      let parts = value.toFixed(2).split(".");
-      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-      if (parts[1] === "00") {
-        return parts[0];
-      }
-      return parts[0] + "," + parts[1];
-    }
-
-    {# Miktar alanı binlik ayraçsız ve noktalı ondalıklı sayı bekler (input type=number) #}
-    function amountAsFormValue(value) {
-      return parseFloat(value.toFixed(2)).toString();
-    }
-
     {#
       Üyenin bu ay ödemesi gereken miktar: vadesi gelmiş ve ödenmemiş aidat + taksitleri.
       Üyenin sandıkta işleme konmamış parası buradan DÜŞÜLMEZ; formun submit kontrolü de girilen
@@ -65,7 +51,7 @@
           .data("amount", amountAsFormValue(suggested_amount))
           .attr("title", fill_button_title)
           .attr("aria-label", fill_button_title);
-        $("#fill_amount_value").text(formatMoney(suggested_amount) + " ₺");
+        $("#fill_amount_value").text(formatMoneyWithSymbol(suggested_amount));
         {# Tuş görünmezken "input-group" sınıfı da kaldırılır, böylece alan normal görünümünde kalır #}
         $("#amount_input_group").addClass("input-group");
         $("#fill_amount_btn_wrapper").show();
@@ -112,8 +98,8 @@
           success: function (data) {
             if (data.result) {
               member_financial_status = data;
-              $("#member_required_payment_span").text(formatMoney(parseFloat(data.undistributed_amount) - parseFloat(data.sum_of_unpaid_and_due_payments)));
-              $("#member_max_borrow_amount_span").text(formatMoney(parseFloat(data.max_amount_can_borrow)));
+              $("#member_required_payment_span").text(formatMoneyWithSymbol(parseFloat(data.undistributed_amount) - parseFloat(data.sum_of_unpaid_and_due_payments)));
+              $("#member_max_borrow_amount_span").text(formatMoneyWithSymbol(parseFloat(data.max_amount_can_borrow)));
             } else {
               member_financial_status = null;
             }
@@ -209,7 +195,7 @@
                 e.preventDefault();
                 askAndSubmit(
                   form,
-                  "Üyenin sandıkta işleme konmamış parası (" + data.undistributed_amount.toString() + " tl) bulunmakta. Bu para ne yapılsın?",
+                  "Üyenin sandıkta işleme konmamış parası (" + formatMoneyWithSymbol(data.undistributed_amount) + ") bulunmakta. Bu para ne yapılsın?",
                   {
                     title: "İşleme konmamış para",
                     confirmText: covers_whole_amount ? "Borç verilmeyip bu para kullanılsın"
@@ -232,17 +218,17 @@
 
 {% block content_under_form_block %}
 <div class="text-center">
-  Sandık son durumu: {{ g.sandik.get_final_status()|tr_number_format }} ₺
+  Sandık son durumu: {{ g.sandik.get_final_status()|money(g.sandik) }}
 </div>
 {# Satırların görünürlüğünü işlem türüne göre updateMemberFinancialStatusView() belirler #}
 <div class="text-center mt-2" id="member_financial_status_div" style="display: none;">
   <div id="member_month_end_row" style="display: none;">
     Seçilen üyenin ay sonu: <span id="member_required_payment_span"
-      class="font-weight-bold">-</span> ₺
+      class="font-weight-bold">-</span>
   </div>
   <div id="member_max_borrow_row" style="display: none;">
     Üyenin alabileceği borç miktarı: <span id="member_max_borrow_amount_span"
-      class="font-weight-bold">-</span> ₺
+      class="font-weight-bold">-</span>
   </div>
 </div>
 {% endblock %}

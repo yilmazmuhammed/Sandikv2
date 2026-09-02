@@ -25,7 +25,7 @@
           console.log("i:", i, "debt:", debt)
             $('#debt').append($('<option>', {
               value: debt.id,
-              text : "H-" + debt.share_order_of_member + " Toplam: " + debt.amount + "₺ Kalan: " + debt.unpaid_amount + "₺ (" + debt.starting_term + " => " + debt.due_term + ")"
+              text : "H-" + debt.share_order_of_member + " Toplam: " + formatMoneyWithSymbol(debt.amount) + " Kalan: " + formatMoneyWithSymbol(debt.unpaid_amount) + " (" + debt.starting_term + " => " + debt.due_term + ")"
             }));
           });
         },

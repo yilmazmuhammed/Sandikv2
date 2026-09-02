@@ -37,4 +37,13 @@ MIGRATIONS = [
                    only_for="mysql", table="WebUser"),
         ],
     ),
+    Migration(
+        name="0002_para_birimi",
+        description="Sandık para birimi",
+        operations=[
+            # Var olan bütün sandıklar TL'dir (`money.Currency.TRY == 1`); modeldeki `default` ile
+            # aynı değer, yani sıfırdan kurulan veritabanıyla sonuç aynı.
+            AddColumn("Sandik", "currency", "INTEGER NOT NULL", default="1"),
+        ],
+    ),
 ]

@@ -10,7 +10,7 @@
 {% block email_title %}{{ data.current_term_text }} ödemeleriniz{% endblock %}
 {% block email_header %}Ödeme hatırlatması{% endblock %}
 
-{% macro payment_table(rows, total) %}
+{% macro payment_table(rows, total, currency) %}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
            style="width:100%; border-collapse:collapse; font-size:14px; margin:0 0 4px 0;">
         <tr>
@@ -28,14 +28,14 @@
                     {{ row.type }}{% if row.share %} <span style="color:#7b8794;">({{ row.share }})</span>{% endif %}
                 </td>
                 <td align="right" style="padding:8px; border-bottom:1px solid #eef0f2; white-space:nowrap;">
-                    {{ row.amount|tr_number_format }} ₺
+                    {{ row.amount|money(currency) }}
                 </td>
             </tr>
         {% endfor %}
         <tr>
             <td colspan="2" align="right" style="padding:8px; font-weight:bold;">Ara toplam</td>
             <td align="right" style="padding:8px; font-weight:bold; white-space:nowrap;">
-                {{ total|tr_number_format }} ₺
+                {{ total|money(currency) }}
             </td>
         </tr>
     </table>
@@ -66,17 +66,17 @@
 
                     {% if sandik.overdue %}
                         {{ section_title("Geçmiş aylardan kalan") }}
-                        {{ payment_table(sandik.overdue, sandik.overdue_total) }}
+                        {{ payment_table(sandik.overdue, sandik.overdue_total, sandik.currency) }}
                     {% endif %}
 
                     {% if sandik.this_month %}
                         {{ section_title(data.current_term_text) }}
-                        {{ payment_table(sandik.this_month, sandik.this_month_total) }}
+                        {{ payment_table(sandik.this_month, sandik.this_month_total, sandik.currency) }}
                     {% endif %}
 
                     {% if sandik.next_month %}
                         {{ section_title(data.next_term_text) }}
-                        {{ payment_table(sandik.next_month, sandik.next_month_total) }}
+                        {{ payment_table(sandik.next_month, sandik.next_month_total, sandik.currency) }}
                     {% endif %}
 
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
@@ -84,14 +84,14 @@
                         <tr>
                             <td style="padding:8px;">Toplam</td>
                             <td align="right" style="padding:8px; white-space:nowrap;">
-                                {{ sandik.total|tr_number_format }} ₺
+                                {{ sandik.total|money(sandik.currency) }}
                             </td>
                         </tr>
                         {% if sandik.undistributed > 0 %}
                             <tr>
                                 <td style="padding:8px; color:#2e7d32;">Hesabınızda bekleyen tutar</td>
                                 <td align="right" style="padding:8px; color:#2e7d32; white-space:nowrap;">
-                                    − {{ sandik.undistributed|tr_number_format }} ₺
+                                    − {{ sandik.undistributed|money(sandik.currency) }}
                                 </td>
                             </tr>
                         {% endif %}
@@ -101,7 +101,7 @@
                             </td>
                             <td align="right" style="padding:8px; font-weight:bold; font-size:15px; white-space:nowrap;
                                        color:{% if sandik.remaining > 0 %}#c0392b{% else %}#2e7d32{% endif %};">
-                                {% if sandik.remaining > 0 %}{{ sandik.remaining|tr_number_format }} ₺{% else %}—{% endif %}
+                                {% if sandik.remaining > 0 %}{{ sandik.remaining|money(sandik.currency) }}{% else %}—{% endif %}
                             </td>
                         </tr>
                     </table>
@@ -127,11 +127,12 @@
         </table>
     {% endfor %}
 
-    {% if data.sandiks|length > 1 %}
+    {# Farklı para birimlerindeki tutarlar toplanamaz; o durumda genel toplam hiç gösterilmez. #}
+    {% if data.sandiks|length > 1 and data.is_single_currency %}
         <p style="margin:24px 0 0 0; padding:12px; background-color:#fafbfc; border:1px solid #e1e4e8;
                   border-radius:6px; font-size:15px;">
             <strong>Bütün sandıklar için ödemeniz gereken:</strong>
-            {% if data.grand_remaining > 0 %}{{ data.grand_remaining|tr_number_format }} ₺{% else %}—{% endif %}
+            {% if data.grand_remaining > 0 %}{{ data.grand_remaining|money(data.currency) }}{% else %}—{% endif %}
         </p>
     {% endif %}
 {% endblock %}

@@ -40,7 +40,7 @@
             "id": `<span title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.index }}</span>`,
             "term": `{{ p.term }}`,
             "transaction_type": `{{ transaction_type }}`,
-            "amount": `<span title="Toplam miktar:\t{{ p.amount|tr_number_format }} \nKalan miktar:\t{{ p.get_unpaid_amount()|tr_number_format }}">{{ p.get_unpaid_amount()|tr_number_format }} ₺</span>`,
+            "amount": `<span title="Toplam miktar:\t{{ p.amount|tr_number_format }} \nKalan miktar:\t{{ p.get_unpaid_amount()|tr_number_format }}">{{ p.get_unpaid_amount()|money(g.sandik) }}</span>`,
             "is_fully_paid": `{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
             "detail": `{{ detail | replace("\n", "<br>")| safe }}`,
           },
@@ -219,7 +219,7 @@
             html += `
               <tr class="row text-center">
                 <td>Hisse ` + debt.share_order_of_member + `</td>
-                <td>` + debt.amount + ` ₺</td>
+                <td>` + formatMoneyWithSymbol(debt.amount) + `</td>
                 <td>` + debt.number_of_installment + `</td>
               </tr>
             `;
@@ -331,27 +331,27 @@
               <tbody>
               <tr class="row">
                 <th>Ödenen aidat:</th>
-                <td>{{ g.member.sum_of_paid_contributions()|tr_number_format }} ₺</td>
+                <td>{{ g.member.sum_of_paid_contributions()|money(g.sandik) }}</td>
               </tr>
               <tr class="row">
                 <th>Alınan borç:</th>
-                <td>{{ g.member.sum_of_debts()|tr_number_format }} ₺</td>
+                <td>{{ g.member.sum_of_debts()|money(g.sandik) }}</td>
               </tr>
               <tr class="row">
                 <th>Ödenen taksit:</th>
-                <td>{{ g.member.sum_of_paid_installments()|tr_number_format }} ₺</td>
+                <td>{{ g.member.sum_of_paid_installments()|money(g.sandik) }}</td>
               </tr>
               <tr class="row">
                 <th>İşleme konmamış:</th>
-                <td>{{ g.member.total_of_undistributed_amount()|tr_number_format }} ₺</td>
+                <td>{{ g.member.total_of_undistributed_amount()|money(g.sandik) }}</td>
               </tr>
               <tr class="row">
                 <th>Ay sonu:</th>
-                <td title="Ay sonu ödemeleri: {{ g.summary_data.sum_of_unpaid_and_due_payments }}" class="font-bold {% if g.member.total_of_undistributed_amount() - g.summary_data.sum_of_unpaid_and_due_payments < 0 %}text-danger{% else %}text-success{% endif %}">{{ (g.member.total_of_undistributed_amount() - g.summary_data.sum_of_unpaid_and_due_payments)|tr_number_format }} ₺</td>
+                <td title="Ay sonu ödemeleri: {{ g.summary_data.sum_of_unpaid_and_due_payments }}" class="font-bold {% if g.member.total_of_undistributed_amount() - g.summary_data.sum_of_unpaid_and_due_payments < 0 %}text-danger{% else %}text-success{% endif %}">{{ (g.member.total_of_undistributed_amount() - g.summary_data.sum_of_unpaid_and_due_payments)|money(g.sandik) }}</td>
               </tr>
               <tr class="row">
                 <th>Mil sonu:</th>
-                <td title="Mil sonu ödemeleri: {{ g.summary_data.sum_of_payments }}" class="font-bold {% if g.member.total_of_undistributed_amount() - g.summary_data.sum_of_payments < 0 %}text-danger{% else %}text-success{% endif %}">{{ (g.member.total_of_undistributed_amount() - g.summary_data.sum_of_payments)|tr_number_format }} ₺</td>
+                <td title="Mil sonu ödemeleri: {{ g.summary_data.sum_of_payments }}" class="font-bold {% if g.member.total_of_undistributed_amount() - g.summary_data.sum_of_payments < 0 %}text-danger{% else %}text-success{% endif %}">{{ (g.member.total_of_undistributed_amount() - g.summary_data.sum_of_payments)|money(g.sandik) }}</td>
               </tr>
               </tbody>
             </table>
@@ -371,7 +371,7 @@
               <tbody>
               <tr class="row text-center" onclick="$('#detailed-borrowing-table').toggle(); $('#detailed-borrowing-table-icon').toggleClass('fa-angle-down').toggleClass('fa-angle-up');">
                 <th>Alabileceğim miktar:</th>
-                <td class="font-bold text-primary">{{ catch_exception(g.member.max_amount_can_borrow, default_value="---", use_untreated_amount=False)|tr_number_format }} ₺</td>
+                <td class="font-bold text-primary">{{ catch_exception(g.member.max_amount_can_borrow, default_value="---", use_untreated_amount=False)|money(g.sandik) }}</td>
                 <td>
                   <span>
                     <i class="fas fa-angle-down" id="detailed-borrowing-table-icon"></i>
@@ -393,14 +393,14 @@
                     {% set max_debt_amount=catch_exception(sandik_preferences.remaining_debt_balance, default_value="---", sandik=share.sandik_ref, whose=share)  %}
                       <tr class="row text-center">
                         <td>Hisse {{ share.share_order_of_member }}</td>
-                        <td>{{ max_debt_amount|tr_number_format }} ₺</td>
+                        <td>{{ max_debt_amount|money(g.sandik) }}</td>
                         <td>{{ catch_exception(sandik_preferences.max_number_of_installment, default_value="---", sandik=share.sandik_ref, amount=max_debt_amount) }}</td>
                       </tr>
                     {% endfor %}
                     {% set max_debt_amount=catch_exception(sandik_preferences.remaining_debt_balance, default_value="---", sandik=g.member.sandik_ref, whose=g.member) %}
                     <tr class="row text-center font-bold">
                       <td class="">Toplam</td>
-                      <td>{{ max_debt_amount|tr_number_format }} ₺</td>
+                      <td>{{ max_debt_amount|money(g.sandik) }}</td>
                       <td></td>
                     </tr>
                     </tbody>
@@ -456,7 +456,7 @@
               </tr>
               <tr class="row">
                 <th>Aidat miktarı:</th>
-                <td>{{ g.member.contribution_amount|tr_number_format }} ₺</td>
+                <td>{{ g.member.contribution_amount|money(g.sandik) }}</td>
               </tr>
               <tr class="row">
                 <th>Hisse sayısı:</th>
@@ -511,19 +511,19 @@
               <tbody>
               <tr class="row">
                 <th>Toplanan aidat:</th>
-                <td>{{ g.summary_data.trusted_links.total_paid_contributions|tr_number_format }} ₺</td>
+                <td>{{ g.summary_data.trusted_links.total_paid_contributions|money(g.sandik) }}</td>
               </tr>
               <tr class="row">
                 <th>Verilen borç:</th>
-                <td>{{ g.summary_data.trusted_links.total_loaned_amount|tr_number_format }} ₺</td>
+                <td>{{ g.summary_data.trusted_links.total_loaned_amount|money(g.sandik) }}</td>
               </tr>
               <tr class="row">
                 <th>Toplanan taksit:</th>
-                <td>{{ g.summary_data.trusted_links.total_paid_installments|tr_number_format }} ₺</td>
+                <td>{{ g.summary_data.trusted_links.total_paid_installments|money(g.sandik) }}</td>
               </tr>
               <tr class="row">
                 <th>Son durum:</th>
-                <td>{{ g.summary_data.trusted_links.total_balance|tr_number_format }} ₺</td>
+                <td>{{ g.summary_data.trusted_links.total_balance|money(g.sandik) }}</td>
               </tr>
               </tbody>
             </table>
@@ -544,22 +544,22 @@
             <table id="from-me-status" class="table">
               <tbody>
               <tr class="row">
-                <th>Sandık puanı: <i class='fa-solid fa-circle-info' title='Sandık puanı, sandıkta bulunan bakiyenin, içeride durduğu gün ile çarpımının 1000e bölünmüş halidir . Örneğin bir kişi 1000₺ aidat ödemiş ve 30 gün sonra 750₺ borç almış ise, borç aldıktan 15 gün sonra puanı şu şekilde hesaplanır: (1000₺ * (30+15)gün - 750₺ * 15gün) / 1000 = 33.75 sp'></i></th>
+                <th>Sandık puanı: <i class='fa-solid fa-circle-info' title='Sandık puanı, sandıkta bulunan bakiyenin içeride durduğu gün ile çarpımından hesaplanır; sonuç para birimine göre sabit bir sayıya bölünür (Türk lirasında 1000). Örneğin 1.000 ₺ aidat ödeyen ve 30 gün sonra 750 ₺ borç alan bir kişinin, borç aldıktan 15 gün sonraki puanı: (1000 * (30+15)gün - 750 * 15gün) / 1000 = 33.75 sp'></i></th>
                 <td>{{ g.member.calculate_sandik_point()|tr_number_format }} sp</td>
               </tr>
               {% if g.sandik.is_type_with_trust_relationship() %}
               <tr class="row">
                 <th>Verilen borç:</th>
-                <td>{{ g.member.get_loaned_amount() }} ₺</td>
+                <td>{{ g.member.get_loaned_amount()|money(g.sandik) }}</td>
               </tr>
               <tr class="row">
                 <th>Toplanan taksit:</th>
-                <td>{{ g.member.get_paid_amount_of_loaned() }} ₺</td>
+                <td>{{ g.member.get_paid_amount_of_loaned()|money(g.sandik) }}</td>
               </tr>
               {% if current_user.is_admin() %}
                 <tr class="row">
                   <th>Şu an ki bakiye:</th>
-                  <td>{{ g.member.get_balance() }} ₺</td>
+                  <td>{{ g.member.get_balance()|money(g.sandik) }}</td>
                 </tr>
               {% endif %}
               {% endif %}

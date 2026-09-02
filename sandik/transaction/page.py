@@ -187,14 +187,14 @@ def add_custom_old_contributions_by_manager_page(sandik_id):
             if added_contributions:
                 success_messages = "Eklenen aidatlar:"
                 for c in added_contributions:
-                    success_messages += f"<br>{c.term} ({c.amount}₺)"
+                    success_messages += f"<br>{c.term} ({g.sandik.amount_str(c.amount)})"
                 flash(success_messages, "success")
 
             if not_added_contributions_with_amounts:
                 warning_msg = ("Bazı aidat dönemlerinde birden farklı aidat miktarı var. Bu dönemler için eskiye "
                                "yönelik aidatlar otomatik olarak eklenemez. Bunları manuel eklemeniz gerekmektedir.")
                 for period, amounts in not_added_contributions_with_amounts.items():
-                    warning_msg += f"<br>{period} -> {', '.join([f'{a}₺' for a in amounts])}"
+                    warning_msg += f"<br>{period} -> {', '.join(g.sandik.amount_str(a) for a in amounts)}"
                 flash(warning_msg, "warning")
 
             return redirect(url_for("transaction_page_bp.add_custom_old_contributions_by_manager_page", sandik_id=sandik_id))

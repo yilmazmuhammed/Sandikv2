@@ -52,8 +52,8 @@ function create_footable_basic_filter(column, all_values_option, options, select
   });
 }
 
+/* Biçimlendirme ve para birimi `custom.js` -> formatMoneyWithSymbol()'dedir; ₺ burada sabit
+ * yazılmaz, sandığın birimi kullanılır. */
 function currency_column_formatter(value, options, rowData) {
-  var parts = value.toString().split(".");
-  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return parts.join(",") + " ₺";
+  return formatMoneyWithSymbol(value);
 }

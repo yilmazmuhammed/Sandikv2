@@ -114,12 +114,18 @@
                 </td>
               </tr>
               <tr class="row">
+                <th>Para birimi:</th>
+                <td>
+                  {{ g.sandik.currency_str() }}
+                </td>
+              </tr>
+              <tr class="row">
                 <th>Oluşturulma tarihi:</th>
                 <td>{{ g.sandik.date_of_opening.strftime("%d.%m.%Y") }}</td>
               </tr>
               <tr class="row">
                 <th>Aidat miktarı:</th>
-                <td>{{ g.sandik.contribution_amount|tr_number_format }} ₺</td>
+                <td>{{ g.sandik.contribution_amount|money(g.sandik) }}</td>
               </tr>
               <tr class="row">
                 <th>Durumu:</th>
@@ -154,23 +160,23 @@
               <tbody>
               <tr class="row">
                 <th>Toplanan aidat:</th>
-                <td>{{ g.sandik.sum_of_contributions()|tr_number_format }} ₺</td>
+                <td>{{ g.sandik.sum_of_contributions()|money(g.sandik) }}</td>
               </tr>
               <tr class="row">
                 <th>Verilen borç:</th>
-                <td>{{ g.sandik.sum_of_debts()|tr_number_format }} ₺</td>
+                <td>{{ g.sandik.sum_of_debts()|money(g.sandik) }}</td>
               </tr>
               <tr class="row">
                 <th>Toplanan taksit:</th>
-                <td>{{ g.sandik.sum_of_paid_installments()|tr_number_format }} ₺</td>
+                <td>{{ g.sandik.sum_of_paid_installments()|money(g.sandik) }}</td>
               </tr>
               <tr class="row">
                 <th>İşleme konmamış:</th>
-                <td>{{ g.sandik.total_of_undistributed_amount()|tr_number_format }} ₺</td>
+                <td>{{ g.sandik.total_of_undistributed_amount()|money(g.sandik) }}</td>
               </tr>
               <tr class="row">
                 <th>Son durum:</th>
-                <td>{{ g.sandik.get_final_status()|tr_number_format }} ₺</td>
+                <td>{{ g.sandik.get_final_status()|money(g.sandik) }}</td>
               </tr>
               </tbody>
             </table>

@@ -152,3 +152,53 @@ $(document)
       }
     });
   });
+
+/* ------------------------------------ Para biçimlendirme ---------------------------------------
+ * Sunucu tarafındaki `utils/money.py` -> `format_number` / `format_amount` ile aynı kuralları
+ * uygular. Para birimi `layout.html`'de `window.SANDIK_CURRENCY` olarak basılır (sandık bağlamı
+ * olmayan sayfalarda varsayılan birim). Yeni bir yerde tutar gösterirken bu iki fonksiyon
+ * kullanılmalı, ₺ elle yazılmamalıdır.
+ * ---------------------------------------------------------------------------------------------- */
+
+const DEFAULT_SANDIK_CURRENCY = {symbol: "₺", places: 0};
+
+/** Para sütunlarında `DECIMAL(12, 2)` sınırı: hiçbir tutar 2 basamaktan ince olamaz. */
+const MONEY_MAX_PLACES = 2;
+
+function sandikCurrency() {
+  return window.SANDIK_CURRENCY || DEFAULT_SANDIK_CURRENCY;
+}
+
+/**
+ * Sayıyı türkçe biçimde döndürür: binlik ayracı nokta, ondalık ayracı virgül.
+ * En az birimin gerektirdiği kadar (TL'de 0, altında 1) basamak gösterilir; değer daha ince bir
+ * ondalık taşıyorsa (eski kuruşlu kayıtlar) iki basamağa çıkılır.
+ */
+function formatMoney(value) {
+  const number = parseFloat(value);
+  if (isNaN(number)) {
+    return "";
+  }
+  const min_places = sandikCurrency().places;
+  /* Değerin gerçekten ihtiyaç duyduğu basamak sayısı (sondaki sıfırlar sayılmaz) */
+  const significant = (number.toFixed(MONEY_MAX_PLACES).split(".")[1] || "").replace(/0+$/, "").length;
+  const places = significant <= min_places ? min_places : MONEY_MAX_PLACES;
+
+  const parts = number.toFixed(places).split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return parts.length > 1 ? parts[0] + "," + parts[1] : parts[0];
+}
+
+/** Tutarı birim sembolüyle döndürür: "1.500 ₺", "5,2 gr" */
+function formatMoneyWithSymbol(value) {
+  return formatMoney(value) + " " + sandikCurrency().symbol;
+}
+
+/**
+ * Tutarı `input type=number` alanına yazılabilecek biçime çevirir: binlik ayraçsız, noktalı
+ * ondalıklı (bkz. CLAUDE.md). Gösterim biçimi (`1.249,50`) ne alana yazılabilir ne de sunucuda
+ * ayrıştırılabilir.
+ */
+function amountAsFormValue(value) {
+  return parseFloat(parseFloat(value).toFixed(MONEY_MAX_PLACES)).toString();
+}

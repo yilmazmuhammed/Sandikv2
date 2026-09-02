@@ -5,7 +5,8 @@ CREATE TABLE "Sandik" (
   "is_active" BOOLEAN NOT NULL,
   "date_of_opening" DATE NOT NULL,
   "detail" VARCHAR(1000) NOT NULL,
-  "type" INTEGER NOT NULL
+  "type" INTEGER NOT NULL,
+  "currency" INTEGER NOT NULL
 );
 
 CREATE TABLE "SandikAuthorityType" (

@@ -81,7 +81,7 @@ jQuery(function($){
           <div class="text-md font-bold">
             <span>Son durum: </span>
             <span class="{% if g.sum_of_transactions >= 0 %}text-success{% else %}text-danger{% endif %}">
-              {{ g.sum_of_transactions }} ₺
+              {{ g.sum_of_transactions|money }}
             </span>
           </div>
         </div>

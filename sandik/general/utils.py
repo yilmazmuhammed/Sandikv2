@@ -41,12 +41,22 @@ def get_home_page_data(web_user):
             "mile_end": undistributed - sum_of_unpaid_and_due - sum_of_future_and_unpaid,
         })
 
+    # Sandıklar farklı para birimlerinde olabilir; farklı birimdeki tutarlar toplanamayacağı için
+    # toplam satırı birim başına bir kez üretilir. Kullanıcının bütün sandıkları aynı birimdeyse
+    # (bugün olağan durum) tek satır çıkar ve tablo eskisi gibi görünür.
     status_total_columns = ["paid_contributions", "total_debts", "paid_installments", "unpaid_debt",
                             "undistributed", "month_end", "mile_end"]
-    status_totals = {
-        column: sum((row[column] for row in status_rows), Decimal(0))
-        for column in status_total_columns
-    }
+    status_totals_by_currency = []
+    for currency in sorted({row["sandik"].currency for row in status_rows}):
+        rows_of_currency = [row for row in status_rows if row["sandik"].currency == currency]
+        totals = {
+            column: sum((row[column] for row in rows_of_currency), Decimal(0))
+            for column in status_total_columns
+        }
+        # Temsilci sandık yalnızca biçimlendirme (`|money`) içindir; aynı birimdeki bütün
+        # sandıklar aynı sonucu verir.
+        totals["sandik"] = rows_of_currency[0]["sandik"]
+        status_totals_by_currency.append(totals)
 
     # --- Tablo 2: Aylık ödemeler (ödenmemiş aidat + taksitler) ---
     # payments_matrix[term][member.id] = o ay o sandıkta ödenmemiş toplam miktar
@@ -84,10 +94,18 @@ def get_home_page_data(web_user):
     net_sandik_totals = {member.id: sandik_totals[member.id] - undistributed_amounts[member.id]
                          for member in members}
 
+    # Aylık ödemeler tablosunda satır/sütun toplamları sandıklar arasıdır; birden fazla para
+    # birimi varsa bu toplamlar anlamsızdır ve şablon onları göstermez.
+    currencies = {member.sandik_ref.currency for member in members}
+    is_single_currency = len(currencies) <= 1
+
     return {
         "members": members,
         "status_rows": status_rows,
-        "status_totals": status_totals,
+        "status_totals_by_currency": status_totals_by_currency,
+        "is_single_currency": is_single_currency,
+        # Tek birim varken toplamların hangi birimde gösterileceği
+        "currency_sandik": members[0].sandik_ref if is_single_currency and members else None,
         "payment_rows": payment_rows,
         "sandik_totals": net_sandik_totals,
         "grand_total": sum(net_sandik_totals.values()) if net_sandik_totals else Decimal(0),

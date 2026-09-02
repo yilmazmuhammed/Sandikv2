@@ -8,9 +8,10 @@ from sandik.auth import db as auth_db
 from sandik.sandik import db, utils
 from sandik.sandik.exceptions import InvalidRuleVariable, InvalidRuleCharacter, RuleOperatorCountException, \
     NoValidRuleFound
-from sandik.utils import sandik_preferences
+from sandik.utils import money, sandik_preferences
 from sandik.utils.db_models import Sandik, SmsPackage, SandikRule
-from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator
+from sandik.utils.forms import CustomFlaskForm, apply_currency_to_amount_field, input_required_validator, \
+    max_length_validator
 
 
 class SandikForm(CustomFlaskForm):
@@ -32,12 +33,20 @@ class SandikForm(CustomFlaskForm):
         coerce=str,
     )
 
-    # TODO IntegerField html5'ten import edilse nasıl oluyor
-    contribution_amount = IntegerField(
+    currency = SelectField(
+        label="Para birimi:",
+        validators=[
+            input_required_validator("Para birimi:"),
+        ],
+        choices=[("", "Para birimini seçiniz...")],
+        coerce=str,
+    )
+
+    contribution_amount = DecimalField(
         label="Aidat miktarı:",
         validators=[
             input_required_validator("Aidat miktarı"),
-            NumberRange(message="Aidat miktarını sayı olarak giriniz"),
+            NumberRange(min=0, message="Aidat miktarını sayı olarak giriniz"),
         ],
         render_kw={"placeholder": "0"},
     )
@@ -53,24 +62,59 @@ class SandikForm(CustomFlaskForm):
 
     submit = SubmitField(label="Kaydet")
 
+    # Sandık düzenlenirken para birimi formda yer almaz; o zaman birim sandığın kendisinden gelir.
+    _sandik_currency = None
+
     def __init__(self, form_title='Kayıt formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
         if self.type:
             self.type.choices += list(Sandik.TYPE.strings.items())
+        if self.currency:
+            self.currency.choices += [(str(value), text)
+                                      for value, text in Sandik.CURRENCY.strings.items()]
+
+    def selected_currency(self):
+        """Aidat miktarının hangi para biriminde doğrulanacağı"""
+        if self.currency and self.currency.data:
+            return int(self.currency.data)
+        return self._sandik_currency
+
+    def validate_contribution_amount(self, field):
+        """Aidat, para biriminin en küçük parçasının katı olmalı.
+
+        Sandık **oluşturulurken** birim aynı formda seçildiği için alanın `step`i önceden
+        bilinemez; bu yüzden kontrol sunucuda yapılır. (Düzenleme formunda `step` zaten
+        sandığın biriminden geliyor, bu kontrol orada ikinci bir emniyet.)
+        """
+        currency = self.selected_currency()
+        if currency is None or field.data is None:
+            return
+        unit = money.unit_of(currency)
+        if not money.is_multiple_of_unit(field.data, unit):
+            raise ValidationError(f"Aidat miktarı {money.format_amount(unit, currency)}"
+                                  f" ve katları şeklinde girilmelidir")
 
     def fill_values_with_sandik(self, sandik):
         self.name.data = sandik.name
         if self.type:
             self.type.data = str(sandik.type)
-        self.contribution_amount.data = int(sandik.contribution_amount)
+        if self.currency:
+            self.currency.data = str(sandik.currency)
+        self.contribution_amount.data = sandik.contribution_amount
         self.detail.data = sandik.detail
 
 
 class UpdateSandikForm(SandikForm):
+    # Tür ve para birimi sonradan değiştirilince mevcut kayıtların anlamı değişir; ikisi de bu
+    # formda değil, kendi sayfalarında güncellenir. (Not: Para birimi sonradan güncellenemez)
     type = None
+    currency = None
 
-    def __init__(self, form_title='Sandık bilgielri formu', *args, **kwargs):
+    def __init__(self, sandik, form_title='Sandık bilgileri formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
+        self._sandik_currency = sandik.currency
+        apply_currency_to_amount_field(self.contribution_amount, sandik.currency,
+                                       field_name="Aidat miktarı")
 
 
 class SandikTypeForm(CustomFlaskForm):
@@ -254,6 +298,8 @@ class AddMemberForm(CustomFlaskForm):
         super().__init__(form_title=form_title, *args, **kwargs)
         self.web_user.choices += auth_db.web_users_form_choices(exclusions=sandik.members_set.web_user_ref,
                                                                 only_active_user=True)
+        apply_currency_to_amount_field(self.contribution_amount, sandik.currency,
+                                       field_name="Aidat miktarı")
         try:
             max_share = sandik_preferences.get_max_number_of_share(sandik=sandik)
             self.number_of_share.validators.append(
@@ -301,8 +347,12 @@ class EditMemberForm(CustomFlaskForm):
 
     submit = SubmitField(label="Gönder")
 
-    def __init__(self, form_title='Üye düzenleme formu', *args, **kwargs):
+    def __init__(self, sandik, form_title='Üye düzenleme formu', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
+        # `fill_values_with_member` yalnızca GET'te çağrılıyor; birim doğrulaması POST'ta da
+        # gerekli olduğu için sandık burada alınır.
+        apply_currency_to_amount_field(self.contribution_amount, sandik.currency,
+                                       field_name="Aidat miktarı")
 
     def fill_values_with_member(self, member):
         self.email_address.data = member.web_user_ref.email_address

@@ -17,7 +17,7 @@
       line-height: 1.15;
       vertical-align: middle;
     }
-    /* Ödeme miktarları ₺ işareti dahil tek satırda kalsın */
+    /* Ödeme miktarları para birimi işareti dahil tek satırda kalsın */
     #home-payments-table tbody td,
     #home-payments-table tfoot td,
     #home-payments-table thead th:first-child,
@@ -115,25 +115,33 @@
                       <td class="text-left font-bold">
                         <a href="{{ url_for('sandik_page_bp.sandik_summary_for_member_page', sandik_id=row.sandik.id) }}">{{ row.sandik.name }}</a>
                       </td>
-                      <td>{{ row.paid_contributions|tr_number_format }} ₺</td>
-                      <td>{{ row.total_debts|tr_number_format }} ₺</td>
-                      <td>{{ row.paid_installments|tr_number_format }} ₺</td>
-                      <td>{{ row.unpaid_debt|tr_number_format }} ₺</td>
-                      <td>{{ row.undistributed|tr_number_format }} ₺</td>
-                      <td class="font-bold {% if row.mile_end < 0 %}text-danger{% else %}text-success{% endif %}">{{ row.mile_end|tr_number_format }} ₺</td>
+                      <td>{{ row.paid_contributions|money(row.sandik) }}</td>
+                      <td>{{ row.total_debts|money(row.sandik) }}</td>
+                      <td>{{ row.paid_installments|money(row.sandik) }}</td>
+                      <td>{{ row.unpaid_debt|money(row.sandik) }}</td>
+                      <td>{{ row.undistributed|money(row.sandik) }}</td>
+                      <td class="font-bold {% if row.mile_end < 0 %}text-danger{% else %}text-success{% endif %}">{{ row.mile_end|money(row.sandik) }}</td>
                     </tr>
                   {% endfor %}
                 </tbody>
                 <tfoot>
-                  <tr class="text-center font-bold active">
-                    <td class="text-left">Toplam</td>
-                    <td>{{ g.home_data.status_totals.paid_contributions|tr_number_format }} ₺</td>
-                    <td>{{ g.home_data.status_totals.total_debts|tr_number_format }} ₺</td>
-                    <td>{{ g.home_data.status_totals.paid_installments|tr_number_format }} ₺</td>
-                    <td>{{ g.home_data.status_totals.unpaid_debt|tr_number_format }} ₺</td>
-                    <td>{{ g.home_data.status_totals.undistributed|tr_number_format }} ₺</td>
-                    <td class="{% if g.home_data.status_totals.mile_end < 0 %}text-danger{% else %}text-success{% endif %}">{{ g.home_data.status_totals.mile_end|tr_number_format }} ₺</td>
-                  </tr>
+                  {# Farklı para birimleri toplanamaz: birim başına bir toplam satırı çıkar.
+                     Bütün sandıklar aynı birimdeyse tek satır olur ve etikette birim yazmaz. #}
+                  {% for totals in g.home_data.status_totals_by_currency %}
+                    <tr class="text-center font-bold active">
+                      <td class="text-left">
+                        Toplam{% if g.home_data.status_totals_by_currency|length > 1 %}
+                          <span class="font-normal">({{ totals.sandik.currency_str() }})</span>
+                        {% endif %}
+                      </td>
+                      <td>{{ totals.paid_contributions|money(totals.sandik) }}</td>
+                      <td>{{ totals.total_debts|money(totals.sandik) }}</td>
+                      <td>{{ totals.paid_installments|money(totals.sandik) }}</td>
+                      <td>{{ totals.unpaid_debt|money(totals.sandik) }}</td>
+                      <td>{{ totals.undistributed|money(totals.sandik) }}</td>
+                      <td class="{% if totals.mile_end < 0 %}text-danger{% else %}text-success{% endif %}">{{ totals.mile_end|money(totals.sandik) }}</td>
+                    </tr>
+                  {% endfor %}
                 </tfoot>
               </table>
             </div>
@@ -172,13 +180,13 @@
                         {% for member in g.home_data.members %}
                           <td>
                             {% if g.home_data.undistributed_row.cells.get(member.id) %}
-                              {{ g.home_data.undistributed_row.cells.get(member.id)|tr_number_format }} ₺
+                              {{ g.home_data.undistributed_row.cells.get(member.id)|money(member.sandik_ref) }}
                             {% else %}
                               <span class="text-muted">–</span>
                             {% endif %}
                           </td>
                         {% endfor %}
-                        <td>{{ g.home_data.undistributed_row.total|tr_number_format }} ₺</td>
+                        <td>{% if g.home_data.is_single_currency %}{{ g.home_data.undistributed_row.total|money(g.home_data.currency_sandik) }}{% else %}<span class="text-muted" title="Sandıklarınız farklı para birimlerinde olduğu için toplanamıyor">–</span>{% endif %}</td>
                       </tr>
                     {% endif %}
                     {% for prow in g.home_data.payment_rows %}
@@ -192,13 +200,13 @@
                         {% for member in g.home_data.members %}
                           <td>
                             {% if prow.cells.get(member.id) %}
-                              {{ prow.cells.get(member.id)|tr_number_format }} ₺
+                              {{ prow.cells.get(member.id)|money(member.sandik_ref) }}
                             {% else %}
                               <span class="text-muted">–</span>
                             {% endif %}
                           </td>
                         {% endfor %}
-                        <td class="font-bold">{{ prow.total|tr_number_format }} ₺</td>
+                        <td class="font-bold">{% if g.home_data.is_single_currency %}{{ prow.total|money(g.home_data.currency_sandik) }}{% else %}<span class="text-muted" title="Sandıklarınız farklı para birimlerinde olduğu için toplanamıyor">–</span>{% endif %}</td>
                       </tr>
                     {% endfor %}
                   </tbody>
@@ -206,9 +214,9 @@
                     <tr class="text-center font-bold active">
                       <td class="text-left" title="İşleme konmamış tutarınız varsa bu tutar düşülerek hesaplanmıştır">Toplam</td>
                       {% for member in g.home_data.members %}
-                        <td class="{% if g.home_data.sandik_totals.get(member.id) > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.home_data.sandik_totals.get(member.id)|tr_number_format }} ₺</td>
+                        <td class="{% if g.home_data.sandik_totals.get(member.id) > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.home_data.sandik_totals.get(member.id)|money(member.sandik_ref) }}</td>
                       {% endfor %}
-                      <td class="{% if g.home_data.grand_total > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.home_data.grand_total|tr_number_format }} ₺</td>
+                      <td class="{% if g.home_data.grand_total > 0 %}text-danger{% else %}text-success{% endif %}">{% if g.home_data.is_single_currency %}{{ g.home_data.grand_total|money(g.home_data.currency_sandik) }}{% else %}<span class="text-muted" title="Sandıklarınız farklı para birimlerinde olduğu için toplanamıyor">–</span>{% endif %}</td>
                     </tr>
                   </tfoot>
                 </table>

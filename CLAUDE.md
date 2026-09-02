@@ -14,7 +14,8 @@ paradan **borç** alır, borcu **taksitler** hâlinde geri öder.
 
 ## Alan modeli (`sandik/utils/db_models.py`)
 
-Tüm entity'ler tek dosyadadır. Para alanlarının hepsi `Decimal`'dir.
+Tüm entity'ler tek dosyadadır. Para alanlarının hepsi `Decimal`'dir; tutarların hangi para
+biriminde olduğunu **sandık** belirler (bkz. "Para birimi").
 
 ```
 Sandik ──< Member ──< Share ──< Contribution        (aidat, dönem = "YYYY-MM")
@@ -357,12 +358,91 @@ elemeden geçen sandıkların en az birinde **aktif üyeliği olan** `WebUser`'l
   **değiştirilmemelidir**.
 - Sayfada kişiye ya da tek bir sandığa ait bilgi gösterilmez; hepsi toplam değerdir.
 
+## Para birimi
+
+Her sandığın bir para birimi vardır (`Sandik.currency`, varsayılan **Türk lirası**). Birim sandık
+oluşturulurken seçilir; sonradan `/sandik/<id>/para-birimini-guncelle` sayfasından değiştirilebilir
+(tür değişikliğiyle aynı kalıp: ana güncelleme formunda **yer almaz**, çünkü mevcut tutarların
+anlamı değişir). **Değiştirmek tutarları çevirmez**, yalnızca gösterilen birimi değiştirir; sayfa
+bunu kullanıcıya açıkça yazar ve kaydetmeden önce onay penceresi çıkarır.
+
+Tek kaynak `sandik/utils/money.py` → `Currency.details`'tir; yeni bir birim eklemek oraya bir satır
+eklemektir. `Sandik.CURRENCY` bu sınıfa işaret eder, yani `Sandik.TYPE` ile aynı kalıpta
+(`Sandik.CURRENCY.TRY`, `Sandik.CURRENCY.strings`) kullanılır.
+
+### "En küçük parça" (`unit`)
+
+Her birimin bir **en küçük parçası** vardır ve sistemdeki **bütün tutarlar bunun katı olmak
+zorundadır**:
+
+| Birim | Sembol | En küçük parça | Sandık puanı böleni |
+|---|---|---|---|
+| Türk lirası / ABD doları / Euro | ₺ / $ / € | `1` | 1000 |
+| Altın (gram) / Gümüş (gram) | gr | `0,1` | 10 |
+
+Bu tek değer üç şeyi birden belirler:
+
+1. **Gösterim hassasiyeti** — en az kaç ondalık basamak yazılacağı (TL'de 0, altında 1).
+2. **Yuvarlama** — borcun taksitlere bölünmesi (`create_installments_of_debt`), güven bağlı
+   sandıkta borcun paylara dağıtılması (`create_piece_of_debts`) ve ödemenin paylara dağıtılması
+   (`Debt.update_pieces_of_debt`) hep bu adımla çalışır.
+3. **Doğrulama** — tutar alanları `apply_currency_to_amount_field()` ile birime bağlanır: tarayıcıda
+   `step`/`min`, sunucuda `AmountUnitValidator`. Bu, forma sandık verilmesini gerektirir; bu yüzden
+   `EditMemberForm` de `sandik` parametresi alır. **Sandık oluşturma formu istisnadır**: birim aynı
+   formda seçildiği için alanın `step`i önceden bilinemez, doğrulama `SandikForm.
+   validate_contribution_amount` içinde sunucuda yapılır.
+
+Para sütunları `DECIMAL(12, 2)`dir; `1` ve `0,1` buraya sığar, **şemaya dokunulmadı**. Daha ince bir
+birim (0,001 gr) istenirse bütün Decimal sütunlarının ölçeği büyütülmelidir.
+
+**Üretimdeki eski kuruşlu TL kayıtları olduğu gibi durur** ve kuruşlarıyla gösterilmeye devam eder;
+birim kuralı yalnızca yeni kayıtlara ve sistemin hesapladığı tutarlara işler. Bu yüzden
+`format_number` "en az birimin gerektirdiği kadar, gerekiyorsa 2 basamak" mantığıyla çalışır.
+
+### Gösterim: tek bir biçimlendirici
+
+- **Sunucu**: `money.format_amount()`. Şablonlarda `{{ tutar|money(g.sandik) }}` (filtre `app.py`de).
+  Sandık nesnesi yerine para birimi kodu da verilebilir — e-posta şablonları entity taşımayan düz
+  sözlüklerle çalışır (`{{ x|money(sandik.currency) }}`). Argümansız kullanım varsayılan birimi
+  kullanır (sitenin kendi masrafları).
+- **İstemci**: `custom.js` → `formatMoney()` / `formatMoneyWithSymbol()` / `amountAsFormValue()`.
+  Birim `layout.html`de `window.SANDIK_CURRENCY = {symbol, places}` olarak basılır; sandık bağlamı
+  yoksa varsayılana düşer. FooTable kolonlarındaki `currency_column_formatter` da buradan besleniyor.
+- `tr_number_format` filtresi **sembol eklemez**, yalnızca sayıyı türkçe biçimler; tutarlar için
+  `money` kullanılır.
+- **Şablona `₺` elle yazılmaz.** Yeni bir tutar gösterirken bu iki yoldan biri kullanılmalıdır.
+
+### Çok sandıklı toplamlar
+
+Farklı para birimlerindeki tutarlar toplanamaz. İki yerde bu ele alınır ve **bütün sandıklar aynı
+birimdeyken çıktı eskisiyle birebir aynıdır**:
+
+- **Ana sayfa** (`general/utils.py`): durum tablosunun toplam satırı birim başına bir kez üretilir
+  (`status_totals_by_currency`); tek birim varsa etiket sadece "Toplam"dır. Aylık ödemeler
+  tablosundaki sandıklar arası toplamlar (`grand_total`, satır toplamları) birden fazla birim varsa
+  hiç gösterilmez, yerine açıklamalı bir `–` konur (mobilde sütun eklememek için).
+- **İstatistikler** (`intro/utils.py`): parasal toplamlar `money_by_currency` listesinde birim
+  başına hesaplanır; öne çıkan kutu en çok sandığı olan birimi (`main_money`) gösterir. Sayaçlar
+  birimden bağımsızdır.
+- **Hatırlatma e-postası** (`utils/reminder.py`): her sandık bölümü kendi `currency`sini taşır;
+  genel toplam yalnızca tek birim varsa yazılır.
+
+### Borç limiti artık yuvarlanmıyor
+
+`sandik_preferences.remaining_debt_balance()` kuralın verdiği değeri **olduğu gibi** döndürür.
+Eskiden `math.ceil(x / 1000) * 1000` ile 1000'in üst katına yuvarlanıyor ve en az 1000 kabul
+ediliyordu; bu, altın gibi birimlerde "hiç aidat ödememiş üye 1000 gr borç alabilir" demekti.
+Kural formüllerinde artık **ondalık** kullanılabilir (`{hisse_toplam_aidat}*1.5`);
+`rule_formula_validator` sayıyı rakam rakam değil bütün olarak okur.
+
 ## Dikkat edilmesi gereken yerler
 
-- **Para hesabında `int()`, `//`, `round()` kullanma.** Tutarlar `Decimal` ve kuruşlu olabilir.
-  Bilinen sorunlu noktalar: `transaction/db.py` `create_piece_of_debts()` içindeki `//`,
-  `db_models.py` `Debt.update_pieces_of_debt()` içindeki `int()`. Bunlar kuruşlu tutarlarda
-  "ERRCODE 0017 / U-POD" hatalarına yol açabilir.
+- **Para hesabında `int()`, `//`, `round()`, `math.ceil()` kullanma.** Tutarlar `Decimal`'dir ve
+  sandığın para birimine göre ondalıklı olabilir. Yuvarlama gerekiyorsa `utils/money.py` →
+  `ceil_to_unit()` / `floor_to_unit()` kullanılır ve adım **sandığın en küçük parçasıdır**
+  (`sandik.unit()`). Tam sayı aritmetiği eskiden "ERRCODE 0017 / ERR U-POD-02" hatalarına yol
+  açıyordu; `create_piece_of_debts()` ve `Debt.update_pieces_of_debt()` bu yüzden düzeltildi,
+  geri döndürme.
 - **Silme sırası önemlidir.** Bir hisse veya üye kapatılırken iade edilecek tutar hesaplanmadan
   *önce* ödemesi tamamlanmamış aidatlar silinmelidir (`remove_unpaid_contributions`). Aksi hâlde
   kısmi ödenmiş bir aidata yatan para hem "ödenmiş aidat" hem de "işleme konmamış para" olarak iki
@@ -375,7 +455,9 @@ elemeden geçen sandıkların en az birinde **aktif üyeliği olan** `WebUser`'l
   `db_models.py` içinde bu kontrolleri susturmak için eklenmiş `return` satırları görürsen bunlar
   geçici çözümdür — kök nedeni bulup kaldır.
 - `Sandikv2Exception.detect_caller_function_name()` `inspect.stack()` kullanır; frame'in kaynak
-  kodu okunamazsa (`code_context is None`) gerçek hata maskelenebilir.
+  kodu okunamazsa (`code_context is None`) gerçek hata maskelenebilir. Yığındaki bir satırda
+  "raise" kelimesinin geçmesi bir fırlatma olduğu anlamına gelmez (`pytest.raises(...)`); ayrıştırma
+  bu yüzden başarısız olabileceğini varsayar — sadeleştirip `IndexError`'a geri dönme.
 - **Entity hook'ları (`before_insert` / `after_insert`) yedekten geri yüklemede çalıştırılmaz.**
   Bu hook'lar "tek bir işlem yapılırken" geçerli iş kurallarını kontrol eder; geri yüklemede satırlar
   tamamlanmış bir anlık görüntü olarak yazıldığı için kurallar satır satır sağlanmaz. Örnek:
@@ -401,7 +483,7 @@ elemeden geçen sandıkların en az birinde **aktif üyeliği olan** `WebUser`'l
   bu nedenle `1`'dir; yeni istisna sınıflarında varsayılanı `0` bırakma.
 - **Taksitlendirmede yuvarlama her adımda kalan tutar üzerinden yapılmalıdır**
   (`create_installments_of_debt`). Sabit bir taksit tutarı yukarı yuvarlanınca borç, son taksitlere
-  sıra gelmeden bitebilir (ör. 100₺ / 30 taksit). Kural sıralamasında da (`raise/lower_order_of_
+  sıra gelmeden bitebilir (ör. 100 ₺ / 30 taksit). Kural sıralamasında da (`raise/lower_order_of_
   sandik_rule`) komşu kural `order±1` ile aranmaz: silme sonrası boşluk kalabilir, komşu sıraya göre
   en yakın kayıt seçilir.
 - **İstek başına değişen sözlükler modül seviyesinde tutulmamalı ya da kopyalanmalıdır.**

@@ -571,13 +571,15 @@ def validate_money_transaction_for_expense(mt_type: int, use_untreated_amount: b
             max_amount = whose.max_amount_can_borrow(use_untreated_amount=use_untreated_amount)
             if amount > max_amount:
                 raise MaximumDebtAmountExceeded(
-                    f"{'Üye' if isinstance(whose, Member) else 'Share'} bu miktarı alamaz. En fazla {max_amount}₺ alabilir."
+                    f"{'Üye' if isinstance(whose, Member) else 'Share'} bu miktarı alamaz. "
+                    f"En fazla {whose.sandik_ref.amount_str(max_amount)} alabilir."
                 )
 
         if number_of_installment and validate_noi:
             max_noi = sandik_preferences.max_number_of_installment(sandik=whose.sandik_ref, amount=amount)
             if number_of_installment > max_noi:
-                raise MaximumInstallmentExceeded(f"{amount} için en fazla {max_noi} taksit yapılabilir.")
+                raise MaximumInstallmentExceeded(
+                    f"{whose.sandik_ref.amount_str(amount)} için en fazla {max_noi} taksit yapılabilir.")
 
         if start_period:
             a = period_utils.date_to_period(mt_date)

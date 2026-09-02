@@ -49,7 +49,7 @@ def create_sandik_page():
 @sandik_page_bp.route("/<int:sandik_id>/guncelle", methods=["GET", "POST"])
 @sandik_authorization_required(permission="write")
 def update_sandik_page(sandik_id):
-    form = forms.UpdateSandikForm()
+    form = forms.UpdateSandikForm(sandik=g.sandik)
 
     if form.validate_on_submit():
         form_data = flask_form_to_dict(request_form=request.form, with_empty_fields=True)
@@ -244,7 +244,7 @@ def add_member_to_sandik_page(sandik_id):
 @sandik_authorization_required(permission="write")
 @member_required
 def update_member_of_sandik_page(sandik_id, member_id):
-    form = forms.EditMemberForm()
+    form = forms.EditMemberForm(sandik=g.sandik)
 
     if form.validate_on_submit():
         try:

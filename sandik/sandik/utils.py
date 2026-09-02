@@ -1,5 +1,7 @@
 import os
+import re
 from datetime import datetime
+from decimal import Decimal
 
 from flask import url_for
 from pony.orm import flush
@@ -102,6 +104,9 @@ def update_sandik_type(sandik, sandik_type: int, updated_by):
 
 
 def update_sandik(sandik: Sandik, updated_by, contribution_amount, **kwargs):
+    # Form verisi `flask_form_to_dict`ten string olarak gelir; Decimal'a çevrilmezse karşılaştırma
+    # her kayıtta doğru çıkar ve bütün üyeler gereksiz yere güncellenir.
+    contribution_amount = Decimal(contribution_amount)
     if sandik.contribution_amount != contribution_amount:
         for member in sandik.get_active_members():
             update_member_of_sandik(member=member, updated_by=updated_by, contribution_amount=contribution_amount)
@@ -340,6 +345,9 @@ def remove_share_from_member(share: Share, removed_by, refunded_money_transactio
     return refunded_money_transaction
 
 
+RULE_NUMBER_PATTERN = re.compile(r"\d+(?:\.\d+)?")
+
+
 def rule_formula_validator(formula_string, variables, operators, formula_type):
     if formula_type not in SandikRule.FORMULA_TYPE.strings.keys():
         raise InvalidArgument(f"type is {formula_type} not in {SandikRule.FORMULA_TYPE.strings.keys()}")
@@ -355,8 +363,13 @@ def rule_formula_validator(formula_string, variables, operators, formula_type):
                 raise InvalidRuleVariable("{" + variable + "}")
             i += 1 + len(variable) + 1
             continue
-        elif data[i].isnumeric():
-            i += 1
+        # Sayı tek tek rakam olarak değil bütün olarak okunur; aksi hâlde ondalık ayracı (".")
+        # geçersiz karakter sayılıyor ve `{hisse_toplam_aidat}*1.5` gibi bir kural
+        # kaydedilemiyordu (oysa cexprtk ondalığı destekler). "1.2.3" yine reddedilir:
+        # kalıp "1.2"yi yer, sıradaki "." hiçbir dala uymaz.
+        number_match = RULE_NUMBER_PATTERN.match(data, i)
+        if number_match:
+            i = number_match.end()
             continue
 
         for operator in operators:
