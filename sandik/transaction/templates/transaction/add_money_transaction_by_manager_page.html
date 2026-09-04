@@ -168,7 +168,14 @@
             console.log(data);
             {# revenue=para girişi, expense=para çıkışı #}
             if ($("#type").val() == {{ MoneyTransaction.TYPE.REVENUE }}) {
-              if ($("#amount").val() > data.sum_of_unpaid_and_due_payments && data.sum_of_future_and_unpaid_payments > 0) {
+              {#
+                Artan parayla ne yapılacağı üyenin sandık tercihidir; soru yalnızca tercih "her
+                seferinde sor" iken sorulur. Diğer iki tercihte form olduğu gibi gönderilir ve
+                kararı sunucu verir (transaction/utils.py -> resolve_pay_future_payments), yani
+                buradaki atlama görüntüyle ilgilidir, sonucu belirlemez.
+              #}
+              let asks_remaining_money = data.remaining_money_action === "{{ RemainingMoneyPreference.ASK }}";
+              if (asks_remaining_money && $("#amount").val() > data.sum_of_unpaid_and_due_payments && data.sum_of_future_and_unpaid_payments > 0) {
                 e.preventDefault();
                 askAndSubmit(
                   form,

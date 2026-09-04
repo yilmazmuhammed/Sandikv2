@@ -352,6 +352,53 @@ class Member(db.Entity):
         # puanı her zaman 0 yapardı.
         return int(total / money.point_divisor_of(self.sandik_ref.currency))
 
+    def get_remaining_money_action(self):
+        """Para girişinde vadesi gelmiş ödemelerden artan para ne yapılsın? (bkz. `RemainingMoneyPreference`)
+
+        Anahtarı olmayan üye varsayılanı (`ASK`) kullanır: tercih eklenmeden önceki davranış her
+        seferinde sormaktı, mevcut üyeler için değişmemesi gerekir. Tanınmayan bir değer de
+        (elle düzenlenmiş Json) sormaya döner; sessizce bir tarafı seçmek paranın yanlış yere
+        gitmesi demektir.
+        """
+        return RemainingMoneyPreference.of(self.preferences)
+
+
+class RemainingMoneyPreference:
+    """**Entity değildir**: `Member.preferences` Json'undaki "kalan para" tercihinin sabitleri.
+
+    Üyenin vadesi gelmiş ödemelerinden fazla para girişi yapıldığında artan paranın ne olacağını
+    belirler. Tercih `ASK` iken karar işlem başına arayüzdeki soruyla verilir
+    (`transaction/add_money_transaction_by_manager_page.html`), diğer iki değerde soru hiç
+    sorulmaz ve cevabın yerine tercih geçer.
+
+    Değerler Json'a **string** olarak yazılır (form alanının değeriyle aynı); sayı kullanılsaydı
+    formdan gelen `"1"` ile veritabanındaki `1` her karşılaştırmada elle çevrilmek zorunda kalırdı.
+    """
+    KEY = "remaining_money_action"
+
+    ASK = "ask"
+    PAY_FUTURE_PAYMENTS = "pay_future_payments"
+    LEAVE_UNDISTRIBUTED = "leave_undistributed"
+
+    DEFAULT = ASK
+
+    # Kullanıcıya görünen etiketler; form alanının `choices`'ı da buradan üretilir.
+    strings = {
+        ASK: "Her para girişinde sorulsun",
+        PAY_FUTURE_PAYMENTS: "Vadesi gelmemiş ödemelerim ödensin",
+        LEAVE_UNDISTRIBUTED: "İşleme konmamış para olarak dursun",
+    }
+
+    @classmethod
+    def is_valid(cls, action):
+        return action in cls.strings
+
+    @classmethod
+    def of(cls, preferences: dict):
+        """Bir tercih sözlüğündeki geçerli değeri döndürür; yoksa/tanınmıyorsa varsayılanı."""
+        action = preferences.get(cls.KEY, cls.DEFAULT)
+        return action if cls.is_valid(action) else cls.DEFAULT
+
 
 class WebUser(db.Entity, UserMixin):
     id = PrimaryKey(int, auto=True)

@@ -20,7 +20,7 @@ from sandik.sandik.page import sandik_page_bp
 from sandik.transaction.api import transaction_api_bp
 from sandik.transaction.page import transaction_page_bp
 from sandik.utils import CustomJSONEncoder, money, sandik_preferences, set_parameters_of_url
-from sandik.utils.db_models import MoneyTransaction, Installment, Contribution, SandikRule
+from sandik.utils.db_models import MoneyTransaction, Installment, Contribution, SandikRule, RemainingMoneyPreference
 from sandik.website_transaction.page import website_transaction_page_bp
 
 os.environ["DATETIME_STR_FORMAT"] = "%Y-%m-%d %H:%M:%S.%f"
@@ -79,6 +79,7 @@ def jinja2_integration(flask_app: Flask) -> Flask:
     flask_app.jinja_env.globals.update(Contribution=Contribution)
     flask_app.jinja_env.globals.update(sandik_preferences=sandik_preferences)
     flask_app.jinja_env.globals.update(SandikRule=SandikRule)
+    flask_app.jinja_env.globals.update(RemainingMoneyPreference=RemainingMoneyPreference)
     flask_app.jinja_env.globals.update(catch_exception=catch_exception)
     flask_app.jinja_env.globals.update(set_parameters_of_url=set_parameters_of_url)
 

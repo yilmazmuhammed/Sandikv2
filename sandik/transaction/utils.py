@@ -8,7 +8,7 @@ from sandik.transaction.exceptions import UndefinedRemoveOperation, MaximumDebtA
     InvalidStartingTerm, TransactionException
 from sandik.utils import period as period_utils, sandik_preferences
 from sandik.utils.db_models import Share, Member, MoneyTransaction, Contribution, Installment, Sandik, Debt, Log, \
-    WebUser
+    WebUser, RemainingMoneyPreference
 from sandik.utils.exceptions import InvalidWhoseType
 from sandik.utils.period import NotValidPeriod
 
@@ -192,6 +192,22 @@ def add_expense_transactions(money_transaction, use_untreated_amount, created_by
                     number_of_installment=number_of_installment, share=share, start_period=start_period)
 
     return True
+
+
+def resolve_pay_future_payments(member: Member, answer):
+    """Para girişinde artan paranın vadesi gelmemiş ödemelere gidip gitmeyeceğini belirler.
+
+    Üyenin tercihi `ASK` ise karar `answer`dır: arayüz o işlem için soruyu sorar ve cevabı formun
+    gizli `pay_future_payments` alanıyla gönderir. Diğer iki tercihte soru hiç sorulmadığı için
+    formdan anlamlı bir cevap gelmez, tercih cevabın yerine geçer. Karar burada — sunucuda —
+    verilir: arayüz soruyu atlasa da sonuç aynıdır.
+    """
+    action = member.get_remaining_money_action()
+    if action == RemainingMoneyPreference.PAY_FUTURE_PAYMENTS:
+        return True
+    elif action == RemainingMoneyPreference.LEAVE_UNDISTRIBUTED:
+        return False
+    return bool(answer)
 
 
 def add_money_transaction(member, created_by, use_untreated_amount, pay_future_payments, creation_type, payments=None,

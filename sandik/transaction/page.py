@@ -38,6 +38,11 @@ def add_money_transaction_by_manager_page(sandik_id):
                     mt_type=int(form.type.data), use_untreated_amount=form_data["use_untreated_amount"],
                     amount=form.amount.data, whose=member
                 )
+            elif int(form.type.data) == MoneyTransaction.TYPE.REVENUE:
+                # Formdaki cevap yalnızca üyenin tercihi "her seferinde sor" iken bağlayıcıdır.
+                form_data["pay_future_payments"] = utils.resolve_pay_future_payments(
+                    member=member, answer=form_data["pay_future_payments"]
+                )
 
             money_transaction = utils.add_money_transaction(
                 member=member, creation_type=MoneyTransaction.CREATION_TYPE.BY_MANUEL,

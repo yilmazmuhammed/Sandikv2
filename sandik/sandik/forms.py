@@ -9,7 +9,7 @@ from sandik.sandik import db, utils
 from sandik.sandik.exceptions import InvalidRuleVariable, InvalidRuleCharacter, RuleOperatorCountException, \
     NoValidRuleFound
 from sandik.utils import money, sandik_preferences
-from sandik.utils.db_models import Sandik, SmsPackage, SandikRule
+from sandik.utils.db_models import RemainingMoneyPreference, Sandik, SmsPackage, SandikRule
 from sandik.utils.forms import CustomFlaskForm, apply_currency_to_amount_field, input_required_validator, \
     max_length_validator
 
@@ -387,6 +387,13 @@ class MemberPreferencesForm(CustomFlaskForm):
         default=True
     )
 
+    remaining_money_action = SelectField(
+        label="Vadesi gelmiş ödemelerimden artan para ne yapılsın?",
+        choices=list(RemainingMoneyPreference.strings.items()),
+        default=RemainingMoneyPreference.DEFAULT,
+        coerce=str,
+    )
+
     submit = SubmitField(label="Kaydet")
 
     def __init__(self, form_title='Sandık tercihleri', *args, **kwargs):
@@ -394,6 +401,7 @@ class MemberPreferencesForm(CustomFlaskForm):
 
     def fill_values(self, preferences):
         self.pay_at_beginning_of_month.data = preferences.get("pay_at_beginning_of_month", True)
+        self.remaining_money_action.data = RemainingMoneyPreference.of(preferences)
 
 
 class SendSmsForm(CustomFlaskForm):

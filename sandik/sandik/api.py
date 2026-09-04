@@ -21,7 +21,9 @@ def member_financial_status_api(sandik_id):
                    sum_of_unpaid_and_due_payments=utils.sum_of_unpaid_and_due_payments(whose=member),
                    sum_of_future_and_unpaid_payments=utils.sum_of_future_and_unpaid_payments(whose=member),
                    undistributed_amount=member.total_of_undistributed_amount(),
-                   max_amount_can_borrow=member.max_amount_can_borrow())
+                   max_amount_can_borrow=member.max_amount_can_borrow(),
+                   # Para girişi formu, artan para sorusunu soracak mı buna bakarak karar verir.
+                   remaining_money_action=member.get_remaining_money_action())
 
 
 @sandik_api_bp.route('<int:sandik_id>/uye-hisseleri')

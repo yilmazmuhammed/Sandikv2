@@ -49,6 +49,9 @@ Kilit kavramlar:
   varsayılanları (1 ve 25) kullanır, yani mevcut ve yeni kullanıcılar baştan mail alır.
   Yazma yalnızca `auth/db.py` → `update_reminder_preference` üzerinden yapılır; o da
   `update_member_preferences` gibi Json'daki diğer anahtarlara dokunmaz.
+- **`Member.preferences`**: kişinin **o sandıktaki üyeliğine** ait tercihler; aynı kalıpta bir Json
+  sütunu. `WebUser.preferences` ile karıştırılmamalı, ikisinin sayfaları da ayrıdır — bkz.
+  "Üye tercihleri".
 
 ## Modüller (`sandik/`)
 
@@ -70,6 +73,55 @@ Kilit kavramlar:
 Tasks). Aidat oluşturur ve sırası gelen ödeme hatırlatma e-postalarını gönderir — bkz.
 "Gecelik işler ve hatırlatma e-postaları". (Procfile'daki `clock` satırı Heroku dönemindendir;
 PythonAnywhere Procfile'ı yok sayar.)
+
+## Üye tercihleri (`/sandik/<id>/tercihlerim`)
+
+**İki ayrı tercih sayfası vardır, adları da adresleri de benzer — karıştırmayın:**
+
+| Sayfa | Nerede tutulur | Kapsam |
+|---|---|---|
+| `/tercihlerim` (üst menü → "E-posta tercihlerim") | `WebUser.preferences` | Kişinin tamamı; şimdilik hatırlatma e-postaları |
+| `/sandik/<id>/tercihlerim` (üst menü → "Sandık tercihlerim") | `Member.preferences` | **O sandıktaki üyeliğe** özel |
+
+`Member.preferences` bir Json sütunudur; yeni tercih için sütun/tablo eklemek gerekmez, anahtar
+eklenir. Sayfa `sandik/page.py` → `update_member_preferences_page`, form
+`sandik/forms.py` → `MemberPreferencesForm`, yazma `sandik/db.py` →
+`update_member_preferences` (Json'daki diğer anahtarlara dokunmaz). Şu an iki tercih var:
+
+| Anahtar | Varsayılan | İş |
+|---|---|---|
+| `pay_at_beginning_of_month` | `True` | Gecelik iş aidatları oluştururken, üyenin işleme konmamış parasından **vadesi gelmiş** ödemelerini de kapatır (`transaction/utils.py` → `create_due_contributions_for_sandik`) |
+| `remaining_money_action` | `ask` | Para girişinde, vadesi gelmiş ödemelerden **artan** para ne olsun? |
+
+### "Artan para" tercihi (`RemainingMoneyPreference`)
+
+Üyenin vadesi gelmiş ödemelerinden fazla para girişi yapıldığında artan paranın vadesi gelmemiş
+taksitlere mi gideceği yoksa "işleme konmamış para" olarak mı duracağı sorulur. Tercih bu soruya
+üye adına baştan cevap verebilmek içindir; `RemainingMoneyPreference` (`utils/db_models.py`,
+**entity değil**, `ReminderPreference` ile aynı kalıp) üç değer tanımlar:
+
+| Değer | Davranış |
+|---|---|
+| `ask` (varsayılan) | Her para girişinde sorulur — tercih eklenmeden önceki davranış |
+| `pay_future_payments` | Sorulmaz, vadesi gelmemiş ödemeler ödenir |
+| `leave_undistributed` | Sorulmaz, para işleme konmamış kalır |
+
+Değerler Json'a **string** yazılır (form alanının değeriyle aynı; sayı olsaydı formdan gelen `"1"`
+ile veritabanındaki `1` her karşılaştırmada elle çevrilirdi). Anahtarı olmayan **ve tanınmayan bir
+değeri olan** üye `ask`e düşer (`RemainingMoneyPreference.of`): elle düzenlenmiş bir Json yüzünden
+sessizce bir tarafı seçmek paranın yanlış yere gitmesi demektir.
+
+**Kararı sunucu verir**, arayüz değil: `transaction/utils.py` → `resolve_pay_future_payments(member,
+answer)` tercih `ask` ise formdan gelen cevabı, değilse tercihi döndürür.
+`transaction/page.py` → `add_money_transaction_by_manager_page` para girişinde formun gizli
+`pay_future_payments` alanını bu fonksiyondan geçirir. Arayüz tarafında ise
+`add_money_transaction_by_manager_page.html`, `member_financial_status_api`nin döndürdüğü
+`remaining_money_action` alanına bakıp soruyu **hiç sormaz**; yani oradaki atlama görüntüyle
+ilgilidir, sonucu belirlemez.
+
+Tercih yalnızca bu soruya bakar. "Vadesi gelmemiş ödemeleri öde" bağlantıları (`payments_page.html`,
+`sandik_summary_for_member_page.html`) ve gecelik iş, `pay_future_payments`i kendileri açıkça
+verdikleri için tercihe bakmaz — oralarda niyet zaten tıklayan kişinindir.
 
 ## Gecelik işler ve hatırlatma e-postaları
 

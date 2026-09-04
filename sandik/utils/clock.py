@@ -81,7 +81,7 @@ def build_app():
     from sandik.app import create_app
 
     app = create_app()
-    app.config["SERVER_NAME"] = os.getenv("SANDIKv2_SERVER_NAME", "sandikv2.myilmaz.tr")
+    app.config["SERVER_NAME"] = os.getenv("SANDIKv2_SERVER_NAME", "www.myilmaz.tr/sandikv2")
     # Site her ortamda https yayınlanıyor; e-postadaki bağlantı da hep canlı adrese gitmeli.
     app.config["PREFERRED_URL_SCHEME"] = "https"
     return app
