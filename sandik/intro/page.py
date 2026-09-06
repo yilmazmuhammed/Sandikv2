@@ -25,4 +25,10 @@ def statistics_page():
     # İstatistikler önbelleğe alınır; site yöneticisi "?yenile=1" ile güncel veriyi görebilir.
     use_cache = not (request.args.get("yenile") and current_user.is_authenticated and current_user.is_admin())
     g.statistics = utils.get_statistics(use_cache=use_cache)
+    # Giriş yapmış kullanıcı, açılır listeden kendi sandıklarından birini seçip onun rakamlarını
+    # görebilir. Kişiye özel olduğu için yukarıdaki önbelleğe konmaz; seçim yoksa hesaplama da
+    # yapılmaz ve sayfa eskisiyle aynı kalır.
+    g.sandik_selection = utils.get_sandik_selection(
+        web_user=current_user, sandik_id=request.args.get("sandik", type=int)
+    ) if current_user.is_authenticated else None
     return render_template("intro/statistics_page.html", page_info=LayoutPI(title="İstatistikler"))

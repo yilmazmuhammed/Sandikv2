@@ -335,7 +335,7 @@ kendi başına duran modern bir tanıtım sitesi görünümündeler.
 |---|---|---|
 | `/tanitim` | `about_page.html` | Sandık sistemi nedir, nasıl işler, kavramlar, sandık türleri |
 | `/nasil-kullanilir` | `how_to_use_page.html` | Üye ve yönetici için adım adım kullanım kılavuzu + SSS |
-| `/istatistikler` | `statistics_page.html` | Sistemin gerçek kullanım rakamları |
+| `/istatistikler` | `statistics_page.html` | Sistemin gerçek kullanım rakamları + giriş yapmışa seçtiği sandığın rakamları |
 
 - **Ortak kabuk `templates/intro/_layout.html`'dedir**: `<head>`, üst menü, alt bilgi, renk
   değişkenleri ve bütün bileşen stilleri (kart, adım listesi, tablo, not kutusu, SSS akordiyonu,
@@ -408,7 +408,44 @@ elemeden geçen sandıkların en az birinde **aktif üyeliği olan** `WebUser`'l
   herkese açık olduğu için her istekte toplu sorgu çalışmasın diye. Önbellek her worker için
   ayrıdır. Site yöneticisi `?yenile=1` ile önbelleği atlayabilir. Dönen sözlük paylaşıldığı için
   **değiştirilmemelidir**.
-- Sayfada kişiye ya da tek bir sandığa ait bilgi gösterilmez; hepsi toplam değerdir.
+- Sayfanın **herkese açık yarısında** kişiye ya da tek bir sandığa ait bilgi gösterilmez; hepsi
+  toplam değerdir.
+
+### "Sandığınızın rakamları" bölümü (giriş yapmış kullanıcıya)
+
+Giriş yapmış kullanıcı, **genel istatistiklerin altındaki açılır listeden** kendi sandıklarından
+birini seçip onun rakamlarını görebilir (`utils.get_sandik_selection` → `collect_sandik_statistics`,
+şablonda `g.sandik_selection`). Seçilen sandık için: öne çıkan dört kutu, "Para" ve "Üyeler ve
+kayıtlar" kartları, yıllara göre borç grafiği ve sandığa giden bağlantı.
+
+- **Bölüm sayfanın sonundadır**: genel istatistikler ("Bu sayılar nasıl hesaplanıyor?" kartı dahil)
+  hiç bölünmeden akar, kullanıcıya özel kısım onların altına, CTA'nın üstüne gelir. Bir üstteki
+  bölüm `soft` zeminde olduğu için bu bölüm düz zemindedir.
+- **Seçim yapılmadıkça hiçbir şey hesaplanmaz**; bölüm yalnızca başlık + açılır listeden ibaret
+  kalır, yani sayfanın geri kalanı herkes için eskisiyle aynıdır. Sandıkların hepsi birden
+  listelenmez (uzun sayfa + gereksiz sorgu).
+- **Seçim adres satırında taşınır** (`/istatistikler?sandik=<id>#sandigim`): sayfa yenilenince ya da
+  bağlantı paylaşılınca aynı sandık açılır ve seçilmeyen sandıkların verisi HTML'e hiç girmez.
+  Açılır liste `onchange` ile formu gönderir; javascript kapalıysa `<noscript>` içindeki "Göster"
+  düğmesi görünür.
+- **Sandık kümesi `WebUser.my_sandiks()`tir** (üyelik + sandık yetkisi). Bu, sandık detay sayfasının
+  erişim kuralıyla (`to_be_member_or_manager_of_sandik_required`) aynı kümedir; yani burada
+  kullanıcının zaten göremeyeceği bir veri gösterilmez. **Yetkilendirme bu kesişimden gelir**, ayrı
+  bir kontrol yoktur: adrese başka bir sandığın kimliği yazılırsa seçim boş kalır (hata verilmez).
+- **Çöp veri elemesi burada uygulanmaz**: kullanıcı, sandığı küçük ya da kapatılmış olsa da kendi
+  rakamlarını görmelidir. Bu yüzden bu sayılar üstteki genel toplamlara girmiyor olabilir; bölümün
+  girişi ve "Bu sayılar nasıl hesaplanıyor?" kartı bunu kullanıcıya yazar.
+- **Önbelleğe alınmaz.** `get_statistics()` önbelleği bütün ziyaretçilerle paylaşılır, kişiye bağlı
+  veri oraya konulamaz; seçili sandığın rakamları her istekte hesaplanır.
+- Tek sandık tek para birimi demektir, birim gruplaması gerekmez: `collect_money_statistics`
+  **tek elemanlı grupla** çağrılır ve genel bölümdekiyle aynı sözlüğü döndürür. `intro/db.py`deki
+  sandık listesi alan sorgular da tek elemanlı listeyle çalışır.
+- Genel bölümde karşılığı olmayan tek şey sandığın **son durumu** (`Sandik.get_final_status()`) ve
+  işleme konmamış parasıdır; kasadaki para sandığa özel olduğu için sistem geneli için anlamsızdır.
+- Öne çıkan kutulardaki kısaltma `short_amount_string`tir ve **işareti korur** (son durum eksi
+  olabilir: "-2 bin").
+- Kutuların ızgarası `.stat-grid`tir; `.stat-strip` aynı ızgaranın hero'nun altına taşan hâlidir
+  (ikisi tek yerde tanımlıdır, kopyalanmaz).
 
 ## Para birimi
 
@@ -475,7 +512,8 @@ birimdeyken çıktı eskisiyle birebir aynıdır**:
   hiç gösterilmez, yerine açıklamalı bir `–` konur (mobilde sütun eklememek için).
 - **İstatistikler** (`intro/utils.py`): parasal toplamlar `money_by_currency` listesinde birim
   başına hesaplanır; öne çıkan kutu en çok sandığı olan birimi (`main_money`) gösterir. Sayaçlar
-  birimden bağımsızdır.
+  birimden bağımsızdır. Kullanıcıya özel bölümde tek bir sandık gösterildiği için sorun
+  kendiliğinden yoktur: tutarlar `|money(sandik)` ile yazılır.
 - **Hatırlatma e-postası** (`utils/reminder.py`): her sandık bölümü kendi `currency`sini taşır;
   genel toplam yalnızca tek birim varsa yazılır.
 

@@ -1,8 +1,13 @@
 """Tanıtım/istatistik sayfaları için salt okunur sorgular.
 
 Diğer `db.py` dosyalarının aksine burada veri değiştirilmez, dolayısıyla `Log` kaydı da
-oluşturulmaz. Bütün fonksiyonlar toplu (aggregate) sonuç döndürür; tek bir üyeye/sandığa ait
-kişisel bilgi dışarı verilmez.
+oluşturulmaz. Bütün fonksiyonlar toplu (aggregate) sonuç döndürür; tek bir üyeye ait kişisel bilgi
+hiçbir zaman dışarı verilmez.
+
+Sandık listesi alan fonksiyonlar tek elemanlı listeyle de çağrılabilir: giriş yapmış kullanıcıya
+gösterilen "sandığınızın rakamları" bölümü bunu kullanır (bkz. `utils.collect_sandik_statistics`).
+Tek bir sandığın rakamları yalnızca o sandığın üyesine/yöneticisine gösterilir; herkese açık
+bölümde yine yalnızca bütün sandıkların toplamı vardır.
 """
 from pony.orm import count, exists, max as pony_max, select, sum as pony_sum
 
@@ -99,3 +104,8 @@ def debt_statistics_by_year(sandiks) -> list:
         (d.sub_receipt_ref.money_transaction_ref.date.year, pony_sum(d.amount), count(d))
         for d in Debt if d.share_ref.member_ref.sandik_ref in sandiks
     ).order_by(1)[:]
+
+
+def last_money_transaction_date(sandik):
+    """Tek bir sandıktaki son para hareketinin tarihi; hiç hareket yoksa `None`."""
+    return select(mt.date for mt in MoneyTransaction if mt.member_ref.sandik_ref == sandik).max()

@@ -5,12 +5,15 @@
 
 {% block intro_css_block %}
   <style>
-    /* Hero'nun altına taşan öne çıkan sayılar */
+    /* Öne çıkan sayıların ızgarası. `.stat-strip`, aynı ızgaranın hero'nun altına taşan hâlidir;
+       `.stat-grid` ise bölüm içinde (kullanıcının kendi sandıkları) taşmadan kullanılır. */
     .stats-hero { padding: 56px 0 96px; }
-    .stat-strip {
+    .stat-grid, .stat-strip {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 16px;
+    }
+    .stat-strip {
       margin-top: -58px;
       position: relative;
       z-index: 2;
@@ -71,9 +74,42 @@
     .bar-value .amount { font-weight: 700; }
     .bar-value .cnt { color: var(--ink-3); font-weight: 600; margin-left: 8px; }
 
+    /* Kullanıcının kendi sandığı: açılır liste ve seçilen sandığın bloğu */
+    .sandik-picker {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px;
+      margin-bottom: 22px;
+    }
+    .sandik-picker label { font-weight: 700; color: var(--ink-2); }
+    .sandik-picker select {
+      flex: 1 1 260px; max-width: 420px;
+      padding: 11px 14px;
+      font: inherit; font-size: 16px;  /* 16px altı, telefonda alanı yakınlaştırır */
+      color: var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .picker-hint { color: var(--ink-3); margin: 0; }
+    .sandik-head {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+      margin-bottom: 18px;
+    }
+    .sandik-head h3 { margin: 0; }
+    .sandik-head .btn { margin-left: auto; }
+    .sandik-meta {
+      display: flex; flex-wrap: wrap; gap: 4px 14px;
+      color: var(--ink-3); font-size: 14.5px;
+    }
+    .sandik-meta .tag {
+      font-weight: 700; color: var(--warn);
+    }
+    .sandik-block .grid, .sandik-block .card.bars-card { margin-top: 18px; }
+    .sandik-block .card h4 { margin: 0 0 14px; }
+
     @media (max-width: 860px) {
       .stats-hero { padding: 42px 0 74px; }
-      .stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: -46px; }
+      .stat-grid, .stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stat-strip { margin-top: -46px; }
       .stat .stat-value { font-size: 27px; }
       /* Dar ekranda tutar, çubuğun altına ikinci satıra iner */
       .bar-row { grid-template-columns: 46px minmax(0, 1fr); }
@@ -82,9 +118,12 @@
     @media (max-width: 700px) {
       .stats-hero { padding: 32px 0 56px; }
       .stat-strip { margin-top: -32px; }
+      /* Sandık başlığı telefonda alt alta dizilir, "sandığa git" düğmesi tam genişlikte olur */
+      .sandik-head { flex-direction: column; align-items: stretch; }
+      .sandik-head .btn { margin-left: 0; justify-content: center; }
     }
     @media (max-width: 460px) {
-      .stat-strip { grid-template-columns: minmax(0, 1fr); }
+      .stat-grid, .stat-strip { grid-template-columns: minmax(0, 1fr); }
     }
   </style>
 {% endblock %}
@@ -106,6 +145,10 @@
 {% block intro_content %}
   {% set stats = g.statistics %}
 
+  {# Sayfanın iki yarısı birbirinden bağımsızdır: sistem geneli rakamlar herkese açıktır ve
+     elemeden geçen sandıkları kapsar; altındaki bölüm ise yalnızca giriş yapmış kullanıcıya
+     kendi sandıklarını gösterir. Bu yüzden ikisi ayrı ayrı koşullanır — genel veri yokken de
+     kullanıcı kendi sandığının rakamlarını görebilmelidir. #}
   {% if not stats.has_data %}
     <section class="section">
       <div class="wrap narrow">
@@ -148,6 +191,10 @@
         </div>
       </div>
     </div>
+
+  {% endif %}
+
+  {% if stats.has_data %}
 
     <!-- Kırılımlar -->
     <section class="section">
@@ -302,13 +349,177 @@
             katılmamış kullanıcılar sayılara girmez.
           </p>
           <p style="color: var(--ink-3); font-size: 14.5px; margin-bottom: 0;">
-            Sayfada kişiye ya da tek bir sandığa ait hiçbir bilgi gösterilmez; hepsi toplam
-            değerlerdir. Son hesaplama: {{ stats.calculated_at.strftime("%d.%m.%Y %H:%M") }}.
+            Bu sayılar toplam değerlerdir; kişiye ya da tek bir sandığa ait bilgi içermezler. Giriş
+            yaptığınızda sayfaya eklenen “Sandığınızın rakamları” bölümü ise yalnızca size gösterilir
+            ve orada yalnızca kendi seçtiğiniz sandığın sayıları hesaplanır.
+            Son hesaplama: {{ stats.calculated_at.strftime("%d.%m.%Y %H:%M") }}.
           </p>
         </div>
       </div>
     </section>
 
+  {% endif %}
+
+  <!-- Kullanıcının kendi sandığı: yalnızca giriş yapmış üyeye/yöneticiye gösterilir ve genel
+       istatistiklerin altında durur. Sayfa varsayılan olarak eskisi gibidir; rakamlar ancak
+       açılır listeden bir sandık seçilince (adreste "?sandik=<id>") hesaplanıp gösterilir.
+       Bir üstteki "Şeffaflık" bölümü `soft` zeminde olduğu için bu bölüm düz zemindedir. -->
+  {% if g.sandik_selection and g.sandik_selection.sandiks %}
+    {% set selection = g.sandik_selection %}
+    <section class="section" id="sandigim">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="kicker">Size özel</div>
+          <h2>Sandığınızın rakamları</h2>
+          <p>
+            Üyesi ya da yöneticisi olduğunuz bir sandığı seçerek onun kendi sayılarını
+            görebilirsiniz. Bu bölümü yalnızca siz görüyorsunuz ve buradaki rakamlar sandığın
+            tamamını kapsar: yukarıdaki genel sayılarda uygulanan eleme burada uygulanmaz.
+          </p>
+        </div>
+
+        {# Seçim adres satırında taşınır: sayfa yenilendiğinde/paylaşıldığında aynı sandık açılır
+           ve seçilmeyen sandıkların verisi sayfaya hiç girmez. #}
+        <form class="sandik-picker" method="get" action="{{ url_for('intro_page_bp.statistics_page') }}#sandigim">
+          <label for="sandik-select">Sandık</label>
+          <select id="sandik-select" name="sandik" onchange="this.form.submit()">
+            <option value="">Sandık seçin…</option>
+            {% for sandik in selection.sandiks %}
+              <option value="{{ sandik.id }}" {% if selection.selected_sandik == sandik %}selected{% endif %}>
+                {{ sandik.name }}
+              </option>
+            {% endfor %}
+          </select>
+          {# Javascript kapalıysa "onchange" çalışmaz; o durumda düğmeyle gönderilir. #}
+          <noscript><button class="btn btn-primary btn-sm" type="submit">Göster</button></noscript>
+        </form>
+
+        {% if not selection.statistics %}
+          <p class="picker-hint">
+            Listeden bir sandık seçtiğinizde o sandığın üye, borç ve aidat rakamları burada
+            gösterilir.
+          </p>
+        {% else %}
+          {% set item = selection.statistics %}
+          {% set sandik = item.sandik %}
+          <div class="sandik-block">
+
+            <div class="sandik-head">
+              <div>
+                <h3>{{ sandik.name }}</h3>
+                <div class="sandik-meta">
+                  <span>{{ sandik.type_str() }}</span>
+                  <span>{{ sandik.currency_str() }}</span>
+                  <span>{{ sandik.date_of_opening.strftime("%d.%m.%Y") }} tarihinde açıldı</span>
+                  {% if not sandik.is_active %}<span class="tag">Kapatılmış sandık</span>{% endif %}
+                </div>
+              </div>
+              <a class="btn btn-ghost btn-sm" href="{{ url_for('sandik_page_bp.sandik_index_page', sandik_id=sandik.id) }}">
+                <i class="fa-solid fa-arrow-right"></i> Sandığa git
+              </a>
+            </div>
+
+            <div class="stat-grid">
+              <div class="stat">
+                <div class="stat-icon alt"><i class="fa-solid fa-users"></i></div>
+                <div class="stat-value">{{ item.active_member_count }}</div>
+                <div class="stat-label">Aktif üye</div>
+                <div class="stat-hint">{{ item.active_share_count }} aktif hisse</div>
+              </div>
+              <div class="stat">
+                <div class="stat-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+                <div class="stat-value">{{ item.money.total_debt_amount_short }} <span class="unit">{{ sandik.currency_symbol() }}</span></div>
+                <div class="stat-label">Verilen toplam borç</div>
+                <div class="stat-hint">{{ item.debt_count }} ayrı borç işlemi</div>
+              </div>
+              <div class="stat">
+                <div class="stat-icon alt"><i class="fa-solid fa-vault"></i></div>
+                <div class="stat-value">{{ item.final_status_short }} <span class="unit">{{ sandik.currency_symbol() }}</span></div>
+                <div class="stat-label">Sandığın son durumu</div>
+                <div class="stat-hint">Aidat, borç ve taksitlerin bakiyesi</div>
+              </div>
+              <div class="stat">
+                <div class="stat-icon"><i class="fa-solid fa-right-left"></i></div>
+                <div class="stat-value">{{ item.money_transaction_count }}</div>
+                <div class="stat-label">Para giriş/çıkışı</div>
+                <div class="stat-hint">
+                  {% if item.last_money_transaction_date %}
+                    Son hareket: {{ item.last_money_transaction_date.strftime("%d.%m.%Y") }}
+                  {% else %}
+                    Henüz para hareketi yok
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-2">
+              <div class="card">
+                <div class="feature" style="margin-bottom: 14px;">
+                  <div class="icon"><i class="fa-solid fa-coins"></i></div>
+                  <div><h3 style="margin: 6px 0 0;">Para</h3></div>
+                </div>
+                <div class="kv">
+                  <div><span class="k">Verilen toplam borç</span><span class="v">{{ item.money.total_debt_amount|money(sandik) }}</span></div>
+                  <div><span class="k">Geri ödenen (taksit) tutarı</span><span class="v">{{ item.money.paid_installment_amount|money(sandik) }}</span></div>
+                  <div><span class="k">Geri ödenmeyi bekleyen borç</span><span class="v">{{ item.money.unpaid_debt_amount|money(sandik) }}</span></div>
+                  <div><span class="k">Ödenen toplam aidat</span><span class="v">{{ item.money.paid_contribution_amount|money(sandik) }}</span></div>
+                  <div><span class="k">Sandığa yatırılan toplam para</span><span class="v">{{ item.money.total_revenue_amount|money(sandik) }}</span></div>
+                  <div><span class="k">İşleme konmamış para</span><span class="v">{{ item.undistributed_amount|money(sandik) }}</span></div>
+                  <div><span class="k">Sandığın son durumu</span><span class="v">{{ item.final_status|money(sandik) }}</span></div>
+                </div>
+                <p style="color: var(--ink-3); font-size: 14px; margin-top: 12px;">
+                  “Son durum”, toplanan aidatlardan verilen borçlar düşülüp geri ödenen taksitler ve
+                  işleme konmamış para eklendiğinde sandıkta kalan tutardır.
+                </p>
+              </div>
+
+              <div class="card">
+                <div class="feature" style="margin-bottom: 14px;">
+                  <div class="icon alt"><i class="fa-solid fa-list-check"></i></div>
+                  <div><h3 style="margin: 6px 0 0;">Üyeler ve kayıtlar</h3></div>
+                </div>
+                <div class="kv">
+                  <div><span class="k">Aktif üye</span><span class="v">{{ item.active_member_count }}</span></div>
+                  <div><span class="k">Aktif hisse</span><span class="v">{{ item.active_share_count }}</span></div>
+                  <div><span class="k">Ortalama aylık aidat</span><span class="v">{{ item.money.average_contribution_amount|money(sandik) }}</span></div>
+                  <div><span class="k">Para giriş/çıkışı</span><span class="v">{{ item.money_transaction_count }}</span></div>
+                  <div><span class="k">Aidat kaydı</span><span class="v">{{ item.contribution_count }}</span></div>
+                  <div><span class="k">Taksit kaydı</span><span class="v">{{ item.installment_count }}</span></div>
+                  <div><span class="k">Borç kaydı</span><span class="v">{{ item.debt_count }}</span></div>
+                  <div>
+                    <span class="k">İşleyiş süresi</span>
+                    <span class="v">
+                      {% if item.operating_year_count >= 1 %}{{ item.operating_year_count }} yıl{% else %}1 yıldan az{% endif %}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {% if item.money.debts_by_year %}
+              <div class="card bars-card">
+                <h4>Yıllara göre verilen borç</h4>
+                <div class="bars">
+                  {% for row in item.money.debts_by_year %}
+                    <div class="bar-row">
+                      <div class="bar-year">{{ row.year }}</div>
+                      <div class="bar-track">
+                        <div class="bar-fill" style="width: {{ row.ratio if row.ratio > 2 else 2 }}%;"></div>
+                      </div>
+                      <div class="bar-value">
+                        <span class="amount">{{ row.amount|money(sandik) }}</span>
+                        <span class="cnt">{{ row.count }} borç</span>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+
+          </div>
+        {% endif %}
+      </div>
+    </section>
   {% endif %}
 
   <!-- CTA -->

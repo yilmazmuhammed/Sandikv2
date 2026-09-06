@@ -4,6 +4,11 @@
 amaçlar. Bu yüzden **denemelik veriler ayıklanır**: birkaç kayıt girilip bırakılmış sandıklar ve
 hiçbir sandıkta üyeliği olmayan site kullanıcıları sayılara dahil edilmez. Ölçütler aşağıdaki
 sabitlerdedir; hepsi sayfanın altında kullanıcıya da açıklanır (bkz. `statistics_page.html`).
+
+Sayfanın ikinci yarısı **giriş yapmış kullanıcıya özeldir**: bir açılır listeden kendi
+sandıklarından birini seçip onun aynı biçimdeki rakamlarını görür (`get_sandik_selection`). Seçim
+yapılmadıkça hiçbir şey hesaplanmaz, yani sayfa herkes için eskisiyle aynı kalır; orada eleme
+uygulanmaz ve sonuç önbelleğe alınmaz — gerekçeleri o fonksiyonların açıklamalarındadır.
 """
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -32,14 +37,18 @@ _statistics_cache = {"data": None, "calculated_at": None}
 def short_amount_string(amount) -> str:
     """Büyük tutarları öne çıkan kutularda kısa göstermek için: 14560648.95 -> "14,6 milyon".
 
-    Tam tutar zaten tabloların içinde gösterildiği için burada okunabilirlik yeğlenir.
+    Tam tutar zaten tabloların içinde gösterildiği için burada okunabilirlik yeğlenir. Kısaltma
+    işaretten bağımsız yapılır: sandığın son durumu eksi olabilir ve "-2308" gibi ham bir sayı
+    yerine "-2 bin" yazılmalıdır.
     """
     amount = Decimal(amount or 0)
+    sign = "-" if amount < 0 else ""
+    amount = abs(amount)
     if amount >= 1000000:
-        return "{:.1f}".format(amount / 1000000).replace(".", ",") + " milyon"
+        return sign + "{:.1f}".format(amount / 1000000).replace(".", ",") + " milyon"
     elif amount >= 1000:
-        return "{:.0f}".format(amount / 1000) + " bin"
-    return "{:.0f}".format(amount)
+        return sign + "{:.0f}".format(amount / 1000) + " bin"
+    return sign + "{:.0f}".format(amount)
 
 
 def collect_sandik_facts() -> list:
@@ -184,3 +193,68 @@ def get_statistics(use_cache: bool = True) -> dict:
     _statistics_cache["data"] = data
     _statistics_cache["calculated_at"] = data["calculated_at"]
     return data
+
+
+def collect_sandik_statistics(sandik) -> dict:
+    """Tek bir sandığın kendi rakamları — giriş yapmış üyeye/yöneticiye gösterilen bölüm için.
+
+    Sayfanın genelindeki "çöp veri" elemesi (`MIN_ACTIVE_MEMBER_COUNT` vb.) burada **uygulanmaz**:
+    kullanıcı, sandığı henüz küçük ya da kapatılmış olsa bile kendi sandığının rakamlarını
+    görebilmelidir. Bu yüzden buradaki sayılar üstteki genel toplamlara girmiyor olabilir; sayfa
+    bunu kullanıcıya da yazar.
+
+    Parasal toplamlar tek bir sandığa aittir, yani hepsi aynı para birimindedir; birim gruplaması
+    gerekmez ve `collect_money_statistics` tek elemanlı grupla çağrılır.
+    """
+    sandiks = [sandik]
+    money_statistics = collect_money_statistics(sandiks)
+    final_status = sandik.get_final_status() or Decimal(0)
+
+    return {
+        "sandik": sandik,
+        # Parasal toplamlar (genel bölümdekiyle aynı yapı: total_debt_amount, unpaid_debt_amount,
+        # debts_by_year, ...) — hepsi sandığın para biriminde
+        "money": money_statistics,
+
+        # Sandığın "şu anki" durumu: genel bölümde karşılığı yoktur, çünkü kasadaki para
+        # sandığa özeldir.
+        "final_status": final_status,
+        "final_status_short": short_amount_string(final_status),
+        "undistributed_amount": sandik.total_of_undistributed_amount() or Decimal(0),
+
+        # Kişiler ve kayıtlar
+        "active_member_count": db.count_active_members(sandiks=sandiks),
+        "active_share_count": db.count_active_shares(sandiks=sandiks),
+        "money_transaction_count": db.count_money_transactions(sandiks=sandiks),
+        "contribution_count": db.count_contributions(sandiks=sandiks),
+        "installment_count": db.count_installments(sandiks=sandiks),
+        "debt_count": db.count_debts(sandiks=sandiks),
+
+        # Zaman
+        "last_money_transaction_date": db.last_money_transaction_date(sandik=sandik),
+        "operating_year_count": relativedelta(date.today(), sandik.date_of_opening).years,
+    }
+
+
+def get_sandik_selection(web_user, sandik_id=None) -> dict:
+    """İstatistik sayfasındaki açılır listenin verisi: sandıklar ve seçiliyse onun rakamları.
+
+    Liste `WebUser.my_sandiks()`tir: üyelikten **ve** sandık yetkisinden gelen sandıklar (türkçe
+    ada göre sıralı). Bu, sandık detay sayfasının erişim kuralıyla
+    (`to_be_member_or_manager_of_sandik_required`) aynı kümedir, yani burada kullanıcının başka
+    sayfalardan zaten göremeyeceği bir veri gösterilmez. **Yetkilendirme bu kesişimden gelir**:
+    `sandik_id` yalnızca listede bulunursa seçili sayılır, adresten başka bir sandığın kimliği
+    verilirse hiçbir şey hesaplanmaz (hata da verilmez, sayfa "seçim yapılmamış" hâlinde kalır).
+
+    Rakamlar **yalnızca seçilen sandık için** hesaplanır; seçim yoksa hiç sorgu çalışmaz ve sayfa
+    eskisiyle birebir aynı kalır. Sonuç kullanıcıya özel olduğu için **önbelleğe alınmaz**:
+    `get_statistics()` önbelleği bütün ziyaretçilerle paylaşılır, kişiye bağlı veri oraya
+    konulamaz.
+    """
+    sandiks = web_user.my_sandiks()
+    selected_sandik = next((sandik for sandik in sandiks if sandik.id == sandik_id), None)
+    return {
+        "sandiks": sandiks,
+        "selected_sandik": selected_sandik,
+        "statistics": collect_sandik_statistics(sandik=selected_sandik) if selected_sandik else None,
+    }
