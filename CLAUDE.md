@@ -279,7 +279,7 @@ Böylece deploy **elle bir adım gerektirmez**: `/paw` → git pull → reload y
 - `AddColumn`ın `column_type`/`default` alanları **sağlayıcıya göre sözlük** de alabilir. Pony `Json`
   mysql/sqlite'ta `JSON`, postgres'te `JSONB`'dir; ayrıca **MySQL JSON sütununa DEFAULT kabul etmez**,
   bu yüzden orada sütun NULL eklenip satırlar `RunSql` ile doldurulur ve sonra NOT NULL yapılır.
-  (Bu iki eklenti `family_tree`deki sürümde yoktur.)
+  (Bu iki eklenti eşlerdeki sürümlerde de vardır; paketler birebir aynıdır.)
 - Kapatmak için `SANDIKv2_AUTO_MIGRATE='0'`; o zaman elle: `python scripts/migrate.py`
   (`--durum` / `--kuru-calistir` seçenekleri vardır).
 - **Testlerde kapalıdır**: `tests/conftest.py` `SANDIKv2_AUTO_MIGRATE=0` yazar. `Database.bind`
@@ -446,6 +446,102 @@ kayıtlar" kartları, yıllara göre borç grafiği ve sandığa giden bağlant�
   olabilir: "-2 bin").
 - Kutuların ızgarası `.stat-grid`tir; `.stat-strip` aynı ızgaranın hero'nun altına taşan hâlidir
   (ikisi tek yerde tanımlıdır, kopyalanmaz).
+
+## Arama motorları (SEO)
+
+Yardımcılar **`sandik/utils/seo.py`** içindedir; `app.py` → `jinja2_integration` içinde
+`seo.register(flask_app)` ile şablonlara açılır (`seo_canonical_url()`, `seo_absolute_url()`,
+`seo_json_ld()`, `seo_breadcrumb_ld()`, `seo_faq_ld()`). Modülün kendisi: `site_url()`,
+`absolute_url()`, `canonical_url()`, `trim_description()`, `json_ld()`, `breadcrumb_ld()`,
+`faq_ld()`.
+
+> Bu dosyanın birebir eşleri, aynı ana site altında yayınlanan diğer uygulamalardadır (Aile
+> Ağacı, Davetiye); yalnızca ortam değişkeni öneki ve varsayılan adres farklıdır. Sandıkv2 ayrı
+> bir depo olduğu (ve her uygulama kendi klasörünün dışına bağımsız olduğu) için kod paylaşılmaz,
+> **kopyalanır**. O depolara erişiminiz varsa birinde düzeltilen hata diğerlerine de taşınmalıdır;
+> yoksa bu not tarihsel bilgidir, bu dosya tek başına yeterlidir. Aynı ilke şema taşımalarında da
+> geçerlidir (bkz. "Şema taşımaları").
+
+### Asıl adres (canonical)
+
+Aynı sayfa **birden fazla adresten** açılabiliyor: ana sitenin mount noktası
+(`www.myilmaz.tr/sandikv2`), alt alan adı (`sandikv2.myilmaz.tr`), yerelde `localhost`, sunucuda
+ayrıca `*.pythonanywhere.com`. Arama motoru bunu "kopya içerik" sayar ve hangisini göstereceğine
+kendi karar verir; `<link rel="canonical">` ile asıl adres tek noktadan bildirilir.
+
+Asıl adres **`SANDIKv2_SITE_URL`**den gelir; tanımlı değilse `sandik/utils/seo.py:DEFAULT_SITE_URL`
+(`https://www.myilmaz.tr/sandikv2`) kullanılır. Uygulama başka bir alan adına taşınırsa
+**değiştirilmesi gereken tek yer budur**; şablonlarda hiçbir şey değişmez.
+
+**`SANDIKv2_SERVER_NAME` ile karıştırılmamalıdır.** O yalnızca `clock.py` içindir: gecelik iş bir
+isteğin içinde çalışmadığı için `url_for(_external=True)`nin ihtiyaç duyduğu **host adını** verir
+ve şema/yol taşımaz. `SANDIKv2_SITE_URL` ise tam adrestir (şema + varsa mount noktası dahil).
+
+`absolute_url()` mount ön ekini **tekrarlamaz**: `url_for` mount noktasında çalışırken ön eki
+(`/sandikv2`) zaten ekliyor, asıl adreste de aynı ön ek var. Canonical **isteğin kendi adresine
+hiç bakmaz** — baksaydı hangi adresten girildiğine göre değişirdi ve canonical'ın var olma sebebi
+ortadan kalkardı.
+
+### Dizine girme kuralı
+
+Üç kabuk, üç ayrı varsayılan:
+
+| Kabuk | Kim kullanır | `robots` |
+|---|---|---|
+| `intro/_layout.html` | tanıtım, kullanım kılavuzu, istatistikler | **index, follow** |
+| `utils/layout.html` | yönetim panelinin tamamı | koşulsuz **noindex** |
+| `auth/auth_layout.html` | giriş, kayıt, parola | koşulsuz **noindex** |
+
+Panel ve giriş kabukları `page_info.robots`a **bakmaz**: orada dizine açılacak bir sayfa yok,
+koşullu yazmak yanlışlıkla açılmasına kapı bırakırdı. Sandıkv2'de kullanıcı içeriği (sandıklar,
+üyeler, işlemler) hiçbir koşulda dizine girmez — `family_tree`/`davetiye`deki gibi kullanıcıya
+sorulan bir "arama motorlarında çıksın" ayarı **yoktur**, çünkü herkese açık bir sandık sayfası
+kavramı yok.
+
+`LayoutPI` artık `description`, `robots` ve `image` alanları da taşır; tanıtım kabuğu bunları
+`<meta name="description">`, Open Graph ve `og:image` olarak basar.
+
+Bu arada iki eski hata düzeltildi: her iki kabukta `<html lang="en">` yazıyordu (sayfalar Türkçe)
+ve `auth_layout.html`in `<meta name="description">`ı satın alınan angulr şablonundan kalma
+İngilizce bir anahtar kelime listesiydi ("app, web app, responsive, ... AngularJS").
+
+### robots.txt ve sitemap
+
+`/robots.txt` ve `/sitemap.xml` `intro/page.py`dedir, içerikleri `intro/utils.py`de. Sitemap'e
+yalnızca üç tanıtım sayfası girer.
+
+**Uygulama bir ana sitenin altına mount edilmişse (`www.myilmaz.tr/sandikv2`) buradaki
+`robots.txt` kimse tarafından okunmaz**: arama motorları bu dosyayı yalnızca alan adının kökünde
+arar, yani o kurulumda geçerli olan dosya ana sitenindir ve buradaki sitemap'e `Sitemap:`
+satırıyla işaret etmesi gerekir. Uygulama kendi alan adının kökünde çalışıyorsa (ör.
+`sandikv2.myilmaz.tr`) buradaki dosya doğrudan geçerlidir.
+
+Dizine girmemesi gereken sayfalar robots.txt ile **kapatılmaz**, `<meta name="robots">` ile
+işaretlenir: robots.txt ile kapatılan bir sayfayı bot açamaz, dolayısıyla `noindex` etiketini de
+göremez ve sayfa dizinde kalmaya devam eder. `DISALLOWED_PATHS` yalnızca gezilmesi anlamsız
+olanları (API'ler, indirmeler, yedek, `/paw`, giriş isteyen bölümler) kapatır.
+
+### Yapısal veri (schema.org)
+
+`seo_json_ld(...)` / `seo_faq_ld(...)` `<script type="application/ld+json">` basar ve `<`, `>`,
+`&` karakterlerini kaçırır. Sözlükler **şablonda değil `intro/utils.py`de** kurulur — Jinja'da
+liste kurma (comprehension) yoktur — ve şablona `structured_data` / `faq_structured_data` olarak
+geçirilip `head_extra` bloğunda basılır.
+
+- `/tanitim` → `WebApplication` (`about_structured_data`). Ücretsiz olduğunun standart yazılışı
+  sıfır fiyatlı `Offer`'dır.
+- `/nasil-kullanilir` → `FAQPage`. **Soruların tek kaynağı `intro/utils.py:FAQ`dir**: hem
+  sayfadaki akordiyon hem yapısal veri oradan üretilir. Google, sayfada bulunmayan bir cevabı
+  yapısal veride görürse sayfayı işaretler; iki yerde ayrı yazılsaydı metinler zamanla ayrışırdı.
+  **Yeni soru şablona değil bu listeye eklenir.** Cevaplarda yalnızca `<b>` gibi basit biçimleme
+  kullanılmalıdır; yapısal veriye yazılırken etiketler atılır (`strip_tags`).
+
+### Görseller
+
+`sandik/utils/static/my_custom/img/` altında `favicon.svg`, `apple-touch-icon.png` (180×180) ve
+`paylasim.png` (1200×630, `og:image`) vardır; eski `favicon.ico` yanlarında duruyor ve hâlâ
+basılıyor. PNG'ler Pillow olmadan, düz Python + zlib ile üretilmiştir (kaynak betik depoda
+değildir, dosyalar işlenir). Marka rengi (`--brand`) değişirse bu görseller de yenilenmelidir.
 
 ## Para birimi
 

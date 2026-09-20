@@ -16,7 +16,32 @@
   <title>{% block page_title %}{{ page_info.title }}{% endblock %} | {{ page_info.website_name }}</title>
   <meta name="description" content="{% block page_description %}İmece usulü yardımlaşma sandıkları için aidat, borç ve taksit takip sistemi.{% endblock %}"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  {#
+    Arama motoru etiketleri. Bu üç sayfa (tanıtım, kullanım kılavuzu, istatistikler) sitenin
+    herkese açık yüzüdür, dizine **açıktır**; yönetim paneli ve giriş sayfaları kendi
+    kabuklarında koşulsuz "noindex"tir.
+    Asıl adres (canonical) `utils/seo.py` üzerinden üretilir: uygulama hem `/sandikv2` mount
+    noktasından hem `sandikv2.myilmaz.tr` alt alan adından açılıyor, ikisi aynı sayfa.
+  #}
+  <meta name="robots" content="{{ page_info.robots or 'index, follow' }}"/>
+  <link rel="canonical" href="{{ seo_canonical_url() }}"/>
+
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="{{ page_info.website_name }}"/>
+  <meta property="og:locale" content="tr_TR"/>
+  <meta property="og:title" content="{% block og_title %}{{ self.page_title() }}{% endblock %}"/>
+  <meta property="og:description" content="{{ self.page_description() }}"/>
+  <meta property="og:url" content="{{ seo_canonical_url() }}"/>
+  {% set share_image = page_info.image or url_for('static', filename='my_custom/img/paylasim.png') %}
+  <meta property="og:image" content="{{ seo_absolute_url(share_image) }}"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+
   <link rel="shortcut icon" href="{{ url_for('static', filename='my_custom/img/favicon.ico') }}"/>
+  <link rel="icon" href="{{ url_for('static', filename='my_custom/img/favicon.svg') }}" type="image/svg+xml"/>
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='my_custom/img/apple-touch-icon.png') }}"/>
+
+  {% block head_extra %}{% endblock %}
 
   <script>
     /* Tema ilk boyamadan ÖNCE belirlenir, yoksa sayfa bir an yanlış temada görünür.

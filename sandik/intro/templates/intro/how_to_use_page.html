@@ -3,6 +3,8 @@
 {% block page_title %}Nasıl kullanılır?{% endblock %}
 {% block page_description %}Sandık v2 kullanım kılavuzu: hesap açma, sandığa katılma, aidat ödeme, borç alma ve sandık yöneticiliği.{% endblock %}
 
+{% block head_extra %}{{ seo_faq_ld(faq_structured_data) }}{% endblock %}
+
 {% block intro_css_block %}
   <style>
     /* Sayfa içi gezinme: geniş ekranda içerikle yan yana, dar ekranda üstte durur */
@@ -341,58 +343,14 @@
           <div class="guide-section" id="sss">
             <h2><span class="num">4</span> Sık sorulan sorular</h2>
 
-            <details class="faq" open>
-              <summary>Parayı yatırdım ama sitede görünmüyor.</summary>
-              <div class="faq-body">
-                Para girişini sisteme sandık yöneticisi kaydeder. Kayıt girilene kadar ödemeniz sitede
-                görünmez; yöneticinize hatırlatmanız yeterlidir.
-              </div>
-            </details>
-            <details class="faq">
-              <summary>Bu ayın aidatı neden oluşmadı?</summary>
-              <div class="faq-body">
-                Aidatlar her ayın başında otomatik oluşur. Oluşmadıysa yönetici, <b>İşlemler</b>
-                menüsünden vadesi gelmiş aidatları elle oluşturabilir.
-              </div>
-            </details>
-            <details class="faq">
-              <summary>“İşleme konmamış para” ne demek?</summary>
-              <div class="faq-body">
-                Yatırdığınız ama henüz bir aidata veya taksite işlenmemiş tutarınızdır. Örneğin
-                aidatınızdan fazla para yatırdıysanız, artan kısım burada bekler ve sonraki
-                ödemelerinizde kullanılır. İstemezseniz yöneticiden geri ödenmesini isteyebilirsiniz.
-              </div>
-            </details>
-            <details class="faq">
-              <summary>Aynı anda birden fazla sandıkta olabilir miyim?</summary>
-              <div class="faq-body">
-                Evet. Tek hesapla istediğiniz kadar sandığa üye olabilirsiniz; ana sayfada hepsinin
-                durumunu bir arada görürsünüz.
-              </div>
-            </details>
-            <details class="faq">
-              <summary>Borç alabileceğim tutarı neye göre hesaplıyor?</summary>
-              <div class="faq-body">
-                Sandığınızın kurallarına göre. En yaygın kural, bir hissenin o hisse için ödenmiş
-                toplam aidatın belirli bir katı kadar borç alabilmesidir. Güven bağlı sandıklarda
-                ayrıca güven halkanızdaki üyelerin birikimi de sınır oluşturur.
-              </div>
-            </details>
-            <details class="faq">
-              <summary>Ekranda “ERRCODE” ile başlayan bir hata gördüm.</summary>
-              <div class="faq-body">
-                Bu, sistemin bir tutarsızlık yakaladığı anlamına gelir. Ekrandaki kodu not alıp site
-                yöneticisine iletin; kaydın elle düzeltilmesi gerekir.
-              </div>
-            </details>
-            <details class="faq">
-              <summary>Verilerimiz güvende mi?</summary>
-              <div class="faq-body">
-                Sandık verileri düzenli olarak yedeklenir ve her yazma işlemi seyir defterine (log)
-                kaydedilir; böylece hangi kaydın kim tarafından ne zaman değiştirildiği geriye dönük
-                olarak görülebilir.
-              </div>
-            </details>
+            {# Sorular `intro/utils.py:FAQ` içindedir; sayfanın yapısal verisi (FAQPage)
+               de aynı listeden üretilir, bkz. `head_extra` bloğu. #}
+            {% for question, answer in faq %}
+              <details class="faq"{{ ' open' if loop.first else '' }}>
+                <summary>{{ question }}</summary>
+                <div class="faq-body">{{ answer|safe }}</div>
+              </details>
+            {% endfor %}
           </div>
 
         </div>

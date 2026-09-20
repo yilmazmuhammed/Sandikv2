@@ -1,4 +1,4 @@
-from flask import Blueprint, g, render_template, request
+from flask import Blueprint, Response, g, render_template, request
 from flask_login import current_user
 
 from sandik.intro import utils
@@ -12,12 +12,16 @@ intro_page_bp = Blueprint(
 
 @intro_page_bp.route("/tanitim")
 def about_page():
-    return render_template("intro/about_page.html", page_info=LayoutPI(title="Sandık nedir?"))
+    return render_template("intro/about_page.html",
+                           structured_data=utils.about_structured_data(),
+                           page_info=LayoutPI(title="Sandık nedir?"))
 
 
 @intro_page_bp.route("/nasil-kullanilir")
 def how_to_use_page():
-    return render_template("intro/how_to_use_page.html", page_info=LayoutPI(title="Nasıl kullanılır?"))
+    return render_template("intro/how_to_use_page.html", faq=utils.FAQ,
+                           faq_structured_data=utils.faq_for_structured_data(),
+                           page_info=LayoutPI(title="Nasıl kullanılır?"))
 
 
 @intro_page_bp.route("/istatistikler")
@@ -32,3 +36,21 @@ def statistics_page():
         web_user=current_user, sandik_id=request.args.get("sandik", type=int)
     ) if current_user.is_authenticated else None
     return render_template("intro/statistics_page.html", page_info=LayoutPI(title="İstatistikler"))
+
+
+# --------------------------------------------------------------------------------------
+# Arama motoru dosyaları
+# --------------------------------------------------------------------------------------
+# Bu iki adres yalnızca uygulama **kendi alan adının kökünde** çalışırken (ör.
+# `sandikv2.myilmaz.tr`) tarayıcı botları tarafından okunur. Mount noktasında çalışırken
+# (`www.myilmaz.tr/sandikv2`) kökteki robots.txt ana sitenindir; oradaki dosya bu sitemap'e
+# `Sitemap:` satırıyla işaret eder.
+
+@intro_page_bp.route("/robots.txt")
+def robots_txt():
+    return Response(utils.robots_txt(), mimetype="text/plain; charset=utf-8")
+
+
+@intro_page_bp.route("/sitemap.xml")
+def sitemap_xml():
+    return Response(utils.sitemap_xml(), mimetype="application/xml")

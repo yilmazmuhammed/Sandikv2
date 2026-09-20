@@ -19,7 +19,7 @@ from sandik.sandik.api import sandik_api_bp
 from sandik.sandik.page import sandik_page_bp
 from sandik.transaction.api import transaction_api_bp
 from sandik.transaction.page import transaction_page_bp
-from sandik.utils import CustomJSONEncoder, money, sandik_preferences, set_parameters_of_url
+from sandik.utils import CustomJSONEncoder, money, sandik_preferences, seo, set_parameters_of_url
 from sandik.utils.db_models import MoneyTransaction, Installment, Contribution, SandikRule, RemainingMoneyPreference
 from sandik.website_transaction.page import website_transaction_page_bp
 
@@ -73,6 +73,7 @@ def catch_exception(func, default_value, *args, **kwargs):
 
 
 def jinja2_integration(flask_app: Flask) -> Flask:
+    seo.register(flask_app)
     flask_app.jinja_env.globals.update(MoneyTransaction=MoneyTransaction)
     flask_app.jinja_env.globals.update(isinstance=isinstance)
     flask_app.jinja_env.globals.update(Installment=Installment)

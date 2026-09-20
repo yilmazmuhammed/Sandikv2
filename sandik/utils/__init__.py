@@ -8,10 +8,20 @@ from flask import g
 class LayoutPI:
     website_name = "Sandık v2"
     short_website_name = "Sandık v2"
+    # Sayfa kendi açıklamasını vermezse arama sonucunda ve paylaşımlarda bu görünür
+    default_description = ("İmece usulü yardımlaşma sandıkları için aidat, borç ve taksit takip "
+                           "sistemi. Kimin ne ödediği, kimin ne kadar borçlu olduğu tek ekranda.")
 
-    def __init__(self, title, active_dropdown=None):
+    def __init__(self, title, active_dropdown=None, description=None, robots=None, image=None):
         self.title = title
         self.active_dropdown = active_dropdown
+        # `<meta name="description">` ve paylaşım açıklaması (og:description)
+        self.description = description or self.default_description
+        # `<meta name="robots">`. Yönetim paneli ve giriş sayfaları koşulsuz "noindex"tir
+        # (kabukları öyle yazar); bu alan yalnızca tanıtım sayfaları için anlamlıdır.
+        self.robots = robots
+        # Paylaşımda görünecek görselin site içi adresi (og:image)
+        self.image = image
         g.now = tz_to_tr(datetime.now(), tz="UTC")
 
 

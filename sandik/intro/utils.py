@@ -258,3 +258,143 @@ def get_sandik_selection(web_user, sandik_id=None) -> dict:
         "selected_sandik": selected_sandik,
         "statistics": collect_sandik_statistics(sandik=selected_sandik) if selected_sandik else None,
     }
+
+
+# --------------------------------------------------------------------------------------
+# Sık sorulan sorular
+# --------------------------------------------------------------------------------------
+# Liste hem `how_to_use_page.html` içindeki akordiyonu hem de sayfanın yapısal verisini
+# (schema.org `FAQPage`) besler. **Tek kaynaktır**: Google, sayfada bulunmayan bir cevabı
+# yapısal veride görürse sayfayı işaretler; iki yerde ayrı ayrı yazılsa metinler zamanla
+# birbirinden ayrılırdı. Cevaplarda yalnızca `<b>` gibi basit biçimleme kullanılmalıdır —
+# yapısal veriye yazılırken etiketler atılır (`strip_tags`).
+
+FAQ = [
+    ("Parayı yatırdım ama sitede görünmüyor.",
+     "Para girişini sisteme sandık yöneticisi kaydeder. Kayıt girilene kadar ödemeniz sitede "
+     "görünmez; yöneticinize hatırlatmanız yeterlidir."),
+    ("Bu ayın aidatı neden oluşmadı?",
+     "Aidatlar her ayın başında otomatik oluşur. Oluşmadıysa yönetici, <b>İşlemler</b> menüsünden "
+     "vadesi gelmiş aidatları elle oluşturabilir."),
+    ("“İşleme konmamış para” ne demek?",
+     "Yatırdığınız ama henüz bir aidata veya taksite işlenmemiş tutarınızdır. Örneğin aidatınızdan "
+     "fazla para yatırdıysanız, artan kısım burada bekler ve sonraki ödemelerinizde kullanılır. "
+     "İstemezseniz yöneticiden geri ödenmesini isteyebilirsiniz."),
+    ("Aynı anda birden fazla sandıkta olabilir miyim?",
+     "Evet. Tek hesapla istediğiniz kadar sandığa üye olabilirsiniz; ana sayfada hepsinin durumunu "
+     "bir arada görürsünüz."),
+    ("Borç alabileceğim tutarı neye göre hesaplıyor?",
+     "Sandığınızın kurallarına göre. En yaygın kural, bir hissenin o hisse için ödenmiş toplam "
+     "aidatın belirli bir katı kadar borç alabilmesidir. Güven bağlı sandıklarda ayrıca güven "
+     "halkanızdaki üyelerin birikimi de sınır oluşturur."),
+    ("Ekranda “ERRCODE” ile başlayan bir hata gördüm.",
+     "Bu, sistemin bir tutarsızlık yakaladığı anlamına gelir. Ekrandaki kodu not alıp site "
+     "yöneticisine iletin; kaydın elle düzeltilmesi gerekir."),
+    ("Verilerimiz güvende mi?",
+     "Sandık verileri düzenli olarak yedeklenir ve her yazma işlemi seyir defterine (log) "
+     "kaydedilir; böylece hangi kaydın kim tarafından ne zaman değiştirildiği geriye dönük olarak "
+     "görülebilir."),
+]
+
+
+def strip_tags(text) -> str:
+    """Cevaptaki basit biçimleme etiketlerini atar (yapısal veri düz metin ister)"""
+    import re
+
+    return re.sub(r"<[^>]+>", "", text or "")
+
+
+def faq_for_structured_data():
+    """`(soru, düz metin cevap)` çiftleri — `utils/seo.py:faq_ld` bunu bekler"""
+    return [(question, strip_tags(answer)) for question, answer in FAQ]
+
+
+# --------------------------------------------------------------------------------------
+# Arama motoru dosyaları ve yapısal veri
+# --------------------------------------------------------------------------------------
+
+# Tarayıcı botlarına kapatılan yollar. Amaç "gizlemek" değil (gizlilik yetkilendirmeyle
+# sağlanır), boşuna gezilmesini önlemek: bu adresler giriş ister ya da JSON/dosya döndürür.
+DISALLOWED_PATHS = (
+    "/api/",
+    "/sandik/",
+    "/indir/",
+    "/yedek/",
+    "/paw/",
+    "/websitesi-masraflari/",
+    "/ana-sayfa",
+    "/giris",
+    "/kayit",
+    "/cikis",
+    "/parola-sifirla",
+    "/tercihlerim",
+    "/tercih/",
+)
+
+
+def robots_txt() -> str:
+    """
+    `robots.txt` içeriği.
+
+    Dizine girmemesi gereken sayfalar zaten `<meta name="robots">` ile işaretlidir (yönetim
+    paneli ve giriş kabukları koşulsuz "noindex" basar); burada yalnızca gezilmesi anlamsız
+    olan yollar kapatılır.
+    """
+    from sandik.utils import seo
+
+    lines = ["User-agent: *"]
+    lines += [f"Disallow: {path}" for path in DISALLOWED_PATHS]
+    lines += ["", f"Sitemap: {seo.absolute_url('/sitemap.xml')}", ""]
+    return "\n".join(lines)
+
+
+def sitemap_urls():
+    """Sitemap'e girecek adresler: `(adres, değişim sıklığı, öncelik)`"""
+    from flask import url_for
+
+    from sandik.utils import seo
+
+    return [
+        (seo.absolute_url(url_for("intro_page_bp.about_page")), "monthly", "1.0"),
+        (seo.absolute_url(url_for("intro_page_bp.how_to_use_page")), "monthly", "0.8"),
+        (seo.absolute_url(url_for("intro_page_bp.statistics_page")), "weekly", "0.6"),
+    ]
+
+
+def sitemap_xml() -> str:
+    from xml.sax.saxutils import escape
+
+    entries = "".join(
+        f"<url><loc>{escape(url)}</loc>"
+        f"<changefreq>{changefreq}</changefreq><priority>{priority}</priority></url>"
+        for url, changefreq, priority in sitemap_urls()
+    )
+    return ('<?xml version="1.0" encoding="UTF-8"?>'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            f"{entries}</urlset>")
+
+
+def about_structured_data() -> dict:
+    """Tanıtım sayfası: "bu bir web uygulaması" bilgisi"""
+    from sandik.utils import seo
+
+    return {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Sandık v2",
+        "url": seo.canonical_url(),
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Web",
+        "inLanguage": "tr-TR",
+        "description": ("İmece usulü yardımlaşma sandıklarının aidat, borç ve taksit kayıtlarını "
+                        "tutan takip sistemi."),
+        # Ücretsiz olduğunun standart yazılışı: sıfır fiyatlı teklif
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "TRY"},
+        "featureList": [
+            "Aidat takibi",
+            "Faizsiz borç ve taksit takibi",
+            "Üye ve hisse yönetimi",
+            "Aylık ödeme hatırlatma e-postaları",
+            "Sandık kurallarıyla borç limiti hesabı",
+        ],
+    }

@@ -1,10 +1,15 @@
 <!DOCTYPE html>
-<html lang="en" class="">
+<html lang="tr" class="">
 <head>
   <meta charset="utf-8" />
   <title>{% block page_title %}{{ page_info.title }}{% endblock %} | {{ page_info.website_name }}</title>
-  <meta name="description" content="app, web app, responsive, responsive layout, admin, admin panel, admin dashboard, flat, flat ui, ui kit, AngularJS, ui route, charts, widgets, components" />
+  <meta name="description" content="{{ page_info.description }}" />
+  {# Giriş, kayıt ve parola sayfaları dizine girmez: arama sonucunda bir forma düşmek yerine
+     ziyaretçinin tanıtım sayfasına gelmesi gerekir. #}
+  <meta name="robots" content="noindex, nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <link rel="shortcut icon" href="{{ url_for('static', filename='my_custom/img/favicon.ico') }}" />
+  <link rel="icon" href="{{ url_for('static', filename='my_custom/img/favicon.svg') }}" type="image/svg+xml" />
 
   <link rel="stylesheet" href="{{ url_for("static", filename="angulr_template/libs/jquery/bootstrap/dist/css/bootstrap.css") }}" type="text/css" />
 
