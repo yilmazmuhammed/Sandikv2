@@ -538,10 +538,19 @@ geçirilip `head_extra` bloğunda basılır.
 
 ### Görseller
 
-`sandik/utils/static/my_custom/img/` altında `favicon.svg`, `apple-touch-icon.png` (180×180) ve
-`paylasim.png` (1200×630, `og:image`) vardır; eski `favicon.ico` yanlarında duruyor ve hâlâ
-basılıyor. PNG'ler Pillow olmadan, düz Python + zlib ile üretilmiştir (kaynak betik depoda
-değildir, dosyalar işlenir). Marka rengi (`--brand`) değişirse bu görseller de yenilenmelidir.
+Simge **uygulamanın kendi logosudur** (`my_custom/img/logo.png`, açık bir sandık): tarayıcı
+sekmesinde eskiden beri `favicon.ico` kullanılır, ikisi de olduğu gibi durur.
+
+`apple-touch-icon.png` (180×180) ve `paylasim.png` (1200×630, `og:image`) bu logodan üretilmiştir:
+şekil marka renkli zeminin üstüne beyaz olarak basılır. Logo tek başına `og:image` olamazdı —
+256×256 karedir ve paylaşım görselinin 1200×630 olması beklenir.
+
+**`logo.png` 8 bit gri bir PNG'dir ve şeffaflık daması resme gömülüdür**: zemin 85-93 arasında
+dalgalanır, şekil 255'tir, arada hiç piksel yoktur. Bu yüzden üretimde maske ikilidir (eşik 128);
+doğrusal bir eşleme damayı da soluk beyaz basıp paylaşım görselinde hayalet desen bırakıyordu.
+Üretim düz Python + zlib ile yapılır (Pillow bağımlılığı yok); kaynak betik depoda değildir,
+yalnızca çıktı dosyaları işlenir. Logo ya da marka rengi (`--brand`) değişirse bu iki dosya
+yeniden üretilmelidir.
 
 ## Para birimi
 
