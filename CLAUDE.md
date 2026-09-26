@@ -163,6 +163,14 @@ e-postadaki "bu ay" üyenin sitede gördüğü "bu ay" ile aynı kalır.
 
 - **Kişi başına tek e-posta.** Bir kişi birden fazla sandıkta üyeyse hepsi tek mailde bölüm bölüm
   listelenir (`general/utils.py` → `get_home_page_data` ile aynı yaklaşım).
+- **Ödemeler e-postada tek tek listelenmez.** Sandık başına iki kalem gösterilir: aidat
+  (`contribution_total`) ve taksit (`installment_total`); tutarı sıfır olan kalem yazılmaz.
+  Geçmiş aylardan kalan varsa tek satırlık bir notla belirtilir. Ayrıntı için her sandık bölümünde
+  sitedeki "Ödemelerim" sayfasına (`transaction_page_bp.payments_of_member_page`, `payments_url`)
+  bağlantı vardır. Satır listeleri (`overdue`/`this_month`/`next_month`) toplamların kaynağı ve
+  testler için hâlâ üretilir; her satır `kind` (`KIND_CONTRIBUTION`/`KIND_INSTALLMENT`) taşır.
+- **Bütün sandıkların genel toplamı e-postanın en üstündedir** (birden fazla sandık ve tek para
+  birimi varsa); sandık bölümleri onun dökümüdür.
 - **Yalnızca ödemesi olan üyeye gönderilir.** `collect_reminder_data` hiç ödeme satırı bulamazsa
   `None` döner ve o kişi atlanır.
 - Yeni sorgu yazılmaz: `transaction_utils.get_payments`, `member.total_of_undistributed_amount()`,

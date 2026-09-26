@@ -46,6 +46,10 @@ KIND_NEXT_MONTH = "next_month"
 
 DEFAULT_SLEEP_SECONDS = 2
 
+# Satır türleri. E-postada ödemeler tek tek değil, sandık başına bu iki kalemde toplanır.
+KIND_CONTRIBUTION = "contribution"
+KIND_INSTALLMENT = "installment"
+
 
 def is_enabled():
     """Acil kapatma valfi. Varsayılan açık."""
@@ -99,10 +103,12 @@ def reminder_for_kind(web_user, kind):
 def _payment_row(payment, show_share):
     """Bir `Contribution`/`Installment` kaydını şablonun beklediği düz sözlüğe çevirir."""
     if isinstance(payment, Contribution):
-        type_text = "Aidat"
+        kind, type_text = KIND_CONTRIBUTION, "Aidat"
     else:
+        kind = KIND_INSTALLMENT
         type_text = f"Taksit ({payment.get_installment_no()}/{payment.debt_ref.number_of_installment})"
     return {
+        "kind": kind,
         "term": payment.term,
         "term_text": period_utils.period_to_tr_text(payment.term),
         "type": type_text,
@@ -128,6 +134,7 @@ def _next_month_contribution_rows(member, next_term, show_share):
         if transaction_db.get_contribution(share_ref=share, term=next_term):
             continue
         rows.append({
+            "kind": KIND_CONTRIBUTION,
             "term": next_term,
             "term_text": period_utils.period_to_tr_text(next_term),
             "type": "Aidat",
@@ -141,8 +148,18 @@ def _sort_rows(rows):
     return sorted(rows, key=lambda r: (r["term"], r["type"], r["share"] or ""))
 
 
+def _sum_amounts(rows, kind=None):
+    return sum((r["amount"] for r in rows if kind is None or r["kind"] == kind), Decimal(0))
+
+
 def collect_member_section(member, include_next_month, url_builder):
-    """Tek bir sandık üyeliği için e-postadaki bölümü hazırlar. Ödeme yoksa `None` döner."""
+    """Tek bir sandık üyeliği için e-postadaki bölümü hazırlar. Ödeme yoksa `None` döner.
+
+    Satırlar (`overdue`/`this_month`/`next_month`) tek tek hesaplanır ama **e-postada
+    listelenmez**: şablon yalnızca sandık başına iki kalemi (`contribution_total`,
+    `installment_total`) gösterir, ayrıntı için sitedeki "Ödemelerim" sayfasına bağlantı verir
+    (`payments_url`). Satırlar toplamların kaynağı olarak ve testler için tutulur.
+    """
     current_term = period_utils.current_period()
     next_term = period_utils.next_period()
     show_share = member.get_active_shares().count() > 1
@@ -168,10 +185,11 @@ def collect_member_section(member, include_next_month, url_builder):
     this_month = _sort_rows(this_month)
     next_month = _sort_rows(next_month)
 
-    overdue_total = sum((r["amount"] for r in overdue), Decimal(0))
-    this_month_total = sum((r["amount"] for r in this_month), Decimal(0))
-    next_month_total = sum((r["amount"] for r in next_month), Decimal(0))
+    overdue_total = _sum_amounts(overdue)
+    this_month_total = _sum_amounts(this_month)
+    next_month_total = _sum_amounts(next_month)
     total = overdue_total + this_month_total + next_month_total
+    all_rows = overdue + this_month + next_month
     # Üyenin yatırdığı ama henüz bir ödemeye dağıtılmamış parası; hatırlatılan tutardan düşülür.
     undistributed = member.total_of_undistributed_amount() or Decimal(0)
 
@@ -184,7 +202,8 @@ def collect_member_section(member, include_next_month, url_builder):
         # Tutarlar şablonda `|money(...)` ile basılır; veri entity taşımadığı için birim kodu
         # burada düz sayı olarak gider.
         "currency": sandik.currency,
-        "summary_url": url_builder(sandik.id),
+        # Sitedeki "Ödemelerim" sayfası; e-postada ödemeler tek tek listelenmediği için ayrıntı orada.
+        "payments_url": url_builder(sandik.id),
         "iban": bank_account.get_iban_string() if bank_account else None,
         "iban_holder": (bank_account.holder or bank_account.title) if bank_account else None,
         "overdue": overdue,
@@ -193,6 +212,8 @@ def collect_member_section(member, include_next_month, url_builder):
         "overdue_total": overdue_total,
         "this_month_total": this_month_total,
         "next_month_total": next_month_total,
+        "contribution_total": _sum_amounts(all_rows, KIND_CONTRIBUTION),
+        "installment_total": _sum_amounts(all_rows, KIND_INSTALLMENT),
         "undistributed": undistributed,
         "total": total,
         "remaining": total - undistributed,

@@ -141,7 +141,7 @@ def test_overdue_and_this_month_are_separated():
     assert section["overdue_total"] == Decimal("100")
     assert section["this_month_total"] == Decimal("120")
     assert section["total"] == Decimal("220")
-    assert section["summary_url"] == fake_url(sandik.id)
+    assert section["payments_url"] == fake_url(sandik.id)
 
 
 @db_session
@@ -204,6 +204,28 @@ def test_member_without_web_user_does_not_break_the_job():
     result, recorder = run()
     assert result["failed"] == 0
     assert [m["to"] for m in recorder.sent] == [owner.email_address]
+
+
+@db_session
+def test_payments_are_summed_into_contribution_and_installment_per_sandik():
+    """E-postada ödemeler tek tek değil, sandık başına iki kalem (aidat, taksit) olarak gösterilir."""
+    wu = factories.make_web_user()
+    sandik = factories.make_sandik(created_by=wu, contribution_amount=Decimal("100"))
+    share = factories.make_member_with_share(sandik=sandik, web_user=wu, created_by=wu)
+    factories.make_contribution(share=share, term=period_utils.previous_period(), created_by=wu,
+                                amount=Decimal("100"))
+    factories.make_contribution(share=share, term=period_utils.current_period(), created_by=wu,
+                                amount=Decimal("100"))
+    # 3 taksit: geçen ay (gecikmiş), bu ay, gelecek ay
+    factories.make_debt(share=share, amount=Decimal("300"), created_by=wu, number_of_installment=3,
+                        start_period=period_utils.previous_period())
+
+    section = collect(wu, include_next_month=True)["sandiks"][0]
+
+    # Aidat: geçen ay + bu ay + gelecek ay (hesaplanan)
+    assert section["contribution_total"] == Decimal("300")
+    assert section["installment_total"] == Decimal("300")
+    assert section["contribution_total"] + section["installment_total"] == section["total"]
 
 
 # --- Gelecek ay --------------------------------------------------------------------------------
