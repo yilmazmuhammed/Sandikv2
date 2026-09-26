@@ -4,45 +4,25 @@
 
   `include_next_month` ayın 25'inde gönderilen e-postada `True`'dur; yalnızca o zaman gelecek ay
   bölümü çıkar.
+
+  Ödemeler tek tek listelenmez: sandık başına aidat ve taksit olmak üzere iki kalem gösterilir,
+  ayrıntı için sitedeki "Ödemelerim" sayfasına bağlantı verilir. Birden fazla sandık varsa genel
+  toplam en üsttedir.
 #}
 {% extends "email/_layout.html" %}
 
 {% block email_title %}{{ data.current_term_text }} ödemeleriniz{% endblock %}
 {% block email_header %}Ödeme hatırlatması{% endblock %}
 
-{% macro payment_table(rows, total, currency) %}
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-           style="width:100%; border-collapse:collapse; font-size:14px; margin:0 0 4px 0;">
-        <tr>
-            <th align="left" style="padding:6px 8px; border-bottom:2px solid #e1e4e8; color:#7b8794;
-                                    font-size:12px; text-transform:uppercase; font-weight:600;">Ay</th>
-            <th align="left" style="padding:6px 8px; border-bottom:2px solid #e1e4e8; color:#7b8794;
-                                    font-size:12px; text-transform:uppercase; font-weight:600;">Ödeme</th>
-            <th align="right" style="padding:6px 8px; border-bottom:2px solid #e1e4e8; color:#7b8794;
-                                     font-size:12px; text-transform:uppercase; font-weight:600;">Tutar</th>
-        </tr>
-        {% for row in rows %}
-            <tr>
-                <td style="padding:8px; border-bottom:1px solid #eef0f2;">{{ row.term_text }}</td>
-                <td style="padding:8px; border-bottom:1px solid #eef0f2;">
-                    {{ row.type }}{% if row.share %} <span style="color:#7b8794;">({{ row.share }})</span>{% endif %}
-                </td>
-                <td align="right" style="padding:8px; border-bottom:1px solid #eef0f2; white-space:nowrap;">
-                    {{ row.amount|money(currency) }}
-                </td>
-            </tr>
-        {% endfor %}
-        <tr>
-            <td colspan="2" align="right" style="padding:8px; font-weight:bold;">Ara toplam</td>
-            <td align="right" style="padding:8px; font-weight:bold; white-space:nowrap;">
-                {{ total|money(currency) }}
-            </td>
-        </tr>
-    </table>
-{% endmacro %}
-
-{% macro section_title(text) %}
-    <p style="margin:20px 0 8px 0; font-size:15px; font-weight:bold; color:#2f3640;">{{ text }}</p>
+{% macro amount_row(label, amount, currency, note=None) %}
+    <tr>
+        <td style="padding:10px 8px; border-bottom:1px solid #eef0f2;">
+            {{ label }}{% if note %}<br><span style="color:#7b8794; font-size:12px;">{{ note }}</span>{% endif %}
+        </td>
+        <td align="right" style="padding:10px 8px; border-bottom:1px solid #eef0f2; white-space:nowrap;">
+            {{ amount|money(currency) }}
+        </td>
+    </tr>
 {% endmacro %}
 
 {% block email_content %}
@@ -55,39 +35,63 @@
         {% endif %}
     </p>
 
+    {#
+      Genel toplam en üstte: birden fazla sandığı olan kişi önce toplam borcunu görür, sandık
+      bölümleri onun dökümüdür. Farklı para birimlerindeki tutarlar toplanamaz; o durumda gösterilmez.
+    #}
+    {% if data.sandiks|length > 1 and data.is_single_currency %}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="width:100%; margin:20px 0 0 0; background-color:#f4f8fc; border:1px solid #d6e4f3;
+                      border-radius:6px;">
+            <tr>
+                <td style="padding:14px 16px; font-size:15px; font-weight:bold;">
+                    Bütün sandıklar için ödemeniz gereken
+                </td>
+                <td align="right" style="padding:14px 16px; font-size:18px; font-weight:bold; white-space:nowrap;
+                           color:{% if data.grand_remaining > 0 %}#c0392b{% else %}#2e7d32{% endif %};">
+                    {% if data.grand_remaining > 0 %}{{ data.grand_remaining|money(data.currency) }}{% else %}—{% endif %}
+                </td>
+            </tr>
+        </table>
+    {% endif %}
+
     {% for sandik in data.sandiks %}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
                style="width:100%; margin:24px 0 0 0; border:1px solid #e1e4e8; border-radius:6px;">
             <tr>
                 <td style="padding:16px 16px 20px 16px;">
-                    <p style="margin:0 0 4px 0; font-size:16px; font-weight:bold; color:#2c6fbb;">
+                    <p style="margin:0 0 8px 0; font-size:16px; font-weight:bold; color:#2c6fbb;">
                         {{ sandik.sandik_name }}
                     </p>
 
+                    {#
+                      Ödemeler tek tek listelenmez; sandık başına iki kalem (aidat, taksit) gösterilir.
+                      Tutarı olmayan kalem yazılmaz. Ayrıntı sitedeki "Ödemelerim" sayfasındadır.
+                    #}
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                           style="width:100%; border-collapse:collapse; font-size:14px;">
+                        {% if sandik.contribution_total > 0 %}
+                            {{ amount_row("Aidat", sandik.contribution_total, sandik.currency) }}
+                        {% endif %}
+                        {% if sandik.installment_total > 0 %}
+                            {{ amount_row("Taksit", sandik.installment_total, sandik.currency) }}
+                        {% endif %}
+                    </table>
                     {% if sandik.overdue %}
-                        {{ section_title("Geçmiş aylardan kalan") }}
-                        {{ payment_table(sandik.overdue, sandik.overdue_total, sandik.currency) }}
-                    {% endif %}
-
-                    {% if sandik.this_month %}
-                        {{ section_title(data.current_term_text) }}
-                        {{ payment_table(sandik.this_month, sandik.this_month_total, sandik.currency) }}
-                    {% endif %}
-
-                    {% if sandik.next_month %}
-                        {{ section_title(data.next_term_text) }}
-                        {{ payment_table(sandik.next_month, sandik.next_month_total, sandik.currency) }}
+                        <p style="margin:6px 0 0 0; font-size:12px; color:#7b8794;">
+                            Geçmiş aylardan kalan {{ sandik.overdue_total|money(sandik.currency) }} dahildir.
+                        </p>
                     {% endif %}
 
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-                           style="width:100%; margin:16px 0 0 0; border-top:2px solid #e1e4e8; font-size:14px;">
-                        <tr>
-                            <td style="padding:8px;">Toplam</td>
-                            <td align="right" style="padding:8px; white-space:nowrap;">
-                                {{ sandik.total|money(sandik.currency) }}
-                            </td>
-                        </tr>
+                           style="width:100%; margin:12px 0 0 0; border-top:2px solid #e1e4e8; font-size:14px;">
                         {% if sandik.undistributed > 0 %}
+                            <tr>
+                                <td style="padding:8px;">Toplam</td>
+                                <td align="right" style="padding:8px; white-space:nowrap;">
+                                    {{ sandik.total|money(sandik.currency) }}
+                                </td>
+                            </tr>
                             <tr>
                                 <td style="padding:8px; color:#2e7d32;">Hesabınızda bekleyen tutar</td>
                                 <td align="right" style="padding:8px; color:#2e7d32; white-space:nowrap;">
@@ -116,25 +120,16 @@
                     {% endif %}
 
                     <p style="margin:16px 0 0 0;">
-                        <a href="{{ sandik.summary_url }}"
+                        <a href="{{ sandik.payments_url }}"
                            style="display:inline-block; padding:10px 18px; background-color:#2c6fbb; color:#ffffff;
                                   text-decoration:none; border-radius:4px; font-size:14px;">
-                            Ödemelerimi görüntüle
+                            Ayrıntılı ödemelerimi görüntüle
                         </a>
                     </p>
                 </td>
             </tr>
         </table>
     {% endfor %}
-
-    {# Farklı para birimlerindeki tutarlar toplanamaz; o durumda genel toplam hiç gösterilmez. #}
-    {% if data.sandiks|length > 1 and data.is_single_currency %}
-        <p style="margin:24px 0 0 0; padding:12px; background-color:#fafbfc; border:1px solid #e1e4e8;
-                  border-radius:6px; font-size:15px;">
-            <strong>Bütün sandıklar için ödemeniz gereken:</strong>
-            {% if data.grand_remaining > 0 %}{{ data.grand_remaining|money(data.currency) }}{% else %}—{% endif %}
-        </p>
-    {% endif %}
 {% endblock %}
 
 {% block email_footer %}

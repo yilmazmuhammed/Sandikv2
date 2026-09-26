@@ -125,7 +125,7 @@ def run_reminders(kind=None, dry_run=False, html_path=None):
     rendered_pages = []
 
     def url_builder(sandik_id):
-        return url_for("sandik_page_bp.sandik_summary_for_member_page", sandik_id=sandik_id, _external=True)
+        return url_for("transaction_page_bp.payments_of_member_page", sandik_id=sandik_id, _external=True)
 
     def preference_url_builder(web_user):
         token = auth_utils.create_reminder_preference_token(web_user=web_user)
