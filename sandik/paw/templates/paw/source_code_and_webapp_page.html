@@ -40,6 +40,7 @@
     let update_source_code_response = $("#update-source-code-response");
     jQuery.ajax({
       url: "{{ url_for("paw_api_bp.update_source_code_api") }}",
+      type: "POST",
       error: function (xhr, ajaxOptions, thrownError) {
         console.log("xhr:", xhr);
         update_source_code_response.html("Status: " + xhr.statusText + "<br>Response: " + xhr.responseText);
@@ -52,10 +53,35 @@
     });
   }
 
+  // Diğer iki işlemin aksine asenkrondur: kurulum dakikalar sürebilir, senkron istek o süre
+  // boyunca sayfayı dondurur ve "çalışıyor" bilgisi bile görünmez.
+  function install_dependencies(){
+    let install_dependencies_response = $("#install-dependencies-response");
+    let button = $("#install-dependencies");
+    button.prop("disabled", true);
+    install_dependencies_response.text("Kuruluyor, birkaç dakika sürebilir...");
+    jQuery.ajax({
+      url: "{{ url_for("paw_api_bp.install_dependencies_api") }}",
+      type: "POST",
+      error: function (xhr, ajaxOptions, thrownError) {
+        console.log("xhr:", xhr);
+        install_dependencies_response.text("Status: " + xhr.statusText + "\nResponse: " + xhr.responseText);
+      },
+      success: function (data) {
+        console.log("install_dependencies response:", data);
+        install_dependencies_response.text((data.result ? "" : "Kurulum tamamlanamadı.\n") + data.msg);
+      },
+      complete: function () {
+        button.prop("disabled", false);
+      },
+    });
+  }
+
   function reload_webapp(){
     let reload_webapp_response = $("#reload-webapp-response");
     jQuery.ajax({
       url: "{{ url_for("paw_api_bp.reload_webapp_api") }}",
+      type: "POST",
       error: function (xhr, ajaxOptions, thrownError) {
         console.log("xhr:", xhr);
         if(xhr.responseText.includes("</html>")){
@@ -82,6 +108,9 @@
     })
     .on("click", "#update-source-code", function (){
       update_source_code();
+    })
+    .on("click", "#install-dependencies", function (){
+      install_dependencies();
     })
     .on("click", "#reload-webapp", function (){
       reload_webapp();
@@ -112,6 +141,13 @@
                   <tr class="row">
                     <th class="text-center"><button class="btn btn-info btn-rounded" id="update-source-code">Kaynak kodu güncelle</button></th>
                     <td id="update-source-code-response"></td>
+                  </tr>
+                  <tr class="row">
+                    <th class="text-center"><button class="btn btn-info btn-rounded" id="install-dependencies">Bağımlılıkları kur</button></th>
+                    {# pip çıktısı uzundur ve içinde "<", ">" geçer (ör. "httpx<1,>=0.24"): metin
+                       olarak yazılır, satır sonları korunur ve kendi içinde kaydırılır. #}
+                    <td id="install-dependencies-response"
+                        style="white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow-y: auto; font-size: .85em;"></td>
                   </tr>
                   <tr class="row">
                     <th class="text-center"><button class="btn btn-info btn-rounded" id="reload-webapp">Uygulamayı yenile</button></th>

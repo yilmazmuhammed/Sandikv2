@@ -64,7 +64,7 @@ Kilit kavramlar:
 | `transaction` | `/sandik/<id>/` | Para giriş/çıkışı, aidat, borç, taksit |
 | `website_transaction` | `/websitesi-masraflari/` | Sitenin kendi gider kaydı |
 | `backup` | `/yedek/` | Veritabanının JSON olarak dışa/içe aktarımı |
-| `paw` | `/paw/` | PythonAnywhere: git pull + webapp reload |
+| `paw` | `/paw/` | PythonAnywhere: git pull + bağımlılık kurulumu + webapp reload (aşağıya bak) |
 | `bot` | — | E-posta (`email_bot.py`), SMS (NetGSM), Kuveyt Türk API |
 | `bugfixs` | — | Tek seferlik veri düzeltme scriptleri (`.env`'i, yani **gerçek veritabanını** kullanır) |
 | `blueprint_template` | — | Yeni modül açarken kopyalanacak iskelet |
@@ -73,6 +73,25 @@ Kilit kavramlar:
 Tasks). Aidat oluşturur ve sırası gelen ödeme hatırlatma e-postalarını gönderir — bkz.
 "Gecelik işler ve hatırlatma e-postaları". (Procfile'daki `clock` satırı Heroku dönemindendir;
 PythonAnywhere Procfile'ı yok sayar.)
+
+### `/paw`: sunucuyu güncelleme
+
+Site yöneticisine (`admin_required`) açık tek sayfa, üç düğme — **bu sırayla** basılır: kaynak kodu
+güncelle (`git pull`) → bağımlılıkları kur (`pip install -r requirements.txt`) → uygulamayı yenile
+(PythonAnywhere API). Yeni paket gerektiren bir değişiklikte ortadaki atlanırsa yeniden başlatılan
+uygulama import hatasıyla açılamaz.
+
+- Üç uç da (`paw/api.py`) sunucuda değişiklik yaptığı için yalnızca **POST** kabul eder.
+- `utils.pip_install()` python'u `sys.executable`'dan değil `sys.prefix`'ten bulur (uWSGI altında
+  `sys.executable` uwsgi'yi gösterebilir) ve 240 sn'de bırakır (PythonAnywhere web isteklerini
+  5 dakikada keser). Komutlar `subprocess` ile çalışır; GitPython bağımlılığı kaldırıldı.
+- Sayfa pip çıktısını `.text()` ile yazar (`httpx<1,>=0.24` gibi satırlar `.html()` ile bozulur) ve
+  bu isteği asenkron atar; diğer ikisi senkrondur.
+- Uygulama bir ana sitenin altına mount edilmişse (`www.myilmaz.tr/sandikv2`) deploy o sitenin
+  kendi `/paw`ından yapılır: orada bu depo submodule olarak, ayrık HEAD'de durur ve buradaki
+  `git pull` çalışmaz. Bu modül uygulama tek başına yayınlandığında geçerlidir.
+- Modül `dirilis_yonetim`deki eşiyle **birebir aynıdır** (yalnızca import yolu ve ortam değişkeni
+  öneki farklı); birinde yapılan değişiklik diğerine de taşınmalıdır.
 
 ## Üye tercihleri (`/sandik/<id>/tercihlerim`)
 
