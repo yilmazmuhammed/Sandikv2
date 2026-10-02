@@ -8,14 +8,23 @@ from sandik.paw import utils
 paw_api_bp = Blueprint('paw_api_bp', __name__)
 
 
-@paw_api_bp.route('/kaynak-kodu-guncelle')
+# Buradaki uçlar sunucuda değişiklik yapar; bir bağlantıya tıklatılarak ya da bir sayfaya gömülerek
+# tetiklenemesinler diye yalnızca POST kabul eder.
+@paw_api_bp.route('/kaynak-kodu-guncelle', methods=["POST"])
 @admin_required
 def update_source_code_api():
-    ret = utils.git_pull()
-    return jsonify(result=True, msg=ret)
+    exit_code, output = utils.git_pull()
+    return jsonify(result=exit_code == 0, msg=output)
 
 
-@paw_api_bp.route('/web-uygulamasini-bastan-baslat')
+@paw_api_bp.route('/bagimliliklari-kur', methods=["POST"])
+@admin_required
+def install_dependencies_api():
+    exit_code, output = utils.pip_install()
+    return jsonify(result=exit_code == 0, msg=output)
+
+
+@paw_api_bp.route('/web-uygulamasini-bastan-baslat', methods=["POST"])
 @admin_required
 def reload_webapp_api():
     domain = request.host
