@@ -778,6 +778,13 @@ Kural formüllerinde artık **ondalık** kullanılabilir (`{hisse_toplam_aidat}*
   veya placeholder yazarken **binlik ayraçsız, noktalı ondalıklı** biçim kullanılmalıdır (`1249.5`);
   gösterim için kullanılan Türkçe biçim (`1.249,50`) ne alana yazılabilir ne de sunucuda
   ayrıştırılabilir.
+- **API'den gelen tutarlar JSON'da metindir.** Flask 3, `Decimal`'i `str()` ile yazar
+  (`"14000.00"`); `app.py`deki `json_encoder` ataması Flask 2.3'ten beri hiç okunmaz. Form
+  alanının değeri (`$("#amount").val()`) de metin olduğu için iki taraf da metinken `>`/`>=`
+  **alfabetik** karşılaştırır: `"3000" > "14000.00"` doğru çıkar. JS'te tutar karşılaştırmadan önce
+  iki taraf da `parseFloat` ile sayıya çevrilmelidir (bkz.
+  `transaction/add_money_transaction_by_manager_page.html`: artan para sorusu bu yüzden 14.000 ₺
+  borcu olan üyeye 3.000 ₺ girilirken de soruluyordu).
 - Hesaplanan bir ipucunu (placeholder/öneri) "anlamsız" diye tamamen gizlemek yerine 0'a sıkıştırıp
   göstermek yeğlenir: değer beklenmedik şekilde 0/negatif çıktığında ipucunun hiç görünmemesi
   "özellik çalışmıyor" gibi algılanıyor.

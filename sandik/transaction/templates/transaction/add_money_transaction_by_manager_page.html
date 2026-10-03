@@ -166,6 +166,15 @@
           },
           success: function (data) {
             console.log(data);
+            {#
+              Tutarlar karşılaştırılmadan önce sayıya çevrilmelidir: alanın değeri metindir, API de
+              Decimal'leri JSON'a metin olarak yazar ("14000.00"). İki metin alfabetik karşılaştırılır,
+              yani "3000" > "14000.00" doğru çıkar ve soru gereksiz yere sorulur.
+            #}
+            let amount = parseFloat($("#amount").val());
+            let unpaid_and_due = parseFloat(data.sum_of_unpaid_and_due_payments);
+            let future_and_unpaid = parseFloat(data.sum_of_future_and_unpaid_payments);
+            let undistributed = parseFloat(data.undistributed_amount);
             {# revenue=para girişi, expense=para çıkışı #}
             if ($("#type").val() == {{ MoneyTransaction.TYPE.REVENUE }}) {
               {#
@@ -175,7 +184,7 @@
                 buradaki atlama görüntüyle ilgilidir, sonucu belirlemez.
               #}
               let asks_remaining_money = data.remaining_money_action === "{{ RemainingMoneyPreference.ASK }}";
-              if (asks_remaining_money && $("#amount").val() > data.sum_of_unpaid_and_due_payments && data.sum_of_future_and_unpaid_payments > 0) {
+              if (asks_remaining_money && amount > unpaid_and_due && future_and_unpaid > 0) {
                 e.preventDefault();
                 askAndSubmit(
                   form,
@@ -192,13 +201,13 @@
                 );
               }
             } else if ($("#type").val() == {{ MoneyTransaction.TYPE.EXPENSE }}) {
-              if (data.undistributed_amount > 0) {
+              if (undistributed > 0) {
                 {#
                   İşleme konmamış para, istenen borcun tamamını karşılıyorsa borç hiç verilmeyebilir;
                   karşılamıyorsa yalnızca kalan kısım borç olur. Seçeneğin sonucu bu iki durumda
                   farklı olduğu için düğme yazısı da buna göre değişir.
                 #}
-                let covers_whole_amount = data.undistributed_amount >= $("#amount").val();
+                let covers_whole_amount = undistributed >= amount;
                 e.preventDefault();
                 askAndSubmit(
                   form,
