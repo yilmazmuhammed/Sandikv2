@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from flask import url_for
-from pony.orm import flush
+from pony.orm import flush, select
 
 from sandik.bot.sms import SmsBot
 from sandik.general import db as general_db
@@ -16,7 +16,8 @@ from sandik.sandik.exceptions import MaxShareCountExceed, NotActiveMemberExcepti
 from sandik.sandik.exceptions import UpdateMemberException
 from sandik.transaction import utils as transaction_utils, db as transaction_db
 from sandik.utils import period as period_utils, sandik_preferences
-from sandik.utils.db_models import Member, Share, MoneyTransaction, TrustRelationship, SmsPackage, Sandik, SandikRule
+from sandik.utils.db_models import Member, Share, MoneyTransaction, TrustRelationship, SmsPackage, Sandik, SandikRule, \
+    SubReceipt, Debt
 
 
 def add_share_to_member(member, added_by, create_contributions=True, force=False, **kwargs):
@@ -239,6 +240,64 @@ def get_member_summary_page(member):
     }
 
 
+def get_members_financial_summary(sandik):
+    """Sandıktaki bütün üyelerin toplamlarını `{üye_id: {...}}` olarak döndürür.
+
+    Değerler üyedeki aynı adlı metotlarla birebir aynıdır (`Member.sum_of_paid_contributions()` vb.;
+    `tests/test_members_financial_summary.py` bunu denetler), ama üye başına beş sorgu yerine sandık
+    genelinde, üyeye göre gruplanmış sekiz sorguyla hesaplanır. Bir metodun tanımı değişirse burası da
+    değişmelidir.
+    """
+    def by_member(query):
+        return {member.id: amount for member, amount in query}
+
+    revenue_contributions = by_member(select(
+        (sr.money_transaction_ref.member_ref, sum(sr.amount)) for sr in SubReceipt
+        if sr.contribution_ref and sr.money_transaction_ref.member_ref.sandik_ref == sandik
+        and sr.money_transaction_ref.is_type_revenue()))
+    expense_contributions = by_member(select(
+        (sr.money_transaction_ref.member_ref, sum(sr.amount)) for sr in SubReceipt
+        if sr.contribution_ref and sr.money_transaction_ref.member_ref.sandik_ref == sandik
+        and sr.money_transaction_ref.is_type_expense()))
+    debts = by_member(select(
+        (sr.money_transaction_ref.member_ref, sum(sr.amount)) for sr in SubReceipt
+        if sr.debt_ref and sr.money_transaction_ref.member_ref.sandik_ref == sandik))
+    paid_installments = by_member(select(
+        (sr.money_transaction_ref.member_ref, sum(sr.amount)) for sr in SubReceipt
+        if sr.installment_ref and sr.money_transaction_ref.member_ref.sandik_ref == sandik))
+    # Pony iç içe toplamları (`sum(mt.get_undistributed_amount())`) gruplayamadığı için kalan tutarlar
+    # "tutarların toplamı - tahsilatların toplamı" olarak iki sorguyla bulunur.
+    undistributed_mt_amounts = by_member(select(
+        (mt.member_ref, sum(mt.amount)) for mt in MoneyTransaction
+        if mt.member_ref.sandik_ref == sandik and mt.type == MoneyTransaction.TYPE.REVENUE
+        and mt.is_fully_distributed is False))
+    distributed_amounts = by_member(select(
+        (sr.money_transaction_ref.member_ref, sum(sr.amount)) for sr in SubReceipt
+        if sr.money_transaction_ref.member_ref.sandik_ref == sandik
+        and sr.money_transaction_ref.type == MoneyTransaction.TYPE.REVENUE
+        and sr.money_transaction_ref.is_fully_distributed is False))
+    debt_amounts = by_member(select(
+        (d.share_ref.member_ref, sum(d.amount)) for d in Debt if d.share_ref.member_ref.sandik_ref == sandik))
+    paid_debt_amounts = by_member(select(
+        (sr.installment_ref.debt_ref.share_ref.member_ref, sum(sr.amount)) for sr in SubReceipt
+        if sr.installment_ref and sr.installment_ref.debt_ref.share_ref.member_ref.sandik_ref == sandik))
+
+    zero = Decimal(0)
+    return {
+        member.id: {
+            "sum_of_paid_contributions": (revenue_contributions.get(member.id, zero)
+                                          - expense_contributions.get(member.id, zero)),
+            "sum_of_debts": debts.get(member.id, zero),
+            "sum_of_paid_installments": paid_installments.get(member.id, zero),
+            "total_of_undistributed_amount": (undistributed_mt_amounts.get(member.id, zero)
+                                              - distributed_amounts.get(member.id, zero)),
+            "sum_of_unpaid_amount_of_debts": (debt_amounts.get(member.id, zero)
+                                              - paid_debt_amounts.get(member.id, zero)),
+        }
+        for member in sandik.members_set
+    }
+
+
 def remove_member_from_sandik(member: Member, removed_by):
     if not member.is_active:
         raise NotActiveMemberException("Silinmek istenen üye zaten aktif üye değil.", create_log=True)
@@ -424,6 +483,9 @@ def get_borrowing_priority(sandik):
     ordered_shares: list = shares.order_by(lambda s: s.date_of_opening)[:][:]
 
     sub_receipts = transaction_utils.get_sub_receipts(whose=sandik)[:]
+    # `sr.debt_ref` borcun tarafında tutulan bire-bir ilişkidir; tahsilat başına ayrı sorguyla
+    # aranmasın diye sandığın borçları bir kerede alınır.
+    debts_by_sub_receipt = {debt.sub_receipt_ref: debt for debt in transaction_utils.get_debts(whose=sandik)}
 
     last_status = {share: {"contributions": 0, "unpaid_debts": 0} for share in ordered_shares}
 
@@ -431,17 +493,18 @@ def get_borrowing_priority(sandik):
                                     ordered_shares]
 
     for sr in sub_receipts:
+        debt = debts_by_sub_receipt.get(sr)
         if sr.share_ref:
             share = sr.share_ref
-        elif sr.debt_ref:
-            share = sr.debt_ref.share_ref
+        elif debt:
+            share = debt.share_ref
         else:
             continue
 
         if last_status.get(share):
             if sr.contribution_ref is not None:
                 last_status[share]["contributions"] += sr.amount
-            elif sr.debt_ref is not None:
+            elif debt is not None:
                 last_status[share]["unpaid_debts"] += sr.amount
                 if last_status[share]["unpaid_debts"] > last_status[share]["contributions"]:
                     siralama_degistiren_islemler.append((sr.creation_time, share))

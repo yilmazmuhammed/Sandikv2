@@ -8,7 +8,7 @@ from sandik.transaction.exceptions import UndefinedRemoveOperation, MaximumDebtA
     InvalidStartingTerm, TransactionException
 from sandik.utils import period as period_utils, sandik_preferences
 from sandik.utils.db_models import Share, Member, MoneyTransaction, Contribution, Installment, Sandik, Debt, Log, \
-    WebUser, RemainingMoneyPreference
+    WebUser, RemainingMoneyPreference, SubReceipt
 from sandik.utils.exceptions import InvalidWhoseType
 from sandik.utils.period import NotValidPeriod
 
@@ -347,7 +347,10 @@ def get_transactions(whose):
     return ret
 
 
-def get_payments(whose, is_fully_paid: bool = None, is_due: bool = None, periods: list = None):
+def get_payments(whose, is_fully_paid: bool = None, is_due: bool = None, periods: list = None,
+                 prefetch_details: bool = False):
+    """`prefetch_details`: listeleme sayfaları için. Ödemelerin tahsilatları ve taksitlerin borçları
+    toplu yüklenir; böylece satır başına `get_*_in_memory()` / `get_installment_no()` sorgu atmaz."""
     filter_str = "lambda p: p"
     order_str = "lambda p: (p.is_fully_paid, p.term, p.member_ref.web_user_ref.name_surname, p.id)"
     if isinstance(whose, Sandik):
@@ -379,6 +382,9 @@ def get_payments(whose, is_fully_paid: bool = None, is_due: bool = None, periods
 
     contributions = db.select_contributions(filter_str).order_by(order_str)
     installment = db.select_installments(filter_str).order_by(order_str)
+    if prefetch_details:
+        contributions = contributions.prefetch(Contribution.sub_receipts_set)
+        installment = installment.prefetch(Installment.sub_receipts_set, Installment.debt_ref, Debt.installments_set)
 
     transactions = contributions[:][:] + installment[:][:]
     sorted_transactions = sorted(transactions, key=lambda t: t.term, reverse=True)
@@ -386,7 +392,9 @@ def get_payments(whose, is_fully_paid: bool = None, is_due: bool = None, periods
     return sorted_transactions
 
 
-def get_debts(whose, only_unpaid=False):
+def get_debts(whose, only_unpaid=False, prefetch_details=False):
+    """`prefetch_details`: listeleme sayfaları için taksitler ve tahsilatları toplu yüklenir
+    (satır başına `get_*_in_memory()` sorgu atmaz)."""
     filter_str = "lambda d: d"
     if isinstance(whose, Sandik):
         filter_str += f" and d.sandik_ref == {whose}"
@@ -403,6 +411,8 @@ def get_debts(whose, only_unpaid=False):
     debts = db.select_debts(filter_str).order_by(
         lambda d: (d.sub_receipt_ref.money_transaction_ref.date, d.id)
     )
+    if prefetch_details:
+        debts = debts.prefetch(Debt.installments_set, Installment.sub_receipts_set)
 
     return debts
 
@@ -423,7 +433,9 @@ def get_sub_receipts(whose):
     return sub_receipts
 
 
-def get_latest_money_transactions(whose, periods_count: int = 0):
+def get_latest_money_transactions(whose, periods_count: int = 0, prefetch_details: bool = False):
+    """`prefetch_details`: listeleme sayfaları için tahsilatlar ve bağlı oldukları aidat/taksitler
+    toplu yüklenir (satır başına `get_*_in_memory()` sorgu atmaz)."""
     filter_str = "lambda mt: mt"
     order_str = "lambda mt: (desc(mt.date), desc(mt.id))"
 
@@ -444,6 +456,10 @@ def get_latest_money_transactions(whose, periods_count: int = 0):
             period_utils.previous_period(prev_count=periods_count - 1)))
 
     money_transactions = money_transactions.order_by(order_str)
+    if prefetch_details:
+        money_transactions = money_transactions.prefetch(
+            MoneyTransaction.sub_receipts_set, SubReceipt.contribution_ref, SubReceipt.installment_ref,
+            Contribution.sub_receipts_set, Installment.sub_receipts_set)
 
     return money_transactions
 
@@ -611,11 +627,11 @@ def validate_money_transaction_for_expense(mt_type: int, use_untreated_amount: b
 
 def get_payment_grouped_by_member(whose, is_fully_paid=None, is_due=None):
     due_and_unpaid_payment_groups = {}
-    for p in get_payments(whose=whose, is_fully_paid=is_fully_paid, is_due=is_due):
+    for p in get_payments(whose=whose, is_fully_paid=is_fully_paid, is_due=is_due, prefetch_details=True):
         group_by = (p.term, p.member_ref.web_user_ref)
         if not due_and_unpaid_payment_groups.get(group_by):
             due_and_unpaid_payment_groups[group_by] = {"payments": [], "remaining_amount": 0, "term": p.term,
                                                        "name_surname": p.member_ref.web_user_ref.name_surname}
         due_and_unpaid_payment_groups[group_by]["payments"].append(p)
-        due_and_unpaid_payment_groups[group_by]["remaining_amount"] += p.get_unpaid_amount()
+        due_and_unpaid_payment_groups[group_by]["remaining_amount"] += p.get_unpaid_amount_in_memory()
     return sorted(due_and_unpaid_payment_groups.values(), key=lambda p: (p["term"], p["name_surname"]))

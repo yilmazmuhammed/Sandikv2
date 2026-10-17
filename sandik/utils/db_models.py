@@ -1,3 +1,4 @@
+import builtins
 import inspect
 import math
 import os
@@ -12,6 +13,15 @@ from sandik.utils import migrations, money
 from sandik.utils.sorting import turkish_sort_key
 
 db = Database()
+
+
+def sum_of_amounts(entities):
+    """Bellekteki kayıtların `amount` toplamı (`*_in_memory` metotlarının ortak parçası).
+
+    `builtins.sum` bilerek yazıldı: `from pony.orm import *` yerleşik `sum`ı Pony'ninkiyle değiştirir ve o,
+    üreteç bir sorgu üzerinde dönüyorsa toplamı SQL'e çevirir; burada amaç tam tersi.
+    """
+    return builtins.sum((entity.amount for entity in entities), Decimal(0))
 
 
 class BankTransaction(db.Entity):
@@ -68,6 +78,10 @@ class MoneyTransaction(db.Entity):
 
     def get_undistributed_amount(self):
         return self.amount - self.distributed_amount()
+
+    def get_undistributed_amount_in_memory(self):
+        """`get_undistributed_amount` ile aynı; bkz. `Contribution.get_paid_amount_in_memory`."""
+        return self.amount - sum_of_amounts(self.sub_receipts_set)
 
     def recalculate_is_fully_distributed(self):
         mt_untreated_amount = self.get_undistributed_amount()
@@ -749,7 +763,18 @@ class Sandik(db.Entity):
                       sr.installment_ref and sr.money_transaction_ref.member_ref.sandik_ref == self).sum()
 
     def sum_of_contributions(self):
-        return select(member.sum_of_paid_contributions() for member in self.get_active_members()).sum()
+        # Aktif üyelerin `Member.sum_of_paid_contributions()` toplamıdır; üye başına iki alt sorgu
+        # (MySQL'de ~200 ms) yerine düz iki sorguyla hesaplanır. Son durum (`get_final_status`) da
+        # buradan geçtiği için birçok sayfayı etkiler.
+        return select(
+            sr.amount for sr in SubReceipt
+            if sr.contribution_ref and sr.money_transaction_ref.member_ref.sandik_ref == self
+            and sr.money_transaction_ref.member_ref.is_active and sr.money_transaction_ref.is_type_revenue()
+        ).sum() - select(
+            sr.amount for sr in SubReceipt
+            if sr.contribution_ref and sr.money_transaction_ref.member_ref.sandik_ref == self
+            and sr.money_transaction_ref.member_ref.is_active and sr.money_transaction_ref.is_type_expense()
+        ).sum()
 
     def sum_of_debts(self):
         return select(sr.amount for sr in SubReceipt if
@@ -873,6 +898,21 @@ class Contribution(db.Entity):
     def get_unpaid_amount(self):
         return self.get_amount() - self.get_paid_amount()
 
+    def get_paid_amount_in_memory(self):
+        """`get_paid_amount` ile aynı değer, ama ayrı bir SUM sorgusu atmadan.
+
+        `get_paid_amount` Pony sorgularının içinde de çağrıldığı (SQL'e çevrildiği) için gövdesi tek
+        bir `select` ifadesi kalmak zorunda; listede her satır için çağrılınca da satır başına bir
+        sorgu gider. Bu eşi tahsilatları (`sub_receipts_set`) bellekteki koleksiyondan toplar:
+        liste `prefetch(Contribution.sub_receipts_set)` ile çekildiyse hiç sorgu atmaz, çekilmediyse
+        Pony koleksiyonu tek sorguyla yükler. Pony koleksiyonu oturumdaki değişikliklerle eşit tuttuğu
+        için sonuç her zaman `get_paid_amount` ile aynıdır. **Sorgu (lambda) içinde kullanılamaz.**
+        """
+        return sum_of_amounts(self.sub_receipts_set)
+
+    def get_unpaid_amount_in_memory(self):
+        return self.get_amount() - self.get_paid_amount_in_memory()
+
     def recalculate_is_fully_paid(self):
         unpaid_amount = self.get_unpaid_amount()
         if unpaid_amount == 0:
@@ -916,6 +956,14 @@ class Debt(db.Entity):
 
     def get_unpaid_amount(self):
         return self.amount - self.get_paid_amount()
+
+    def get_paid_amount_in_memory(self):
+        """`get_paid_amount` ile aynı; bkz. `Contribution.get_paid_amount_in_memory`.
+        Sorgusuz çalışması için `prefetch(Debt.installments_set, Installment.sub_receipts_set)`."""
+        return builtins.sum((i.get_paid_amount_in_memory() for i in self.installments_set), Decimal(0))
+
+    def get_unpaid_amount_in_memory(self):
+        return self.amount - self.get_paid_amount_in_memory()
 
     def update_pieces_of_debt(self):
         paid_amount = self.get_paid_amount()
@@ -1014,6 +1062,13 @@ class Installment(db.Entity):
     def get_unpaid_amount(self):
         return self.amount - self.get_paid_amount()
 
+    def get_paid_amount_in_memory(self):
+        """`get_paid_amount` ile aynı; bkz. `Contribution.get_paid_amount_in_memory`."""
+        return sum_of_amounts(self.sub_receipts_set)
+
+    def get_unpaid_amount_in_memory(self):
+        return self.amount - self.get_paid_amount_in_memory()
+
     def recalculate_is_fully_paid(self):
         unpaid_amount = self.get_unpaid_amount()
         if unpaid_amount == 0:
@@ -1026,7 +1081,8 @@ class Installment(db.Entity):
             raise UnexpectedValue("ERRCODE: 0011, MSG: Site yöneticisi ile iletişime geçerek ERRCODE'u söyleyiniz.")
 
     def get_installment_no(self):
-        installments = self.debt_ref.installments_set.order_by(lambda i: i.term)[:][:]
+        # Sıralama bellekte yapılır: borcun taksitleri önceden yüklendiyse (prefetch) sorgu atılmaz.
+        installments = sorted(self.debt_ref.installments_set, key=lambda i: i.term)
         return installments.index(self) + 1
 
 
