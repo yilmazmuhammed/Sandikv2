@@ -306,6 +306,7 @@ def members_of_sandik_page(sandik_id):
 @sandik_authorization_required(permission="read")
 def members_of_sandik_with_detail_page(sandik_id):
     g.members = g.sandik.members_set.order_by(lambda m: m.web_user_ref.name_surname.lower())
+    g.members_summary = utils.get_members_financial_summary(sandik=g.sandik)
     return render_template("sandik/members_of_sandik_with_detail_page.html",
                            page_info=LayoutPI(title="Detaylı üye listesi", active_dropdown="members"))
 

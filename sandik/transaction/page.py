@@ -290,7 +290,8 @@ def money_transactions_of_sandik_page(sandik_id):
     g.type = "management"
 
     g.total_count, g.page_count, g.first_index, g.money_transactions = get_paging_variables(
-        entities_query=utils.get_latest_money_transactions(whose=g.sandik), page_size=g.page_size, page_num=g.page_num
+        entities_query=utils.get_latest_money_transactions(whose=g.sandik, prefetch_details=True),
+        page_size=g.page_size, page_num=g.page_num
     )
 
     return render_template("transaction/money_transactions_page.html",
@@ -305,7 +306,8 @@ def money_transactions_of_member_page(sandik_id):
     g.type = "member"
 
     g.total_count, g.page_count, g.first_index, g.money_transactions = get_paging_variables(
-        entities_query=utils.get_latest_money_transactions(whose=g.member), page_size=g.page_size, page_num=g.page_num
+        entities_query=utils.get_latest_money_transactions(whose=g.member, prefetch_details=True),
+        page_size=g.page_size, page_num=g.page_num
     )
 
     return render_template(
@@ -322,7 +324,8 @@ def money_transactions_of_member_for_management_page(sandik_id, member_id):
     g.type = "management"
 
     g.total_count, g.page_count, g.first_index, g.money_transactions = get_paging_variables(
-        entities_query=utils.get_latest_money_transactions(whose=g.member), page_size=g.page_size, page_num=g.page_num
+        entities_query=utils.get_latest_money_transactions(whose=g.member, prefetch_details=True),
+        page_size=g.page_size, page_num=g.page_num
     )
 
     page_title = f"Para giriş/çıkış işlemleri: {g.member.web_user_ref.name_surname}"
@@ -348,10 +351,10 @@ def transactions_of_sandik_page(sandik_id):
 @paging_must_be_verified(default_page_num=1, default_page_size=50)
 def transactions_of_member_page(sandik_id):
     g.type = "member"
-
-    g.total_count, g.page_count, g.first_index, g.transactions = get_paging_variables(
-        entities_query=utils.get_transactions(whose=g.member), page_size=g.page_size, page_num=g.page_num
-    )
+    # `get_transactions` sorgu değil liste döndürür; sunucu tarafı sayfalama (`get_paging_variables`)
+    # ona uygulanınca sayfa 500 veriyordu. Şablon sayfalamayı tarayıcıda (footable) yaptığı için
+    # sandık sayfasındaki gibi bütün liste verilir.
+    g.transactions = utils.get_transactions(whose=g.member)
 
     return render_template("transaction/sandik_transactions_page.html",
                            page_info=LayoutPI(title="Sandık işlemlerim", active_dropdown="member-transactions"))
@@ -380,7 +383,8 @@ def payments_of_member_page(sandik_id):
     g.all_payments = {"is_grouped": True, "groups": utils.get_payment_grouped_by_member(whose=g.member)}
     g.due_and_unpaid_payment = {
         "is_grouped": False,
-        "payments": sorted(utils.get_payments(whose=g.member, is_fully_paid=False, is_due=True), key=lambda t: t.term)
+        "payments": sorted(utils.get_payments(whose=g.member, is_fully_paid=False, is_due=True, prefetch_details=True),
+                           key=lambda t: t.term)
     }
     return render_template("transaction/payments_page.html",
                            page_info=LayoutPI(title="Ödemelerim", active_dropdown="member-transactions"))
@@ -391,8 +395,8 @@ def payments_of_member_page(sandik_id):
 # TODO tablolara göre ayrı ayrı paging yapılacak
 def debts_of_sandik_page(sandik_id):
     g.type = "management"
-    g.unpaid_debts = utils.get_debts(whose=g.sandik, only_unpaid=True)
-    g.debts = utils.get_debts(whose=g.sandik)
+    g.unpaid_debts = utils.get_debts(whose=g.sandik, only_unpaid=True, prefetch_details=True)
+    g.debts = utils.get_debts(whose=g.sandik, prefetch_details=True)
     return render_template("transaction/debts_page.html",
                            page_info=LayoutPI(title="Sandıktaki borçlar", active_dropdown="management-transactions"))
 
@@ -402,8 +406,8 @@ def debts_of_sandik_page(sandik_id):
 # TODO tablolara göre ayrı ayrı paging yapılacak
 def debts_of_member_page(sandik_id):
     g.type = "member"
-    g.unpaid_debts = utils.get_debts(whose=g.member, only_unpaid=True)
-    g.debts = utils.get_debts(whose=g.member)
+    g.unpaid_debts = utils.get_debts(whose=g.member, only_unpaid=True, prefetch_details=True)
+    g.debts = utils.get_debts(whose=g.member, prefetch_details=True)
     return render_template("transaction/debts_page.html",
                            page_info=LayoutPI(title="Borçlarım", active_dropdown="member-transactions"))
 

@@ -804,6 +804,47 @@ Kural formüllerinde artık **ondalık** kullanılabilir (`{hisse_toplam_aidat}*
   bağlıdır; tablolardaki istemci tarafı (footable) sıralama da türkçe bilmez. Testler:
   `tests/test_turkish_sorting.py`.
 
+## Listeleme sayfalarında performans
+
+Üretim veritabanı MySQL'dir ve her sorgu bir ağ gidiş-dönüşüdür; sayfaları yavaşlatan şey tek tek
+yavaş sorgular değil, **satır başına atılan sorgulardır** (N+1). 2026-10'da gerçekçi bir veriyle
+(40 üyeli, 5 yıllık bir sandık) ölçüldü; "Sandıktaki ödemeler" sayfası 3678 sorgu atıyordu. Bu
+bölümdeki kalıplar o çalışmadan kalmadır.
+
+- **`get_paid_amount()` / `get_unpaid_amount()` / `get_undistributed_amount()` sorguların içinde de
+  kullanılır** (`select(c for c in Contribution if c.get_unpaid_amount() > 0)` gibi); Pony bu
+  metotların gövdesini SQL'e çevirdiği için gövde **tek bir `select(...)` ifadesi kalmak zorundadır**.
+  Python'dan her çağrıldığında da ayrı bir SUM sorgusu atarlar.
+- Listeleme için eşleri vardır: **`get_paid_amount_in_memory()`, `get_unpaid_amount_in_memory()`**
+  (`Contribution`, `Installment`, `Debt`) ve **`MoneyTransaction.get_undistributed_amount_in_memory()`**.
+  Bunlar tahsilatları (`sub_receipts_set`) bellekteki koleksiyondan toplar. Liste
+  `prefetch(...)` ile çekildiyse hiç sorgu atmazlar; çekilmediyse koleksiyonu yükleyip yine doğru
+  sonucu verirler. Pony koleksiyonu oturumdaki değişikliklerle eşit tuttuğu için önbellek eskimesi
+  diye bir sorun yoktur. **Sorgu (lambda) içinde kullanılamazlar.**
+- Toplu yükleme için `transaction/utils.py`deki `get_payments`, `get_debts`,
+  `get_latest_money_transactions` **`prefetch_details=True`** alır. Sayfa şablonları bu listelerde
+  `*_in_memory()` eşlerini çağırır; yeni bir listeleme sayfası da aynı şekilde yazılmalıdır.
+- Şablonda ilişkili koleksiyonu `.order_by('lambda ...')` ile sıralamak her satırda sorgu atar;
+  yüklenmiş koleksiyon Jinja'da `|sort(attribute='...,id')` ile sıralanır (`id`, eşit değerlerde
+  sırayı sabit tutar). `.count() == 0` yerine `.is_empty()` yüklenmiş koleksiyonda sorgu atmaz.
+- **`sr.debt_ref` bir sorgudur**: borç–tahsilat ilişkisinin sütunu `Debt` tablosundadır, yani her
+  tahsilat için ayrı arama yapılır. Döngüde gerekiyorsa borçlar bir kerede alınıp
+  `{debt.sub_receipt_ref: debt}` sözlüğüne konur (`sandik/utils.py` → `get_borrowing_priority`).
+- Üye listesi toplamları ("Detaylı üye listesi") `sandik/utils.py` →
+  `get_members_financial_summary()` ile üyeye göre gruplanmış sorgularla hesaplanır. Değerler
+  `Member.sum_of_*()` metotlarıyla aynı olmak zorundadır; **bir metodun tanımı değişirse oradaki
+  sorgu da değişmelidir**. `tests/test_bulk_amounts.py` bütün bu eşleri asıl metotlarla karşılaştırır.
+- `Sandik.sum_of_contributions()` (dolayısıyla `get_final_status()`, sandığın son durumu) eskiden üye
+  başına iki alt sorgu çalıştırıyordu ve MySQL'de tek başına ~200 ms sürüyordu; son durum detay,
+  işlem ekleme, üye finansal durumu ve özet sayfalarında hesaplandığı için hepsini yavaşlatıyordu.
+  Artık düz iki sorgudur.
+
+Kalan bilinen maliyetler: "Sandıktaki ödemeler" bütün ödemeleri (binlerce satır, MB'larca HTML) tek
+sayfada basar — süresinin çoğu artık Pony'nin nesneleri kurması ve şablondur, sunucu tarafı
+sayfalama olmadan daha fazla kısalmaz. Güven bağlı sandığın özet sayfaları bağlı her üye için
+bakiyeyi ayrı sorgularla hesaplar; borç limiti (`max_amount_can_borrow`) de hisse başına kural
+değerlendirir.
+
 ## Yerelde çalıştırma ve test
 
 ```bash

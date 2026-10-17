@@ -47,11 +47,11 @@
           {
             "index": `<span title='ID: {{ member.id }}'>{{ loop.index }}</span>`,
             "name_surname": `{{ member.web_user_ref.name_surname }}`,
-            "sum_of_paid_contributions": `{{ member.sum_of_paid_contributions()|money(g.sandik) }}`,
-            "sum_of_debts": `{{ member.sum_of_debts()|money(g.sandik) }}`,
-            "sum_of_paid_installments": `{{ member.sum_of_paid_installments()|money(g.sandik) }}`,
-            "total_of_undistributed_amount": `{{ member.total_of_undistributed_amount()|money(g.sandik) }}`,
-            "sum_of_unpaid_amount_of_debts": `{{ member.sum_of_unpaid_amount_of_debts()|money(g.sandik) }}`,
+            "sum_of_paid_contributions": `{{ g.members_summary[member.id]["sum_of_paid_contributions"]|money(g.sandik) }}`,
+            "sum_of_debts": `{{ g.members_summary[member.id]["sum_of_debts"]|money(g.sandik) }}`,
+            "sum_of_paid_installments": `{{ g.members_summary[member.id]["sum_of_paid_installments"]|money(g.sandik) }}`,
+            "total_of_undistributed_amount": `{{ g.members_summary[member.id]["total_of_undistributed_amount"]|money(g.sandik) }}`,
+            "sum_of_unpaid_amount_of_debts": `{{ g.members_summary[member.id]["sum_of_unpaid_amount_of_debts"]|money(g.sandik) }}`,
             {#"end_of_month": `... ₺`,#}
             {#"end_of_mil": `... ₺`,#}
             "max_amount_can_borrow": `{{ catch_exception(member.max_amount_can_borrow, default_value="---", use_untreated_amount=False, dont_care_sandik_status=True)|money(g.sandik) }}`,
