@@ -202,6 +202,12 @@ sayfa `general/page.py` → `debt_history_page`, şablon `general/debt_history_p
   `sandikv2-borc-gecmisi` çerezine yazılır ve sayfa parametresiz açılınca kullanılır. Hazır aralık
   ay olarak değil adıyla saklanır ("Son 12 ay" gelecek ay da son 12 aydır). "Sandık sandık göster"
   yalnızca tarayıcıda çalışır (`localStorage["sandikv2-borc-gecmisi-sandik-sandik"]`, sayfa yenilenmez).
+- **Grafiğin yatay ekseni zaman eksenidir, etiketleri ay başlarıdır** (kullanıcı istedi): noktalar
+  gerçek tarihlerine (`chart.dates`, UTC gün) yerleşir, etiketler veri noktalarından değil ay
+  başlarından gelir ("Oca 2026"). Sığmayanlar takvime oturan adımlarla seyreltilir (2/3/6/12 ayda bir;
+  etiket başına ~62 px). Aralık 2 ay ya da daha kısaysa ayın 15'i de etiketlenir ("1 Eyl", "15 Eyl")
+  ve eksen aralığın ilk gününden başlar. Chart.js'in zaman ekseni tarih kütüphanesi istediği için
+  doğrusal eksen + `afterBuildTicks` kullanılır. Nokta üzerindeki tarih `chart.labels`tan gelir.
 - **Tablo varsayılan olarak kapalıdır** (kullanıcı istedi), `<details>` ile açılır; açık/kapalı durumu
   saklanmaz, sayfa her açılışta kapalı gelir.
 - Farklı para birimleri toplanmaz: sandıklar birime göre gruplanır, her grubun ayrı grafiği vardır.

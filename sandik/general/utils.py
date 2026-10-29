@@ -386,6 +386,9 @@ def get_mile_end_history(web_user, selection, today=None):
     # Grafiğe giden veri: tutarlar metin olarak (Decimal; JS parseFloat ile okur, bkz. CLAUDE.md).
     chart = {
         "labels": labels,
+        # Noktaların tarihi; grafiğin yatay ekseni zaman eksenidir ve etiketleri ay başlarına konur
+        "dates": [point.isoformat() for point in points],
+        "start_date": start_date.isoformat(),
         "groups": [{
             "currency": {"symbol": group["sandik"].currency_symbol(), "places": group["sandik"].currency_places()},
             "total_label": "Toplam" if len(group["members"]) > 1 else group["members"][0].sandik_ref.name,
