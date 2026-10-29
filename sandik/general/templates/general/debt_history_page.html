@@ -257,11 +257,78 @@
         /* Günlük/haftalık uzun aralıklar: noktalar gizlenir, çizgi basamaklı çizilir (borç gün
            içinde değişir, iki gün arasında eğimli bir geçiş yoktur) */
         var manyPoints = HISTORY.labels.length > 40;
-        var isNarrow = window.innerWidth < 500;
         var charts = [];
 
-        function toNumbers(values) {
-          return values.map(function (value) { return parseFloat(value); });
+        /* Yatay eksen: noktalar gerçek tarihlerine yerleşir (gün, UTC: yaz saati kayması olmasın),
+           etiketler veri noktalarından değil ay başlarından gelir. Aralık 2 ay ya da daha kısaysa
+           ayın 15'i de etiketlenir. Sığmayan ay başları takvime oturan adımlarla seyreltilir
+           (2/3/6/12 ayda bir). */
+        var DAY_MS = 24 * 60 * 60 * 1000;
+        var TR_MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+        var MONTH_STEPS = [1, 2, 3, 6, 12, 24, 60];
+        var MIN_TICK_WIDTH = 62;
+
+        function isoToX(iso) {
+          var parts = iso.split("-");
+          return Date.UTC(+parts[0], +parts[1] - 1, +parts[2]);
+        }
+
+        var xs = HISTORY.dates.map(isoToX);
+        var xMax = xs[xs.length - 1];
+        var isShortRange = xMax - isoToX(HISTORY.start_date) <= 62 * DAY_MS;
+        /* Eksen ilk noktadan başlar (aylık dilimde ilk nokta ilk ayın sonudur, öncesi boş kalmasın).
+           Kısa aralıkta ise aralığın ilk günüden başlar ki ayın 1'i etiketlensin (haftalık dilimin ilk
+           noktası ayın 1'i olmayabilir); tek noktalı grafikte de eksenin bir genişliği olur. */
+        var xMin = isShortRange || xs.length === 1
+          ? Math.min(isoToX(HISTORY.start_date), xs[0], xMax - DAY_MS) : xs[0];
+
+        function xAxisTicks(maxCount) {
+          var first = new Date(xMin);
+          var monthIndex = first.getUTCFullYear() * 12 + first.getUTCMonth();
+          var monthStarts = [];
+          var ticks = [];
+          for (; ; monthIndex++) {
+            var year = Math.floor(monthIndex / 12);
+            var month = monthIndex % 12;
+            var monthStart = Date.UTC(year, month, 1);
+            if (monthStart > xMax) {
+              break;
+            }
+            if (monthStart >= xMin) {
+              monthStarts.push({value: monthStart, monthIndex: monthIndex});
+            }
+            if (isShortRange) {
+              var middle = Date.UTC(year, month, 15);
+              if (monthStart >= xMin) {
+                ticks.push(monthStart);
+              }
+              if (middle >= xMin && middle <= xMax) {
+                ticks.push(middle);
+              }
+            }
+          }
+          if (!isShortRange) {
+            var step = MONTH_STEPS.filter(function (candidate) {
+              return monthStarts.filter(function (m) { return m.monthIndex % candidate === 0; }).length <= maxCount;
+            })[0] || MONTH_STEPS[MONTH_STEPS.length - 1];
+            ticks = monthStarts.filter(function (m) { return m.monthIndex % step === 0; })
+              .map(function (m) { return m.value; });
+          }
+          /* Aralıkta hiç ay başı/ortası yoksa (birkaç günlük aralık) uçlar etiketlenir */
+          return ticks.length ? ticks : [xMin, xMax];
+        }
+
+        function formatXTick(value) {
+          var day = new Date(value);
+          var monthName = TR_MONTHS[day.getUTCMonth()];
+          if (isShortRange || day.getUTCDate() !== 1) {
+            return day.getUTCDate() + " " + monthName;
+          }
+          return monthName + " " + day.getUTCFullYear();
+        }
+
+        function toPoints(values) {
+          return values.map(function (value, i) { return {x: xs[i], y: parseFloat(value)}; });
         }
 
         function isPerSandikShown() {
@@ -272,12 +339,14 @@
           var group = HISTORY.groups[$(this).data("group")];
           var datasets = [{
             label: group.total_label,
-            data: toNumbers(group.total),
+            data: toPoints(group.total),
             borderColor: TOTAL_COLOR,
             backgroundColor: TOTAL_COLOR,
             borderWidth: manyPoints ? 2 : 3,
             pointRadius: manyPoints ? 0 : 3,
             stepped: manyPoints ? "after" : false,
+            /* Eksenin uçlarındaki noktalar yarım kesilmesin */
+            clip: 6,
             /* Sıfırın üstü (borçlu) kırmızı, altı (alacaklı) yeşil taranır */
             fill: {target: "origin", above: "rgba(240, 80, 80, 0.12)", below: "rgba(39, 194, 76, 0.12)"},
             order: 0
@@ -286,12 +355,13 @@
             var color = SANDIK_COLORS[index % SANDIK_COLORS.length];
             datasets.push({
               label: series.name,
-              data: toNumbers(series.values),
+              data: toPoints(series.values),
               borderColor: color,
               backgroundColor: color,
               borderWidth: manyPoints ? 1.5 : 2,
               pointRadius: manyPoints ? 0 : 2,
               stepped: manyPoints ? "after" : false,
+              clip: 6,
               fill: false,
               hidden: !isPerSandikShown(),
               isPerSandik: true,
@@ -301,7 +371,7 @@
 
           charts.push(new Chart(this, {
             type: "line",
-            data: {labels: HISTORY.labels, datasets: datasets},
+            data: {datasets: datasets},
             options: {
               responsive: true,
               maintainAspectRatio: false,
@@ -315,6 +385,7 @@
                 },
                 tooltip: {
                   callbacks: {
+                    title: function (items) { return HISTORY.labels[items[0].dataIndex]; },
                     label: function (ctx) {
                       return ctx.dataset.label + ": " + formatMoneyWithSymbol(ctx.parsed.y, group.currency);
                     }
@@ -322,7 +393,16 @@
                 }
               },
               scales: {
-                x: {ticks: {maxRotation: 0, autoSkip: true, autoSkipPadding: 16, maxTicksLimit: isNarrow ? 4 : 8}},
+                x: {
+                  type: "linear",
+                  min: xMin,
+                  max: xMax,
+                  afterBuildTicks: function (axis) {
+                    var maxCount = Math.max(2, Math.floor((axis.width || 300) / MIN_TICK_WIDTH));
+                    axis.ticks = xAxisTicks(maxCount).map(function (value) { return {value: value}; });
+                  },
+                  ticks: {maxRotation: 0, autoSkip: false, callback: formatXTick}
+                },
                 y: {
                   ticks: {
                     callback: function (value) { return formatMoney(value, group.currency); }
