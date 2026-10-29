@@ -68,7 +68,7 @@ def debt_history_page():
     g.history = utils.get_mile_end_history(web_user=current_user, selection=g.selection)
 
     response = make_response(render_template("general/debt_history_page.html",
-                                             page_info=LayoutPI(title="Borç geçmişim"),
+                                             page_info=LayoutPI(title="Borç geçmişim", active_dropdown="debt-history"),
                                              RANGES=utils.HISTORY_RANGES, SLICES=utils.HISTORY_SLICES))
     if has_selection:
         response.set_cookie(DEBT_HISTORY_COOKIE, urlencode(g.selection["args"]),

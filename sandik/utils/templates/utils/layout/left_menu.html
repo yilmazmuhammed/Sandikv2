@@ -5,6 +5,22 @@
           <!-- nav -->
           <nav ui-nav class="navi clearfix">
             <ul class="nav">
+              {% if current_user.is_authenticated %}
+              <!-- Bütün sandıkları kapsayan sayfalar (hangi sandığın sayfasında olunursa olunsun görünür) -->
+              <li class="hidden-folded padder m-t m-b-sm text-muted text-xs">
+                <span>Tüm sandıklarım</span>
+              </li>
+              <li id="debt-history-dropdown">
+                <a href="{{ url_for('general_page_bp.debt_history_page') }}">
+                  <i class="fas fa-chart-line"></i>
+                  <span>Borç geçmişim</span>
+                </a>
+              </li>
+              {% if g.member %}
+              <li class="line dk"></li>
+              {% endif %}
+              {% endif %}
+
               {% if g.member %}
               <!-- Sandık menüleri-->
               <li class="hidden-folded padder m-t m-b-sm text-muted text-xs">
