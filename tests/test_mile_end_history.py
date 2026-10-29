@@ -1,4 +1,6 @@
-"""`sandik/general/utils.py` -> mil sonu geçmişi (`/mil-sonu-gecmisi`) için testler.
+"""`sandik/general/utils.py` -> borç geçmişi (`/borc-gecmisi`) için testler.
+
+Sayfa borç gösterir ama hesap mil sonu üzerinden yapılır (borç = -mil sonu).
 
 En önemli kural: bugünle biten noktanın değeri ana sayfadaki mil sonuyla (`get_home_page_data` ->
 `status_rows[...]["mile_end"]`) birebir aynıdır. Geçmiş değerler bugünkü kayıtlardan geriye doğru
@@ -65,6 +67,11 @@ def test_todays_value_equals_the_home_page_mile_end():
     assert history["points"][-1] == date.today()
     assert history["member_values"][member.id][-1] == expected
     assert history["groups"][0]["total"][-1] == expected
+    # Sayfanın gösterdiği borç, mil sonunun tersidir (grafik verisi dahil).
+    assert expected < 0
+    assert history["member_debts"][member.id][-1] == -expected
+    assert history["groups"][0]["debt_total"][-1] == -expected
+    assert history["chart"]["groups"][0]["total"][-1] == str(-expected)
 
 
 @db_session

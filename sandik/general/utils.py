@@ -174,10 +174,11 @@ def _future_contribution_amounts(member, periods):
     return amounts
 
 
-# --- Mil sonu geçmişi (/mil-sonu-gecmisi) ---------------------------------------------------------
+# --- Borç geçmişi (/borc-gecmisi) -----------------------------------------------------------------
 # Ana sayfadaki "Mil sonu" sütununun (status_rows -> mile_end) geçmişteki her dilim sonundaki değeri.
-# Geçmiş durum veritabanında saklanmaz, bugünkü kayıtlardan geriye doğru hesaplanır. Ayrıntı:
-# CLAUDE.md -> "Mil sonu geçmişi".
+# Hesap mil sonu üzerinden yapılır; sayfa ise kafa karıştırmasın diye işaretini çevirip borç olarak
+# gösterir (borç = -mil sonu). Geçmiş durum veritabanında saklanmaz, bugünkü kayıtlardan geriye
+# doğru hesaplanır. Ayrıntı: CLAUDE.md -> "Borç geçmişi".
 
 HISTORY_SLICES = {  # adresteki değer -> etiket
     "gun": "Günlük",
@@ -328,6 +329,9 @@ def get_mile_end_history(web_user, selection, today=None):
     Sandıklar para birimine göre gruplanır (farklı birimler toplanamaz); her grubun bir toplam
     serisi ve sandık sandık serileri vardır. Bugünle biten noktanın değeri ana sayfadaki mil sonuyla
     aynıdır (`tests/test_mile_end_history.py`).
+
+    `member_values` / `total` mil sonudur; sayfanın gösterdiği borç bunun işaret çevrilmiş hâlidir
+    (`member_debts` / `debt_total`, grafik verisi de borçtur).
     """
     today = today or date.today()
     members = sorted(
@@ -364,6 +368,9 @@ def get_mile_end_history(web_user, selection, today=None):
             "total": [sum((values[member.id][i] for member in group_members), Decimal(0))
                       for i in range(len(points))],
         })
+    debts = {member_id: [-value for value in member_values] for member_id, member_values in values.items()}
+    for group in groups:
+        group["debt_total"] = [-value for value in group["total"]]
 
     # Tablo satırları en yeniden eskiye; günlük/haftalık dilimde yalnızca değişen satırlar. Aralığın
     # ilk ve son noktası (çoğunlukla bugün) değişmemiş olsa da listelenir.
@@ -382,8 +389,8 @@ def get_mile_end_history(web_user, selection, today=None):
         "groups": [{
             "currency": {"symbol": group["sandik"].currency_symbol(), "places": group["sandik"].currency_places()},
             "total_label": "Toplam" if len(group["members"]) > 1 else group["members"][0].sandik_ref.name,
-            "total": [str(value) for value in group["total"]],
-            "series": [{"name": member.sandik_ref.name, "values": [str(value) for value in values[member.id]]}
+            "total": [str(value) for value in group["debt_total"]],
+            "series": [{"name": member.sandik_ref.name, "values": [str(value) for value in debts[member.id]]}
                        for member in group["members"]] if len(group["members"]) > 1 else [],
         } for group in groups],
     }
@@ -399,6 +406,7 @@ def get_mile_end_history(web_user, selection, today=None):
         "start_date": start_date,
         "end_date": end_date,
         "member_values": values,
+        "member_debts": debts,
         "groups": groups,
         "row_indexes": row_indexes,
         "lists_only_changes": selection["slice"] in HISTORY_SLICES_LISTING_ONLY_CHANGES,

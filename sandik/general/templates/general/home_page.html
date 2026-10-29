@@ -219,8 +219,8 @@
           <div class="panel panel-default">
             <div class="panel-heading font-bold">
               <span>Sandıklardaki son durumlarım</span>
-              <a class="pull-right font-normal" href="{{ url_for('general_page_bp.mile_end_history_page') }}">
-                <i class="fas fa-chart-line"></i> Geçmişi gör
+              <a class="pull-right font-normal" href="{{ url_for('general_page_bp.debt_history_page') }}">
+                <i class="fas fa-chart-line"></i> Borç geçmişi
               </a>
             </div>
             <div class="table-responsive">
@@ -233,7 +233,7 @@
                     <th>Ödenen taksit</th>
                     <th>Kalan borç</th>
                     <th>İşleme konmamış</th>
-                    <th title="İşleme konmamış miktar - bütün ödenmemiş ödemeler"><a href="{{ url_for('general_page_bp.mile_end_history_page') }}" title="Mil sonu geçmişi">Mil sonu <i class="fas fa-chart-line"></i></a></th>
+                    <th title="İşleme konmamış miktar - bütün ödenmemiş ödemeler"><a href="{{ url_for('general_page_bp.debt_history_page') }}" title="Borç geçmişi">Mil sonu <i class="fas fa-chart-line"></i></a></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -283,6 +283,9 @@
             <div class="panel-heading font-bold">
               <span>Aylık ödemelerim</span>
               <span class="text-muted" style="font-weight: normal;">(ödenmemiş aidat ve taksitler)</span>
+              <a class="pull-right font-normal" href="{{ url_for('general_page_bp.debt_history_page') }}">
+                <i class="fas fa-chart-line"></i> Borç geçmişi
+              </a>
               <label class="future-contributions-toggle"
                      title="Gelecek ayların aidatları henüz oluşturulmadığı için tabloda yalnızca taksitler görünür. İşaretlenirse o ayların aidatları da eklenir.">
                 <input type="checkbox" id="future-contributions-toggle">

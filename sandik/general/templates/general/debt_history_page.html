@@ -1,10 +1,11 @@
 {% extends "utils/layout.html" %}
 {% import "utils/parts/macros.html" as macros %}
 
-{# Mil sonu geçmişi: ana sayfadaki "Mil sonu" sütununun dilim dilim değeri. Hesap
-   general/utils.py -> get_mile_end_history'dedir; ayrıntı CLAUDE.md -> "Mil sonu geçmişi". #}
+{# Borç geçmişi: ana sayfadaki "Mil sonu" sütununun dilim dilim değeri, işareti çevrilerek borç
+   olarak gösterilir (borç = -mil sonu; eksi grafikler kafa karıştırıyordu). Hesap
+   general/utils.py -> get_mile_end_history'dedir; ayrıntı CLAUDE.md -> "Borç geçmişi". #}
 
-{% set PER_SANDIK_STORAGE_KEY = "sandikv2-mil-sonu-sandik-sandik" %}
+{% set PER_SANDIK_STORAGE_KEY = "sandikv2-borc-gecmisi-sandik-sandik" %}
 
 {% block css_block %}
   <style>
@@ -58,6 +59,29 @@
     }
     .history-note {
       font-size: 12px;
+      margin: -10px 0 20px;
+    }
+    /* Tablo varsayılan olarak kapalıdır; <details> javascript olmadan da açılıp kapanır */
+    details.history-table-panel > summary {
+      cursor: pointer;
+      list-style: none;
+      font-weight: 600;
+    }
+    details.history-table-panel > summary::-webkit-details-marker {
+      display: none;
+    }
+    details.history-table-panel > summary .fa-chevron-down {
+      transition: transform 0.15s;
+    }
+    details.history-table-panel[open] > summary .fa-chevron-down {
+      transform: rotate(180deg);
+    }
+    details.history-table-panel:not([open]) > summary {
+      border-bottom: 0;
+    }
+    details.history-table-panel[open] > summary .when-closed,
+    details.history-table-panel:not([open]) > summary .when-open {
+      display: none;
     }
     /* Sandık sandık sütunlar yalnızca seçenek açıkken görünür */
     .history-table .per-sandik {
@@ -77,14 +101,14 @@
   {% set h = g.history %}
   {% set sel = g.selection %}
   {{ macros.page_header(page_info.title) }}
-  <div class="wrapper-md" id="mile-end-history">
+  <div class="wrapper-md" id="debt-history">
     {% if h.has_per_sandik %}
       <script>
         /* Sandık sandık seçimi ilk boyamadan önce uygulanır (tablo sütunları bir an görünmesin) */
         (function () {
           try {
             if (localStorage.getItem("{{ PER_SANDIK_STORAGE_KEY }}") === "1") {
-              document.getElementById("mile-end-history").className += " show-per-sandik";
+              document.getElementById("debt-history").className += " show-per-sandik";
             }
           } catch (e) {}
         })();
@@ -105,12 +129,12 @@
             <div class="btn-group btn-group-sm">
               {% for key, range_info in RANGES.items() %}
                 <a class="btn btn-default{% if sel.range == key %} active{% endif %}"
-                   href="{{ url_for('general_page_bp.mile_end_history_page', aralik=key, dilim=sel.slice) }}">{{ range_info[0] }}</a>
+                   href="{{ url_for('general_page_bp.debt_history_page', aralik=key, dilim=sel.slice) }}">{{ range_info[0] }}</a>
               {% endfor %}
             </div>
           </div>
           <div class="control-row">
-            <form method="get" action="{{ url_for('general_page_bp.mile_end_history_page') }}">
+            <form method="get" action="{{ url_for('general_page_bp.debt_history_page') }}">
               <input type="month" class="form-control input-sm" name="baslangic" required
                      value="{{ h.start_date.strftime('%Y-%m') }}" aria-label="Başlangıç ayı" placeholder="YYYY-AA">
               <span>–</span>
@@ -121,7 +145,7 @@
             </form>
           </div>
           <div class="control-row">
-            <form method="get" action="{{ url_for('general_page_bp.mile_end_history_page') }}">
+            <form method="get" action="{{ url_for('general_page_bp.debt_history_page') }}">
               <label class="control-label" for="history-slice">Dilim:</label>
               {% for name, value in sel.args.items() if name != "dilim" %}
                 <input type="hidden" name="{{ name }}" value="{{ value }}">
@@ -160,9 +184,18 @@
             </div>
           </div>
         {% endfor %}
+        <div class="text-muted history-note">
+          Borç: ödenmemiş bütün aidat ve taksitlerinizden işleme konmamış paranız düşüldükten sonra kalan
+          tutar (ana sayfadaki "Mil sonu"nun tersi). Her nokta dilimin son günündeki borcunuzdur, son nokta
+          bugündür. Eksi değer o gün alacaklı olduğunuzu gösterir.
+        </div>
 
-        <!-- Tablo -->
-        <div class="panel panel-default">
+        <!-- Tablo: varsayılan olarak kapalı -->
+        <details class="panel panel-default history-table-panel">
+          <summary class="panel-heading">
+            <span class="when-closed">Tabloyu göster</span><span class="when-open">Tabloyu gizle</span>
+            <i class="fas fa-chevron-down pull-right"></i>
+          </summary>
           <div class="table-responsive">
             <table class="table table-striped table-bordered history-table" style="margin-bottom: 0;">
               <thead>
@@ -175,7 +208,7 @@
                         <th class="text-center per-sandik">{{ member.sandik_ref.name }}</th>
                       {% endfor %}
                     {% else %}
-                      <th class="text-center">{% if h.members|length > 1 %}{{ group.members[0].sandik_ref.name }}{% else %}Mil sonu{% endif %}</th>
+                      <th class="text-center">{% if h.members|length > 1 %}{{ group.members[0].sandik_ref.name }}{% else %}Borç{% endif %}</th>
                     {% endif %}
                   {% endfor %}
                 </tr>
@@ -187,12 +220,12 @@
                       {{ h.labels[i] }}{% if h.points[i] == h.today %} <span class="text-muted">(bugün)</span>{% endif %}
                     </td>
                     {% for group in h.groups %}
-                      {% set total = group.total[i] %}
-                      <td class="font-bold {% if total < 0 %}text-danger{% else %}text-success{% endif %}">{{ total|money(group.sandik) }}</td>
+                      {% set total = group.debt_total[i] %}
+                      <td class="font-bold {% if total > 0 %}text-danger{% else %}text-success{% endif %}">{{ total|money(group.sandik) }}</td>
                       {% if group.members|length > 1 %}
                         {% for member in group.members %}
-                          {% set value = h.member_values[member.id][i] %}
-                          <td class="per-sandik {% if value < 0 %}text-danger{% else %}text-success{% endif %}">{{ value|money(member.sandik_ref) }}</td>
+                          {% set value = h.member_debts[member.id][i] %}
+                          <td class="per-sandik {% if value > 0 %}text-danger{% else %}text-success{% endif %}">{{ value|money(member.sandik_ref) }}</td>
                         {% endfor %}
                       {% endif %}
                     {% endfor %}
@@ -201,13 +234,12 @@
               </tbody>
             </table>
           </div>
-          <div class="panel-footer text-muted history-note">
-            Her satır, dilimin son günündeki mil sonudur; son satır bugünün değeridir.
-            {% if h.lists_only_changes %}Yalnızca mil sonunun değiştiği günler listelenmiştir.{% endif %}
-            Mil sonu, işleme konmamış paranızdan ödenmemiş bütün aidat ve taksitleriniz düşüldükten sonra kalan
-            tutardır; eksi değer o gün borçlu olduğunuzu gösterir.
-          </div>
-        </div>
+          {% if h.lists_only_changes %}
+            <div class="panel-footer text-muted" style="font-size: 12px;">
+              Yalnızca borcun değiştiği günler listelenmiştir.
+            </div>
+          {% endif %}
+        </details>
 
       {% endif %}
     {% endif %}
@@ -222,7 +254,7 @@
         var HISTORY = {{ g.history.chart|tojson }};
         var TOTAL_COLOR = "#3a3f51";
         var SANDIK_COLORS = ["#7266ba", "#23b7e5", "#27c24c", "#fad733", "#f05050", "#ff9800", "#8bc34a", "#e91e63"];
-        /* Günlük/haftalık uzun aralıklar: noktalar gizlenir, çizgi basamaklı çizilir (mil sonu gün
+        /* Günlük/haftalık uzun aralıklar: noktalar gizlenir, çizgi basamaklı çizilir (borç gün
            içinde değişir, iki gün arasında eğimli bir geçiş yoktur) */
         var manyPoints = HISTORY.labels.length > 40;
         var isNarrow = window.innerWidth < 500;
@@ -233,7 +265,7 @@
         }
 
         function isPerSandikShown() {
-          return $("#mile-end-history").hasClass("show-per-sandik");
+          return $("#debt-history").hasClass("show-per-sandik");
         }
 
         $(".history-canvas").each(function () {
@@ -246,8 +278,8 @@
             borderWidth: manyPoints ? 2 : 3,
             pointRadius: manyPoints ? 0 : 3,
             stepped: manyPoints ? "after" : false,
-            /* Sıfırın üstü (alacaklı) yeşil, altı (borçlu) kırmızı taranır */
-            fill: {target: "origin", above: "rgba(39, 194, 76, 0.12)", below: "rgba(240, 80, 80, 0.12)"},
+            /* Sıfırın üstü (borçlu) kırmızı, altı (alacaklı) yeşil taranır */
+            fill: {target: "origin", above: "rgba(240, 80, 80, 0.12)", below: "rgba(39, 194, 76, 0.12)"},
             order: 0
           }];
           group.series.forEach(function (series, index) {
@@ -310,7 +342,7 @@
         $toggle.prop("checked", isPerSandikShown());
         $toggle.on("change", function () {
           var shown = this.checked;
-          $("#mile-end-history").toggleClass("show-per-sandik", shown);
+          $("#debt-history").toggleClass("show-per-sandik", shown);
           try {
             localStorage.setItem("{{ PER_SANDIK_STORAGE_KEY }}", shown ? "1" : "0");
           } catch (e) {}
