@@ -142,6 +142,26 @@ Tercih yalnızca bu soruya bakar. "Vadesi gelmemiş ödemeleri öde" bağlantıl
 `sandik_summary_for_member_page.html`) ve gecelik iş, `pay_future_payments`i kendileri açıkça
 verdikleri için tercihe bakmaz — oralarda niyet zaten tıklayan kişinindir.
 
+## Ana sayfa: "Aylık ödemelerim" tablosu (`general/utils.py` → `get_home_page_data`)
+
+Kullanıcının bütün sandıklarındaki ödenmemiş aidat ve taksitleri ay × sandık tablosunda gösterir.
+Aidat kayıtları yalnızca içinde bulunulan aya kadar oluşturulduğu için gelecek aylarda tabloda
+yalnızca taksitler görünür. Bu yüzden tablonun bir seçeneği vardır: **"Gelecek ayların aidatlarını da
+göster"** (kullanıcı istedi).
+
+- Sunucu **iki tabloyu da** hesaplar ve basar: varsayılan (`payment_rows`, `sandik_totals`,
+  `grand_total`) ve aidatlı hâli (`payments_table_with_contributions`, aynı anahtarlar); ikisi de
+  `_build_payments_table` ile üretilir, şablonda tek bir `payments_table` makrosu çizer. Hangisinin
+  görüneceğine tarayıcı karar verir; seçim `localStorage["sandikv2-ana-sayfa-gelecek-aidatlar"]`te
+  durur ve tablonun hemen altındaki satır içi script ile **ilk boyamadan önce** uygulanır.
+- Gelecek aidatlar `_future_contribution_amounts` ile **hesaplanır, veritabanına yazılmaz**:
+  `member.contribution_amount` × aktif hisse (hatırlatma e-postasındaki gelecek ay aidatıyla aynı
+  formül). Kaydı zaten olan hisse/ay ve hissenin açılış ayından önceki aylar atlanır. Aralık gelecek
+  aydan tablodaki son aya (çoğunlukla son taksit) kadardır; hiç ödeme yoksa yalnızca gelecek ay.
+- Hesaplanan tutar içeren hücreler eğik yazılır (`projected_member_ids`) ve tablonun altında açıklanır.
+- Sandık başlıklarının yazı boyutunu küçülten JS gizli tabloda çalışamaz (genişlikler 0); bu yüzden
+  yalnızca görünen tabloya, seçim değişince de yeni görünen tabloya uygulanır.
+
 ## Gecelik işler ve hatırlatma e-postaları
 
 `sandik/utils/clock.py` PythonAnywhere'de zamanlanmış görev olarak **her gece 01:01'de** çalışır ve

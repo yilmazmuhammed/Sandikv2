@@ -3,6 +3,7 @@ from decimal import Decimal
 from sandik.general import db
 from sandik.general.exceptions import BankAccountNotFound, PrimaryBankAccountCannotBeDeleted, \
     UnauthorizedBankAccountOperation
+from sandik.transaction import db as transaction_db
 from sandik.transaction import utils as transaction_utils
 from sandik.utils import period as period_utils
 from sandik.utils.sorting import turkish_sort_key
@@ -61,7 +62,6 @@ def get_home_page_data(web_user):
     # --- Tablo 2: Aylık ödemeler (ödenmemiş aidat + taksitler) ---
     # payments_matrix[term][member.id] = o ay o sandıkta ödenmemiş toplam miktar
     payments_matrix = {}
-    sandik_totals = {member.id: Decimal(0) for member in members}
     for member in members:
         for payment in transaction_utils.get_payments(whose=member, is_fully_paid=False):
             unpaid_amount = payment.get_unpaid_amount()
@@ -69,16 +69,6 @@ def get_home_page_data(web_user):
                 continue
             row = payments_matrix.setdefault(payment.term, {})
             row[member.id] = row.get(member.id, Decimal(0)) + unpaid_amount
-            sandik_totals[member.id] += unpaid_amount
-
-    payment_rows = []
-    for term in sorted(payments_matrix.keys()):
-        cells = payments_matrix[term]
-        payment_rows.append({
-            "term": term,
-            "cells": cells,
-            "total": sum(cells.values()),
-        })
 
     # İşleme konmamış para: üyenin yatırdığı ama henüz bir aidat/taksite dağıtılmamış tutarı.
     # Ödenmemiş ödemeleri karşılamak için kullanılabileceğinden "Toplam" satırında bu tutar
@@ -91,8 +81,27 @@ def get_home_page_data(web_user):
         "total": sum(undistributed_cells.values(), Decimal(0)),
     } if undistributed_cells else None
 
-    net_sandik_totals = {member.id: sandik_totals[member.id] - undistributed_amounts[member.id]
-                         for member in members}
+    payments_table = _build_payments_table(members=members, payments_matrix=payments_matrix,
+                                           undistributed_amounts=undistributed_amounts)
+
+    # Tablonun "gelecek ayların aidatları da" seçeneği: aidat kayıtları yalnızca içinde bulunulan
+    # aya kadar oluşturulduğu için gelecek aylarda tabloda yalnızca taksitler görünür. Bu ikinci
+    # tablo o ayların aidatlarını hesaplayıp ekler; iki tablo da basılır, hangisinin görüneceğini
+    # tarayıcıdaki seçim belirler.
+    last_term = max([period_utils.next_period()] + list(payments_matrix.keys()))
+    future_periods = period_utils.get_periods_between_two_period(first_period=period_utils.next_period(),
+                                                                 last_period=last_term)
+    matrix_with_contributions = {term: dict(cells) for term, cells in payments_matrix.items()}
+    projected_cells = {}  # term -> {member.id, ...}: hesaplanan aidat içeren hücreler
+    for member in members:
+        for term, amount in _future_contribution_amounts(member=member, periods=future_periods).items():
+            row = matrix_with_contributions.setdefault(term, {})
+            row[member.id] = row.get(member.id, Decimal(0)) + amount
+            projected_cells.setdefault(term, set()).add(member.id)
+    payments_table_with_contributions = _build_payments_table(
+        members=members, payments_matrix=matrix_with_contributions,
+        undistributed_amounts=undistributed_amounts, projected_cells=projected_cells,
+    )
 
     # Aylık ödemeler tablosunda satır/sütun toplamları sandıklar arasıdır; birden fazla para
     # birimi varsa bu toplamlar anlamsızdır ve şablon onları göstermez.
@@ -106,12 +115,62 @@ def get_home_page_data(web_user):
         "is_single_currency": is_single_currency,
         # Tek birim varken toplamların hangi birimde gösterileceği
         "currency_sandik": members[0].sandik_ref if is_single_currency and members else None,
-        "payment_rows": payment_rows,
-        "sandik_totals": net_sandik_totals,
-        "grand_total": sum(net_sandik_totals.values()) if net_sandik_totals else Decimal(0),
+        **payments_table,
+        "payments_table_with_contributions": payments_table_with_contributions,
         "undistributed_row": undistributed_row,
         "current_period": period_utils.current_period(),
     }
+
+
+def _build_payments_table(members, payments_matrix, undistributed_amounts, projected_cells=None):
+    """Aylık ödemeler tablosunun satırlarını ve (işleme konmamış para düşülmüş) toplamlarını üretir.
+    `projected_cells`: hesaplanan (henüz oluşturulmamış) aidat içeren hücreler, `term -> {member.id}`."""
+    projected_cells = projected_cells or {}
+    payment_rows = []
+    for term in sorted(payments_matrix.keys()):
+        cells = payments_matrix[term]
+        payment_rows.append({
+            "term": term,
+            "cells": cells,
+            "total": sum(cells.values()),
+            "projected_member_ids": projected_cells.get(term, set()),
+        })
+
+    net_sandik_totals = {
+        member.id: sum((row["cells"].get(member.id, Decimal(0)) for row in payment_rows), Decimal(0))
+        - undistributed_amounts[member.id]
+        for member in members
+    }
+    return {
+        "payment_rows": payment_rows,
+        "sandik_totals": net_sandik_totals,
+        "grand_total": sum(net_sandik_totals.values()) if net_sandik_totals else Decimal(0),
+    }
+
+
+def _future_contribution_amounts(member, periods):
+    """Henüz oluşturulmamış aidatların ay bazında toplamı: `{term: tutar}`.
+
+    Aidat kayıtları yalnızca içinde bulunulan aya kadar oluşturulur
+    (`transaction_utils.create_due_contributions_for_share`). Tutar, kaydı oluşturacak
+    `transaction_db.create_contribution`ın varsayılanıyla aynı formüldür (üyenin aidat tutarı, hisse
+    başına); hatırlatma e-postasındaki gelecek ay aidatıyla da aynıdır (`reminder.py`). Kaydı zaten
+    olan (ör. elle oluşturulmuş) hisse/ay atlanır: ödenmemişse gerçek kayıt tabloya zaten girmiştir.
+    **Veritabanına hiçbir şey yazılmaz.**
+    """
+    if not periods or member.contribution_amount <= 0:
+        return {}
+    first_period = periods[0]
+    existing = {(c.share_ref.id, c.term) for c in transaction_db.select_contributions(
+        lambda c: c.share_ref.member_ref == member and c.term >= first_period)}
+    amounts = {}
+    for share in member.get_active_shares():
+        opening_period = period_utils.date_to_period(share.date_of_opening)
+        for term in periods:
+            if term < opening_period or (share.id, term) in existing:
+                continue
+            amounts[term] = amounts.get(term, Decimal(0)) + member.contribution_amount
+    return amounts
 
 
 def remove_bank_account(bank_account_id, deleted_by):

@@ -1,14 +1,93 @@
 {% extends "utils/layout.html" %}
 {% import "utils/parts/macros.html" as macros%}
 
+{% set FUTURE_CONTRIBUTIONS_STORAGE_KEY = "sandikv2-ana-sayfa-gelecek-aidatlar" %}
+
+{# Aylık ödemeler tablosu. `table`: payment_rows / sandik_totals / grand_total taşıyan sözlük
+   (bkz. general/utils.py -> _build_payments_table). İşleme konmamış satırı iki tabloda ortaktır. #}
+{% macro payments_table(table) %}
+  {% set data = g.home_data %}
+  <div class="table-responsive">
+    {% if table.payment_rows or data.undistributed_row %}
+      <table class="table table-striped table-bordered home-payments-table" style="margin-bottom: 0;">
+        <thead>
+          <tr class="text-center font-bold">
+            <th>Ay</th>
+            {% for member in data.members %}
+              <th class="sandik-col"><div class="sandik-head">{{ member.sandik_ref.name }}</div></th>
+            {% endfor %}
+            <th>Toplam</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if data.undistributed_row %}
+            <tr class="text-center text-success font-bold"
+                title="Yatırdığınız ama henüz bir aidat/taksite işlenmemiş tutar. Ödenmemiş ödemeleri karşılamak için kullanılabilir.">
+              <td class="text-left">
+                İşleme konmamış
+                <i class="fas fa-info-circle"></i>
+              </td>
+              {% for member in data.members %}
+                <td>
+                  {% if data.undistributed_row.cells.get(member.id) %}
+                    {{ data.undistributed_row.cells.get(member.id)|money(member.sandik_ref) }}
+                  {% else %}
+                    <span class="text-muted">–</span>
+                  {% endif %}
+                </td>
+              {% endfor %}
+              <td>{% if data.is_single_currency %}{{ data.undistributed_row.total|money(data.currency_sandik) }}{% else %}<span class="text-muted" title="Sandıklarınız farklı para birimlerinde olduğu için toplanamıyor">–</span>{% endif %}</td>
+            </tr>
+          {% endif %}
+          {% for prow in table.payment_rows %}
+            <tr class="text-center {% if prow.term < data.current_period %}text-danger{% elif prow.term == data.current_period %}text-warning font-bold{% endif %}">
+              <td class="text-left font-bold">
+                {{ prow.term }}
+                {% if prow.term < data.current_period %}
+                  <i class="fas fa-exclamation-triangle" title="Vadesi geçmiş"></i>
+                {% endif %}
+              </td>
+              {% for member in data.members %}
+                <td>
+                  {% if prow.cells.get(member.id) %}
+                    {% if member.id in prow.projected_member_ids %}
+                      <span class="projected" title="Henüz oluşturulmamış aidat dahil, aidat tutarınıza göre hesaplandı">{{ prow.cells.get(member.id)|money(member.sandik_ref) }}</span>
+                    {% else %}
+                      {{ prow.cells.get(member.id)|money(member.sandik_ref) }}
+                    {% endif %}
+                  {% else %}
+                    <span class="text-muted">–</span>
+                  {% endif %}
+                </td>
+              {% endfor %}
+              <td class="font-bold">{% if data.is_single_currency %}<span class="{% if prow.projected_member_ids %}projected{% endif %}">{{ prow.total|money(data.currency_sandik) }}</span>{% else %}<span class="text-muted" title="Sandıklarınız farklı para birimlerinde olduğu için toplanamıyor">–</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="text-center font-bold active">
+            <td class="text-left" title="İşleme konmamış tutarınız varsa bu tutar düşülerek hesaplanmıştır">Toplam</td>
+            {% for member in data.members %}
+              <td class="{% if table.sandik_totals.get(member.id) > 0 %}text-danger{% else %}text-success{% endif %}">{{ table.sandik_totals.get(member.id)|money(member.sandik_ref) }}</td>
+            {% endfor %}
+            <td class="{% if table.grand_total > 0 %}text-danger{% else %}text-success{% endif %}">{% if data.is_single_currency %}{{ table.grand_total|money(data.currency_sandik) }}{% else %}<span class="text-muted" title="Sandıklarınız farklı para birimlerinde olduğu için toplanamıyor">–</span>{% endif %}</td>
+          </tr>
+        </tfoot>
+      </table>
+    {% else %}
+      <div class="wrapper text-center text-muted">Ödenmemiş ödemeniz bulunmuyor.</div>
+    {% endif %}
+  </div>
+{% endmacro %}
+
 {% block css_block %}
   <style>
     /* Sandık başlık isimleri: kelimeler arası alt satıra geçsin,
        tek uzun kelime sığmazsa (JS ile) yazı boyutu küçülür */
-    #home-payments-table th.sandik-col {
+    .home-payments-table th.sandik-col {
       vertical-align: middle;
     }
-    #home-payments-table .sandik-head {
+    .home-payments-table .sandik-head {
       display: inline-block;
       max-width: 90px;
       white-space: normal;      /* kelimeler arası sarma */
@@ -18,11 +97,32 @@
       vertical-align: middle;
     }
     /* Ödeme miktarları para birimi işareti dahil tek satırda kalsın */
-    #home-payments-table tbody td,
-    #home-payments-table tfoot td,
-    #home-payments-table thead th:first-child,
-    #home-payments-table thead th:last-child {
+    .home-payments-table tbody td,
+    .home-payments-table tfoot td,
+    .home-payments-table thead th:first-child,
+    .home-payments-table thead th:last-child {
       white-space: nowrap;
+    }
+    /* "Gelecek ayların aidatlarını da göster" seçimi */
+    .future-contributions-toggle {
+      display: block;
+      margin: 4px 0 0;
+      font-weight: normal;
+      cursor: pointer;
+    }
+    .future-contributions-toggle input {
+      margin: 0 4px 0 0;
+      vertical-align: -2px;
+    }
+    /* Henüz oluşturulmamış (hesaplanan) aidat içeren tutarlar */
+    .home-payments-table .projected,
+    .payments-note .projected {
+      font-style: italic;
+    }
+    .payments-note {
+      padding: 6px 15px;
+      font-size: 12px;
+      border-top: 1px solid #dee5e7;
     }
   </style>
 {% endblock %}
@@ -30,20 +130,44 @@
 {% block js_block %}
   <script>
     jQuery(function ($) {
-      $('#home-payments-table .sandik-head').each(function () {
-        var el = this;
-        var size = 13;
-        el.style.fontSize = size + 'px';
-        // Bir kelime kutuya sığmıyorsa yazı boyutunu küçült
-        while (el.scrollWidth > el.clientWidth + 1 && size > 8) {
-          size -= 0.5;
+      // Sandık başlıkları: bir kelime kutuya sığmıyorsa yazı boyutunu küçült. Gizli tabloda
+      // genişlikler 0 olduğu için yalnızca görünen tabloya uygulanır, diğeri gösterilince yapılır.
+      function fitSandikHeads($container) {
+        $container.find('.sandik-head').each(function () {
+          var el = this;
+          var size = 13;
           el.style.fontSize = size + 'px';
-        }
-        // En küçük boyutta bile sığmıyorsa son çare olarak kelimeyi böl
-        if (el.scrollWidth > el.clientWidth + 1) {
-          el.style.wordBreak = 'break-word';
-          el.style.overflowWrap = 'break-word';
-        }
+          el.style.wordBreak = '';
+          el.style.overflowWrap = '';
+          while (el.scrollWidth > el.clientWidth + 1 && size > 8) {
+            size -= 0.5;
+            el.style.fontSize = size + 'px';
+          }
+          // En küçük boyutta bile sığmıyorsa son çare olarak kelimeyi böl
+          if (el.scrollWidth > el.clientWidth + 1) {
+            el.style.wordBreak = 'break-word';
+            el.style.overflowWrap = 'break-word';
+          }
+        });
+      }
+
+      function showVariant(withContributions) {
+        $('.payments-variant').each(function () {
+          var isTarget = ($(this).data('variant') === 'with-contributions') === withContributions;
+          $(this).toggle(isTarget);
+          if (isTarget) {
+            fitSandikHeads($(this));
+          }
+        });
+      }
+
+      showVariant($('#future-contributions-toggle').prop('checked'));
+      $('#future-contributions-toggle').on('change', function () {
+        var checked = this.checked;
+        try {
+          localStorage.setItem("{{ FUTURE_CONTRIBUTIONS_STORAGE_KEY }}", checked ? "1" : "0");
+        } catch (e) {}
+        showVariant(checked);
       });
     });
   </script>
@@ -156,74 +280,35 @@
             <div class="panel-heading font-bold">
               <span>Aylık ödemelerim</span>
               <span class="text-muted" style="font-weight: normal;">(ödenmemiş aidat ve taksitler)</span>
+              <label class="future-contributions-toggle"
+                     title="Gelecek ayların aidatları henüz oluşturulmadığı için tabloda yalnızca taksitler görünür. İşaretlenirse o ayların aidatları da eklenir.">
+                <input type="checkbox" id="future-contributions-toggle">
+                Gelecek ayların aidatlarını da göster
+              </label>
             </div>
-            <div class="table-responsive">
-              {% if g.home_data.payment_rows or g.home_data.undistributed_row %}
-                <table id="home-payments-table" class="table table-striped table-bordered" style="margin-bottom: 0;">
-                  <thead>
-                    <tr class="text-center font-bold">
-                      <th>Ay</th>
-                      {% for member in g.home_data.members %}
-                        <th class="sandik-col"><div class="sandik-head">{{ member.sandik_ref.name }}</div></th>
-                      {% endfor %}
-                      <th>Toplam</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% if g.home_data.undistributed_row %}
-                      <tr class="text-center text-success font-bold"
-                          title="Yatırdığınız ama henüz bir aidat/taksite işlenmemiş tutar. Ödenmemiş ödemeleri karşılamak için kullanılabilir.">
-                        <td class="text-left">
-                          İşleme konmamış
-                          <i class="fas fa-info-circle"></i>
-                        </td>
-                        {% for member in g.home_data.members %}
-                          <td>
-                            {% if g.home_data.undistributed_row.cells.get(member.id) %}
-                              {{ g.home_data.undistributed_row.cells.get(member.id)|money(member.sandik_ref) }}
-                            {% else %}
-                              <span class="text-muted">–</span>
-                            {% endif %}
-                          </td>
-                        {% endfor %}
-                        <td>{% if g.home_data.is_single_currency %}{{ g.home_data.undistributed_row.total|money(g.home_data.currency_sandik) }}{% else %}<span class="text-muted" title="Sandıklarınız farklı para birimlerinde olduğu için toplanamıyor">–</span>{% endif %}</td>
-                      </tr>
-                    {% endif %}
-                    {% for prow in g.home_data.payment_rows %}
-                      <tr class="text-center {% if prow.term < g.home_data.current_period %}text-danger{% elif prow.term == g.home_data.current_period %}text-warning font-bold{% endif %}">
-                        <td class="text-left font-bold">
-                          {{ prow.term }}
-                          {% if prow.term < g.home_data.current_period %}
-                            <i class="fas fa-exclamation-triangle" title="Vadesi geçmiş"></i>
-                          {% endif %}
-                        </td>
-                        {% for member in g.home_data.members %}
-                          <td>
-                            {% if prow.cells.get(member.id) %}
-                              {{ prow.cells.get(member.id)|money(member.sandik_ref) }}
-                            {% else %}
-                              <span class="text-muted">–</span>
-                            {% endif %}
-                          </td>
-                        {% endfor %}
-                        <td class="font-bold">{% if g.home_data.is_single_currency %}{{ prow.total|money(g.home_data.currency_sandik) }}{% else %}<span class="text-muted" title="Sandıklarınız farklı para birimlerinde olduğu için toplanamıyor">–</span>{% endif %}</td>
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                  <tfoot>
-                    <tr class="text-center font-bold active">
-                      <td class="text-left" title="İşleme konmamış tutarınız varsa bu tutar düşülerek hesaplanmıştır">Toplam</td>
-                      {% for member in g.home_data.members %}
-                        <td class="{% if g.home_data.sandik_totals.get(member.id) > 0 %}text-danger{% else %}text-success{% endif %}">{{ g.home_data.sandik_totals.get(member.id)|money(member.sandik_ref) }}</td>
-                      {% endfor %}
-                      <td class="{% if g.home_data.grand_total > 0 %}text-danger{% else %}text-success{% endif %}">{% if g.home_data.is_single_currency %}{{ g.home_data.grand_total|money(g.home_data.currency_sandik) }}{% else %}<span class="text-muted" title="Sandıklarınız farklı para birimlerinde olduğu için toplanamıyor">–</span>{% endif %}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              {% else %}
-                <div class="wrapper text-center text-muted">Ödenmemiş ödemeniz bulunmuyor.</div>
-              {% endif %}
+            {# İki tablo da basılır, hangisinin görüneceğini tarayıcıda saklanan seçim belirler
+               (aşağıdaki satır içi script, ilk boyamadan önce). #}
+            <div class="payments-variant" data-variant="due">
+              {{ payments_table(g.home_data) }}
             </div>
+            <div class="payments-variant" data-variant="with-contributions" style="display: none;">
+              {{ payments_table(g.home_data.payments_table_with_contributions) }}
+              <div class="payments-note text-muted">
+                <span class="projected">Eğik yazılı</span> tutarlar henüz oluşturulmamış aidatları da içerir;
+                aidat tutarınıza göre hesaplanmıştır.
+              </div>
+            </div>
+            <script>
+              (function () {
+                var show = false;
+                try { show = localStorage.getItem("{{ FUTURE_CONTRIBUTIONS_STORAGE_KEY }}") === "1"; } catch (e) {}
+                document.getElementById("future-contributions-toggle").checked = show;
+                var variants = document.querySelectorAll(".payments-variant");
+                for (var i = 0; i < variants.length; i++) {
+                  variants[i].style.display = (variants[i].getAttribute("data-variant") === "with-contributions") === show ? "" : "none";
+                }
+              })();
+            </script>
           </div>
         </div>
       </div>
