@@ -162,6 +162,59 @@ göster"** (kullanıcı istedi).
 - Sandık başlıklarının yazı boyutunu küçülten JS gizli tabloda çalışamaz (genişlikler 0); bu yüzden
   yalnızca görünen tabloya, seçim değişince de yeni görünen tabloya uygulanır.
 
+## Borç geçmişi (`/borc-gecmisi`)
+
+Ana sayfadaki "Sandıklardaki son durumlarım" tablosunun **"Mil sonu"** sütununun geçmişteki değerini
+grafik + tablo olarak gösterir (kullanıcı istedi; yalnızca mil sonu, diğer kalemler ayrıca
+gösterilmez). **Hesap mil sonu üzerinden yapılır, sayfa ise işaretini çevirip borç olarak gösterir**
+(borç = -mil sonu): kullanıcı eksi grafiklerin kafa karıştırdığını söyledi. Borçlu olunan değer
+pozitiftir, kırmızıdır, grafikte sıfırın üstü kırmızı taranır; eksi değer alacaklı demektir. Bu,
+"Aylık ödemelerim" tablosunun Toplam satırıyla aynı sayıdır. Fonksiyonlar mil sonunu
+(`member_values`, `total`), sayfa borcu (`member_debts`, `debt_total`, grafik verisi) kullanır.
+Sayfaya iki yerden gidilir (kullanıcı istedi): sol menünün en üstündeki "Tüm sandıklarım" →
+"Borç geçmişim" (hangi sandığın sayfasında olunursa olunsun görünür, `left_menu.html`) ve ana sayfada
+"Aylık ödemelerim" tablosunun altındaki bağlantı satırı ("Borcumun zaman içindeki değişimini gör"). "Sandıklardaki son durumlarım" tablosunda bilerek
+bağlantı yoktur.
+Hesap `general/utils.py` → `get_mile_end_history`, sorgular `general/db.py` → `select_*_rows`,
+sayfa `general/page.py` → `debt_history_page`, şablon `general/debt_history_page.html`, testler
+`tests/test_mile_end_history.py`.
+
+- **Geçmiş durum saklanmaz, bugünkü kayıtlardan hesaplanır.** Mil sonu = işleme konmamış para -
+  vadesi gelmiş ödenmemiş aidatlar - ödenmemiş bütün taksitler. Bir ödeme iki tarafı birden aynı
+  tutarda azalttığı için mil sonunu değiştirmez; değiştiren olaylar şunlardır: para girişi (+,
+  işlemin tarihi), işleme konmamış paranın iadesi (-, iadenin para çıkışının tarihi), aidatın vadesinin
+  gelmesi (-, dönemin 1'i; gelecek dönemler hiç sayılmaz — bugünkü `sum_of_future_and_unpaid_payments`
+  da yalnızca taksitleri sayar), borç alınması (- bütün taksitleri, borcu veren para çıkışının tarihi).
+  Tek istisna henüz sayılmayan bir kaleme önceden yapılan ödemedir (ör. gelecek ayın aidatı); onun
+  tarihi para işleminin tarihi ile `SubReceipt.creation_time`dan hangisi geçse odur. Gelecek tarihli
+  kayıtlar bugüne çekilir.
+- **Olaylar bir kez sıralanıp taranır** (`_mile_end_events`, `_values_at`); sorgu sayısı dilime ve
+  aralığa bağlı değildir (bütün sandıklar için 6 sorgu + üyeler). 5 yıllık örnek veride günlük dilim
+  (1.824 nokta) ~35 ms sürdü.
+- **Bugünle biten noktanın değeri ana sayfadaki mil sonuyla birebir aynı olmak zorundadır**; test
+  bunu kısmi ödeme, önceden ödenmiş gelecek aidat, kısmen ödenmiş taksit ve iade içeren bir senaryoyla
+  sabitler. Ana sayfadaki mil sonunun tanımı değişirse olay listesi de değişmelidir.
+- **Dilimler takvime oturur, değer dilimin son günüdür**: aylıkta ay sonu, 3 aylıkta mart/haziran/
+  eylül/aralık sonu, haftalıkta pazar; aralığın son günü (çoğunlukla bugün) dilim sonu değilse o da
+  eklenir (`history_point_dates`). Günlük/haftalık dilimde tablo yalnızca değerin değiştiği satırları
+  (ve aralığın ilk/son noktasını) listeler, grafik basamaklı çizilir.
+- Seçim (`aralik`=12ay/3yil/tumu ya da `baslangic`/`bitis` + `dilim`) adres satırındadır; son seçim
+  `sandikv2-borc-gecmisi` çerezine yazılır ve sayfa parametresiz açılınca kullanılır. Hazır aralık
+  ay olarak değil adıyla saklanır ("Son 12 ay" gelecek ay da son 12 aydır). "Sandık sandık göster"
+  yalnızca tarayıcıda çalışır (`localStorage["sandikv2-borc-gecmisi-sandik-sandik"]`, sayfa yenilenmez).
+- **Tablo varsayılan olarak kapalıdır** (kullanıcı istedi), `<details>` ile açılır; açık/kapalı durumu
+  saklanmaz, sayfa her açılışta kapalı gelir.
+- Farklı para birimleri toplanmaz: sandıklar birime göre gruplanır, her grubun ayrı grafiği vardır.
+  JS'te tutar biçimlendirme için `formatMoney(value, currency)` / `formatMoneyWithSymbol(value,
+  currency)` birimi parametre olarak alır (verilmezse sayfanın birimi). Adı "mil sonu geçmişi" iken
+  `/mil-sonu-gecmisi` adresindeydi; yayına girmeden değiştirildi, eski adres için yönlendirme yoktur.
+- **Grafik kütüphanesi Chart.js'tir** ve CDN'den değil depodan yüklenir:
+  `sandik/utils/static/vendor/chartjs-4.5.1/` (MIT, lisansı yanında; `sourceMappingURL` satırı
+  çıkarıldı). Sürüm yükseltilirse klasör adı da değişir. Başka bir sayfada grafik gerekirse aynı dosya
+  kullanılır.
+- Bağlam sözlüğünde `values`, `items`, `keys` gibi anahtar adları kullanılmaz: Jinja `h.values`'u
+  sözlüğün kendi metoduna çözer (bu yüzden `member_values`).
+
 ## Gecelik işler ve hatırlatma e-postaları
 
 `sandik/utils/clock.py` PythonAnywhere'de zamanlanmış görev olarak **her gece 01:01'de** çalışır ve

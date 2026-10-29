@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sandik.general import db
@@ -171,6 +172,245 @@ def _future_contribution_amounts(member, periods):
                 continue
             amounts[term] = amounts.get(term, Decimal(0)) + member.contribution_amount
     return amounts
+
+
+# --- Borç geçmişi (/borc-gecmisi) -----------------------------------------------------------------
+# Ana sayfadaki "Mil sonu" sütununun (status_rows -> mile_end) geçmişteki her dilim sonundaki değeri.
+# Hesap mil sonu üzerinden yapılır; sayfa ise kafa karıştırmasın diye işaretini çevirip borç olarak
+# gösterir (borç = -mil sonu). Geçmiş durum veritabanında saklanmaz, bugünkü kayıtlardan geriye
+# doğru hesaplanır. Ayrıntı: CLAUDE.md -> "Borç geçmişi".
+
+HISTORY_SLICES = {  # adresteki değer -> etiket
+    "gun": "Günlük",
+    "hafta": "Haftalık",
+    "ay": "Aylık",
+    "3ay": "3 aylık",
+    "6ay": "6 aylık",
+    "yil": "Yıllık",
+}
+DEFAULT_HISTORY_SLICE = "ay"
+# Bu dilimlerde tabloda yalnızca mil sonunun değiştiği satırlar listelenir (5 yıl günlük 1800 satır eder).
+HISTORY_SLICES_LISTING_ONLY_CHANGES = {"gun", "hafta"}
+
+HISTORY_RANGES = {  # adresteki değer -> (etiket, kaç ay; None = ilk kayıttan bugüne)
+    "12ay": ("Son 12 ay", 12),
+    "3yil": ("Son 3 yıl", 36),
+    "tumu": ("Tümü", None),
+}
+DEFAULT_HISTORY_RANGE = "12ay"
+
+# Seçimi taşıyan adres parametreleri; sayfa bunlardan biri olmadan açılırsa son seçim kullanılır.
+HISTORY_ARG_NAMES = ("aralik", "baslangic", "bitis", "dilim")
+
+
+def parse_history_selection(args):
+    """Adres parametrelerinden (ya da kaydedilmiş seçimden) aralık ve dilim seçimini okur.
+
+    Hazır bir aralık (`aralik=12ay`) ay olarak değil adıyla saklanır: "Son 12 ay" seçilip kaydedilen
+    bir seçim gelecek ay da son 12 ayı göstermelidir. Geçersiz değerler sessizce varsayılana düşer.
+    """
+    history_slice = args.get("dilim")
+    if history_slice not in HISTORY_SLICES:
+        history_slice = DEFAULT_HISTORY_SLICE
+
+    start_period, end_period = args.get("baslangic"), args.get("bitis")
+    if period_utils.is_valid_period(start_period) and period_utils.is_valid_period(end_period):
+        if start_period > end_period:
+            start_period, end_period = end_period, start_period
+        return {"slice": history_slice, "range": None, "start_period": start_period, "end_period": end_period,
+                "args": {"baslangic": start_period, "bitis": end_period, "dilim": history_slice}}
+
+    history_range = args.get("aralik")
+    if history_range not in HISTORY_RANGES:
+        history_range = DEFAULT_HISTORY_RANGE
+    return {"slice": history_slice, "range": history_range, "start_period": None, "end_period": None,
+            "args": {"aralik": history_range, "dilim": history_slice}}
+
+
+def _last_day_of_month(day):
+    return (day.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+
+
+def history_point_dates(start_date, end_date, history_slice):
+    """Aralıktaki dilim sonları (artan sırada). Aralığın son günü dilim sonu değilse o da eklenir:
+    bitmemiş bir dilimin (ör. bu ayın) değeri bugünün değeridir."""
+    if start_date > end_date:
+        return []
+
+    if history_slice in ("gun", "hafta"):
+        points = []
+        day = start_date
+        while day <= end_date:
+            if history_slice == "gun" or day.weekday() == 6:  # hafta pazar günü biter
+                points.append(day)
+            day += timedelta(days=1)
+    else:
+        month_step = {"ay": 1, "3ay": 3, "6ay": 6, "yil": 12}[history_slice]
+        points = []
+        month_end = _last_day_of_month(start_date)
+        while month_end <= end_date:
+            # Dilimler takvime oturur: 3 aylık dilim mart/haziran/eylül/aralık sonunda biter.
+            if month_end.month % month_step == 0:
+                points.append(month_end)
+            month_end = _last_day_of_month(month_end + timedelta(days=1))
+
+    if not points or points[-1] != end_date:
+        points.append(end_date)
+    return points
+
+
+def _mile_end_events(member_ids, today):
+    """Mil sonunu değiştiren olaylar: `{member_id: [(tarih, değişim), ...]}`.
+
+    Bugünkü mil sonu = işleme konmamış para - vadesi gelmiş ödenmemiş aidatlar - ödenmemiş bütün
+    taksitler (`get_home_page_data` -> `mile_end`). Bir ödeme (para aidata/taksite işlenince) iki
+    tarafı birden aynı tutarda azaltır, mil sonunu değiştirmez; geriye mil sonunu değiştiren dört
+    olay kalır:
+        + para girişi                    (para işleminin tarihinde)
+        - işleme konmamış paranın iadesi (iadenin yapıldığı para çıkışının tarihinde)
+        - aidatın vadesinin gelmesi      (dönemin ilk günü; gelecek dönemler bugün sayılmadığı için hiç)
+        - borç alınması: bütün taksitleri (borcun verildiği para çıkışının tarihinde)
+    Tek istisna, henüz sayılmayan bir aidata/taksite önceden yapılan ödemedir (ör. gelecek ayın
+    aidatı): para, aidat sayılmaya başlayana kadar yalnızca işleme konmamış paradan düşer. Ödemenin
+    tarihi, para işleminin tarihi ile ödemenin kaydedildiği andan hangisi geçse odur.
+
+    Gelecek tarihli kayıtlar bugüne çekilir: bugünkü mil sonu onları zaten sayıyor.
+    """
+    current_period = period_utils.date_to_period(today)
+    events = {member_id: [] for member_id in member_ids}
+
+    def add(member_id, day, delta):
+        events[member_id].append((min(day, today), delta))
+
+    def add_payment(member_id, money_transaction_date, creation_time, amount, counted_from):
+        """`counted_from`: ödenen kalemin mil sonunda sayılmaya başladığı gün (None: bugüne kadar hiç)."""
+        paid_on = min(max(money_transaction_date, creation_time.date()), today)
+        if counted_from is None or paid_on < counted_from:
+            add(member_id, paid_on, -amount)
+            if counted_from is not None:
+                add(member_id, counted_from, amount)
+
+    for _, member_id, day, amount in db.select_revenue_money_transaction_rows(member_ids):
+        add(member_id, day, amount)
+    for _, member_id, day, amount in db.select_retracted_rows(member_ids):
+        add(member_id, day, -amount)
+    for _, member_id, term, amount in db.select_contribution_rows(member_ids):
+        if term <= current_period:
+            add(member_id, period_utils.period_to_date(term), -amount)
+    for _, member_id, debt_date, amount in db.select_installment_rows(member_ids):
+        add(member_id, debt_date, -amount)
+    for _, member_id, term, mt_date, creation_time, amount in db.select_contribution_payment_rows(member_ids):
+        counted_from = period_utils.period_to_date(term) if term <= current_period else None
+        add_payment(member_id, mt_date, creation_time, amount, counted_from)
+    for _, member_id, debt_date, mt_date, creation_time, amount in db.select_installment_payment_rows(member_ids):
+        add_payment(member_id, mt_date, creation_time, amount, min(debt_date, today))
+
+    for member_events in events.values():
+        member_events.sort(key=lambda event: event[0])
+    return events
+
+
+def _values_at(member_events, points):
+    """Her dilim sonundaki birikmiş değer (olaylar ve noktalar artan sırada, tek geçiş)."""
+    values = []
+    total = Decimal(0)
+    index = 0
+    for point in points:
+        while index < len(member_events) and member_events[index][0] <= point:
+            total += member_events[index][1]
+            index += 1
+        values.append(total)
+    return values
+
+
+def get_mile_end_history(web_user, selection, today=None):
+    """Kullanıcının hâlâ üyesi olduğu sandıklardaki mil sonunun dilim dilim değeri.
+
+    Sandıklar para birimine göre gruplanır (farklı birimler toplanamaz); her grubun bir toplam
+    serisi ve sandık sandık serileri vardır. Bugünle biten noktanın değeri ana sayfadaki mil sonuyla
+    aynıdır (`tests/test_mile_end_history.py`).
+
+    `member_values` / `total` mil sonudur; sayfanın gösterdiği borç bunun işaret çevrilmiş hâlidir
+    (`member_debts` / `debt_total`, grafik verisi de borçtur).
+    """
+    today = today or date.today()
+    members = sorted(
+        web_user.members_set.filter(lambda m: m.is_active)[:],
+        key=lambda m: turkish_sort_key(m.sandik_ref.name)
+    )
+    member_ids = [member.id for member in members]
+    events = _mile_end_events(member_ids=member_ids, today=today) if members else {}
+
+    if selection["range"] is None:
+        start_date = period_utils.period_to_date(selection["start_period"])
+        end_date = min(_last_day_of_month(period_utils.period_to_date(selection["end_period"])), today)
+    else:
+        month_count = HISTORY_RANGES[selection["range"]][1]
+        if month_count is None:
+            first_days = [member.date_of_membership for member in members]
+            first_days += [member_events[0][0] for member_events in events.values() if member_events]
+            start_date = min(first_days).replace(day=1) if first_days else today.replace(day=1)
+        else:
+            start_date = period_utils.period_to_date(
+                period_utils.get_period_by_difference(period_utils.date_to_period(today), -(month_count - 1)))
+        end_date = today
+
+    points = history_point_dates(start_date=start_date, end_date=end_date, history_slice=selection["slice"])
+    values = {member_id: _values_at(events[member_id], points) for member_id in member_ids}
+
+    groups = []
+    for currency in sorted({member.sandik_ref.currency for member in members}):
+        group_members = [member for member in members if member.sandik_ref.currency == currency]
+        groups.append({
+            # Temsilci sandık yalnızca biçimlendirme (`|money`) içindir.
+            "sandik": group_members[0].sandik_ref,
+            "members": group_members,
+            "total": [sum((values[member.id][i] for member in group_members), Decimal(0))
+                      for i in range(len(points))],
+        })
+    debts = {member_id: [-value for value in member_values] for member_id, member_values in values.items()}
+    for group in groups:
+        group["debt_total"] = [-value for value in group["total"]]
+
+    # Tablo satırları en yeniden eskiye; günlük/haftalık dilimde yalnızca değişen satırlar. Aralığın
+    # ilk ve son noktası (çoğunlukla bugün) değişmemiş olsa da listelenir.
+    row_indexes = []
+    for i in range(len(points)):
+        if (selection["slice"] in HISTORY_SLICES_LISTING_ONLY_CHANGES and 0 < i < len(points) - 1
+                and all(values[member_id][i] == values[member_id][i - 1] for member_id in member_ids)):
+            continue
+        row_indexes.append(i)
+    row_indexes.reverse()
+
+    labels = [point.strftime("%d.%m.%Y") for point in points]
+    # Grafiğe giden veri: tutarlar metin olarak (Decimal; JS parseFloat ile okur, bkz. CLAUDE.md).
+    chart = {
+        "labels": labels,
+        "groups": [{
+            "currency": {"symbol": group["sandik"].currency_symbol(), "places": group["sandik"].currency_places()},
+            "total_label": "Toplam" if len(group["members"]) > 1 else group["members"][0].sandik_ref.name,
+            "total": [str(value) for value in group["debt_total"]],
+            "series": [{"name": member.sandik_ref.name, "values": [str(value) for value in debts[member.id]]}
+                       for member in group["members"]] if len(group["members"]) > 1 else [],
+        } for group in groups],
+    }
+
+    return {
+        "members": members,
+        "points": points,
+        "labels": labels,
+        "chart": chart,
+        # Sandık sandık gösterimin anlamı ancak bir toplamın birden fazla sandıktan oluştuğunda var.
+        "has_per_sandik": any(len(group["members"]) > 1 for group in groups),
+        "today": today,
+        "start_date": start_date,
+        "end_date": end_date,
+        "member_values": values,
+        "member_debts": debts,
+        "groups": groups,
+        "row_indexes": row_indexes,
+        "lists_only_changes": selection["slice"] in HISTORY_SLICES_LISTING_ONLY_CHANGES,
+    }
 
 
 def remove_bank_account(bank_account_id, deleted_by):

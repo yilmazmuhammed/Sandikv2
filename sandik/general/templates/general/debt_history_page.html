@@ -1,0 +1,362 @@
+{% extends "utils/layout.html" %}
+{% import "utils/parts/macros.html" as macros %}
+
+{# Borç geçmişi: ana sayfadaki "Mil sonu" sütununun dilim dilim değeri, işareti çevrilerek borç
+   olarak gösterilir (borç = -mil sonu; eksi grafikler kafa karıştırıyordu). Hesap
+   general/utils.py -> get_mile_end_history'dedir; ayrıntı CLAUDE.md -> "Borç geçmişi". #}
+
+{% set PER_SANDIK_STORAGE_KEY = "sandikv2-borc-gecmisi-sandik-sandik" %}
+
+{% block css_block %}
+  <style>
+    .history-controls .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 10px;
+      margin-bottom: 10px;
+    }
+    .history-controls .control-row:last-child {
+      margin-bottom: 0;
+    }
+    .history-controls .control-label {
+      font-weight: 600;
+      min-width: 52px;
+    }
+    .history-controls form {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin: 0;
+    }
+    .history-controls input[type="month"] {
+      width: 150px;
+    }
+    .history-controls select {
+      width: auto;
+    }
+    .history-controls .per-sandik-toggle {
+      font-weight: normal;
+      cursor: pointer;
+      margin: 0;
+    }
+    .history-controls .per-sandik-toggle input {
+      margin: 0 4px 0 0;
+      vertical-align: -2px;
+    }
+    .history-chart {
+      position: relative;
+      height: 300px;
+    }
+    @media (max-width: 767px) {
+      .history-chart {
+        height: 240px;
+      }
+      .history-controls input[type="month"] {
+        width: 130px;
+      }
+    }
+    .history-note {
+      font-size: 12px;
+      margin: -10px 0 20px;
+    }
+    /* Tablo varsayılan olarak kapalıdır; <details> javascript olmadan da açılıp kapanır */
+    details.history-table-panel > summary {
+      cursor: pointer;
+      list-style: none;
+      font-weight: 600;
+    }
+    details.history-table-panel > summary::-webkit-details-marker {
+      display: none;
+    }
+    details.history-table-panel > summary .fa-chevron-down {
+      transition: transform 0.15s;
+    }
+    details.history-table-panel[open] > summary .fa-chevron-down {
+      transform: rotate(180deg);
+    }
+    details.history-table-panel:not([open]) > summary {
+      border-bottom: 0;
+    }
+    details.history-table-panel[open] > summary .when-closed,
+    details.history-table-panel:not([open]) > summary .when-open {
+      display: none;
+    }
+    /* Sandık sandık sütunlar yalnızca seçenek açıkken görünür */
+    .history-table .per-sandik {
+      display: none;
+    }
+    .show-per-sandik .history-table .per-sandik {
+      display: table-cell;
+    }
+    .history-table td,
+    .history-table th {
+      white-space: nowrap;
+    }
+  </style>
+{% endblock %}
+
+{% block content_block %}
+  {% set h = g.history %}
+  {% set sel = g.selection %}
+  {{ macros.page_header(page_info.title) }}
+  <div class="wrapper-md" id="debt-history">
+    {% if h.has_per_sandik %}
+      <script>
+        /* Sandık sandık seçimi ilk boyamadan önce uygulanır (tablo sütunları bir an görünmesin) */
+        (function () {
+          try {
+            if (localStorage.getItem("{{ PER_SANDIK_STORAGE_KEY }}") === "1") {
+              document.getElementById("debt-history").className += " show-per-sandik";
+            }
+          } catch (e) {}
+        })();
+      </script>
+    {% endif %}
+
+    {% if not h.members %}
+      <div class="panel panel-default">
+        <div class="panel-body text-center text-muted">Hiçbir sandıkta üyeliğiniz bulunmuyor.</div>
+      </div>
+    {% else %}
+
+      <!-- Seçimler -->
+      <div class="panel panel-default">
+        <div class="panel-body history-controls">
+          <div class="control-row">
+            <span class="control-label">Aralık:</span>
+            <div class="btn-group btn-group-sm">
+              {% for key, range_info in RANGES.items() %}
+                <a class="btn btn-default{% if sel.range == key %} active{% endif %}"
+                   href="{{ url_for('general_page_bp.debt_history_page', aralik=key, dilim=sel.slice) }}">{{ range_info[0] }}</a>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="control-row">
+            <form method="get" action="{{ url_for('general_page_bp.debt_history_page') }}">
+              <input type="month" class="form-control input-sm" name="baslangic" required
+                     value="{{ h.start_date.strftime('%Y-%m') }}" aria-label="Başlangıç ayı" placeholder="YYYY-AA">
+              <span>–</span>
+              <input type="month" class="form-control input-sm" name="bitis" required
+                     value="{{ h.end_date.strftime('%Y-%m') }}" aria-label="Bitiş ayı" placeholder="YYYY-AA">
+              <input type="hidden" name="dilim" value="{{ sel.slice }}">
+              <button type="submit" class="btn btn-sm btn-default">Göster</button>
+            </form>
+          </div>
+          <div class="control-row">
+            <form method="get" action="{{ url_for('general_page_bp.debt_history_page') }}">
+              <label class="control-label" for="history-slice">Dilim:</label>
+              {% for name, value in sel.args.items() if name != "dilim" %}
+                <input type="hidden" name="{{ name }}" value="{{ value }}">
+              {% endfor %}
+              <select id="history-slice" name="dilim" class="form-control input-sm" onchange="this.form.submit()">
+                {% for key, label in SLICES.items() %}
+                  <option value="{{ key }}"{% if sel.slice == key %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <noscript><button type="submit" class="btn btn-sm btn-default">Göster</button></noscript>
+            </form>
+            {% if h.has_per_sandik %}
+              <label class="per-sandik-toggle">
+                <input type="checkbox" id="per-sandik-toggle">
+                Sandık sandık göster
+              </label>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {% if not h.points %}
+        <div class="panel panel-default">
+          <div class="panel-body text-center text-muted">Seçilen aralıkta gösterilecek gün yok.</div>
+        </div>
+      {% else %}
+
+        <!-- Grafik: para birimi başına bir tane (farklı birimler toplanamaz) -->
+        {% for group in h.groups %}
+          <div class="panel panel-default">
+            {% if h.groups|length > 1 %}
+              <div class="panel-heading font-bold">{{ group.sandik.currency_str() }}</div>
+            {% endif %}
+            <div class="panel-body">
+              <div class="history-chart"><canvas class="history-canvas" data-group="{{ loop.index0 }}"></canvas></div>
+            </div>
+          </div>
+        {% endfor %}
+        <div class="text-muted history-note">
+          Borç: ödenmemiş bütün aidat ve taksitlerinizden işleme konmamış paranız düşüldükten sonra kalan
+          tutar (ana sayfadaki "Mil sonu"nun tersi). Her nokta dilimin son günündeki borcunuzdur, son nokta
+          bugündür. Eksi değer o gün alacaklı olduğunuzu gösterir.
+        </div>
+
+        <!-- Tablo: varsayılan olarak kapalı -->
+        <details class="panel panel-default history-table-panel">
+          <summary class="panel-heading">
+            <span class="when-closed">Tabloyu göster</span><span class="when-open">Tabloyu gizle</span>
+            <i class="fas fa-chevron-down pull-right"></i>
+          </summary>
+          <div class="table-responsive">
+            <table class="table table-striped table-bordered history-table" style="margin-bottom: 0;">
+              <thead>
+                <tr class="text-center font-bold">
+                  <th>Tarih</th>
+                  {% for group in h.groups %}
+                    {% if group.members|length > 1 %}
+                      <th class="text-center">Toplam{% if h.groups|length > 1 %} <span class="font-normal">({{ group.sandik.currency_str() }})</span>{% endif %}</th>
+                      {% for member in group.members %}
+                        <th class="text-center per-sandik">{{ member.sandik_ref.name }}</th>
+                      {% endfor %}
+                    {% else %}
+                      <th class="text-center">{% if h.members|length > 1 %}{{ group.members[0].sandik_ref.name }}{% else %}Borç{% endif %}</th>
+                    {% endif %}
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for i in h.row_indexes %}
+                  <tr class="text-center">
+                    <td class="text-left">
+                      {{ h.labels[i] }}{% if h.points[i] == h.today %} <span class="text-muted">(bugün)</span>{% endif %}
+                    </td>
+                    {% for group in h.groups %}
+                      {% set total = group.debt_total[i] %}
+                      <td class="font-bold {% if total > 0 %}text-danger{% else %}text-success{% endif %}">{{ total|money(group.sandik) }}</td>
+                      {% if group.members|length > 1 %}
+                        {% for member in group.members %}
+                          {% set value = h.member_debts[member.id][i] %}
+                          <td class="per-sandik {% if value > 0 %}text-danger{% else %}text-success{% endif %}">{{ value|money(member.sandik_ref) }}</td>
+                        {% endfor %}
+                      {% endif %}
+                    {% endfor %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% if h.lists_only_changes %}
+            <div class="panel-footer text-muted" style="font-size: 12px;">
+              Yalnızca borcun değiştiği günler listelenmiştir.
+            </div>
+          {% endif %}
+        </details>
+
+      {% endif %}
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block js_block %}
+  {% if g.history.points %}
+    <script src="{{ url_for('static', filename='vendor/chartjs-4.5.1/chart.umd.min.js') }}"></script>
+    <script>
+      jQuery(function ($) {
+        var HISTORY = {{ g.history.chart|tojson }};
+        var TOTAL_COLOR = "#3a3f51";
+        var SANDIK_COLORS = ["#7266ba", "#23b7e5", "#27c24c", "#fad733", "#f05050", "#ff9800", "#8bc34a", "#e91e63"];
+        /* Günlük/haftalık uzun aralıklar: noktalar gizlenir, çizgi basamaklı çizilir (borç gün
+           içinde değişir, iki gün arasında eğimli bir geçiş yoktur) */
+        var manyPoints = HISTORY.labels.length > 40;
+        var isNarrow = window.innerWidth < 500;
+        var charts = [];
+
+        function toNumbers(values) {
+          return values.map(function (value) { return parseFloat(value); });
+        }
+
+        function isPerSandikShown() {
+          return $("#debt-history").hasClass("show-per-sandik");
+        }
+
+        $(".history-canvas").each(function () {
+          var group = HISTORY.groups[$(this).data("group")];
+          var datasets = [{
+            label: group.total_label,
+            data: toNumbers(group.total),
+            borderColor: TOTAL_COLOR,
+            backgroundColor: TOTAL_COLOR,
+            borderWidth: manyPoints ? 2 : 3,
+            pointRadius: manyPoints ? 0 : 3,
+            stepped: manyPoints ? "after" : false,
+            /* Sıfırın üstü (borçlu) kırmızı, altı (alacaklı) yeşil taranır */
+            fill: {target: "origin", above: "rgba(240, 80, 80, 0.12)", below: "rgba(39, 194, 76, 0.12)"},
+            order: 0
+          }];
+          group.series.forEach(function (series, index) {
+            var color = SANDIK_COLORS[index % SANDIK_COLORS.length];
+            datasets.push({
+              label: series.name,
+              data: toNumbers(series.values),
+              borderColor: color,
+              backgroundColor: color,
+              borderWidth: manyPoints ? 1.5 : 2,
+              pointRadius: manyPoints ? 0 : 2,
+              stepped: manyPoints ? "after" : false,
+              fill: false,
+              hidden: !isPerSandikShown(),
+              isPerSandik: true,
+              order: 1
+            });
+          });
+
+          charts.push(new Chart(this, {
+            type: "line",
+            data: {labels: HISTORY.labels, datasets: datasets},
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: HISTORY.labels.length > 400 ? false : undefined,
+              interaction: {mode: "index", intersect: false},
+              plugins: {
+                legend: {
+                  display: group.series.length > 0 && isPerSandikShown(),
+                  position: "bottom",
+                  labels: {boxWidth: 12, boxHeight: 12}
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function (ctx) {
+                      return ctx.dataset.label + ": " + formatMoneyWithSymbol(ctx.parsed.y, group.currency);
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: {ticks: {maxRotation: 0, autoSkip: true, autoSkipPadding: 16, maxTicksLimit: isNarrow ? 4 : 8}},
+                y: {
+                  ticks: {
+                    callback: function (value) { return formatMoney(value, group.currency); }
+                  },
+                  grid: {
+                    /* Sıfır çizgisi belirgin */
+                    color: function (ctx) { return ctx.tick && ctx.tick.value === 0 ? "#98a6ad" : "rgba(0, 0, 0, 0.06)"; },
+                    lineWidth: function (ctx) { return ctx.tick && ctx.tick.value === 0 ? 2 : 1; }
+                  }
+                }
+              }
+            }
+          }));
+        });
+
+        var $toggle = $("#per-sandik-toggle");
+        $toggle.prop("checked", isPerSandikShown());
+        $toggle.on("change", function () {
+          var shown = this.checked;
+          $("#debt-history").toggleClass("show-per-sandik", shown);
+          try {
+            localStorage.setItem("{{ PER_SANDIK_STORAGE_KEY }}", shown ? "1" : "0");
+          } catch (e) {}
+          charts.forEach(function (chart) {
+            chart.data.datasets.forEach(function (dataset) {
+              if (dataset.isPerSandik) {
+                dataset.hidden = !shown;
+              }
+            });
+            chart.options.plugins.legend.display = shown && chart.data.datasets.length > 1;
+            chart.update();
+          });
+        });
+      });
+    </script>
+  {% endif %}
+{% endblock %}

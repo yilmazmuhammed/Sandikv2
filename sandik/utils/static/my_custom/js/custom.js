@@ -173,13 +173,15 @@ function sandikCurrency() {
  * Sayıyı türkçe biçimde döndürür: binlik ayracı nokta, ondalık ayracı virgül.
  * En az birimin gerektirdiği kadar (TL'de 0, altında 1) basamak gösterilir; değer daha ince bir
  * ondalık taşıyorsa (eski kuruşlu kayıtlar) iki basamağa çıkılır.
+ * `currency` ({symbol, places}) verilmezse sayfanın birimi kullanılır; birden fazla birimin aynı
+ * sayfada gösterildiği yerler (ör. mil sonu geçmişi) birimi kendisi verir.
  */
-function formatMoney(value) {
+function formatMoney(value, currency) {
   const number = parseFloat(value);
   if (isNaN(number)) {
     return "";
   }
-  const min_places = sandikCurrency().places;
+  const min_places = (currency || sandikCurrency()).places;
   /* Değerin gerçekten ihtiyaç duyduğu basamak sayısı (sondaki sıfırlar sayılmaz) */
   const significant = (number.toFixed(MONEY_MAX_PLACES).split(".")[1] || "").replace(/0+$/, "").length;
   const places = significant <= min_places ? min_places : MONEY_MAX_PLACES;
@@ -190,8 +192,8 @@ function formatMoney(value) {
 }
 
 /** Tutarı birim sembolüyle döndürür: "1.500 ₺", "5,2 gr" */
-function formatMoneyWithSymbol(value) {
-  return formatMoney(value) + " " + sandikCurrency().symbol;
+function formatMoneyWithSymbol(value, currency) {
+  return formatMoney(value, currency) + " " + (currency || sandikCurrency()).symbol;
 }
 
 /**

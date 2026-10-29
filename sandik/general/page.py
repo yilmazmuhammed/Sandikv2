@@ -1,4 +1,6 @@
-from flask import Blueprint, render_template, request, redirect, flash, url_for, g, abort
+from urllib.parse import parse_qsl, urlencode
+
+from flask import Blueprint, render_template, request, redirect, flash, url_for, g, abort, make_response
 from flask_login import current_user
 from pony.orm import desc
 
@@ -46,6 +48,34 @@ def index_page():
 def home_page():
     g.home_data = utils.get_home_page_data(web_user=current_user)
     return render_template("general/home_page.html", page_info=LayoutPI(title="Ana sayfa"))
+
+
+# Son seçilen aralık/dilim bu çerezde durur; sayfa parametresiz açılınca o seçim gösterilir.
+DEBT_HISTORY_COOKIE = "sandikv2-borc-gecmisi"
+DEBT_HISTORY_COOKIE_MAX_AGE = 365 * 24 * 60 * 60
+
+
+@general_page_bp.route("/borc-gecmisi")
+@login_required
+def debt_history_page():
+    """Borç geçmişi: ana sayfadaki mil sonunun geçmişi, borç olarak (işareti çevrilmiş) gösterilir."""
+    has_selection = any(name in request.args for name in utils.HISTORY_ARG_NAMES)
+    if has_selection:
+        selection_args = request.args
+    else:
+        selection_args = dict(parse_qsl(request.cookies.get(DEBT_HISTORY_COOKIE, "")))
+    g.selection = utils.parse_history_selection(selection_args)
+    g.history = utils.get_mile_end_history(web_user=current_user, selection=g.selection)
+
+    response = make_response(render_template("general/debt_history_page.html",
+                                             page_info=LayoutPI(title="Borç geçmişim", active_dropdown="debt-history"),
+                                             RANGES=utils.HISTORY_RANGES, SLICES=utils.HISTORY_SLICES))
+    if has_selection:
+        response.set_cookie(DEBT_HISTORY_COOKIE, urlencode(g.selection["args"]),
+                            max_age=DEBT_HISTORY_COOKIE_MAX_AGE,
+                            path=url_for("general_page_bp.debt_history_page"),
+                            httponly=True, samesite="Lax", secure=request.is_secure)
+    return response
 
 
 @general_page_bp.route("/banka-hesaplarim")
