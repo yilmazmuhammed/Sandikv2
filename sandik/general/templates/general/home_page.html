@@ -124,6 +124,32 @@
       font-size: 12px;
       border-top: 1px solid #dee5e7;
     }
+    /* Bootstrap telefonda .table-responsive altına 15px boşluk bırakır; tablo panelin içinde,
+       altında bağlantı satırı olduğu için gerekmez */
+    .payments-variant .table-responsive {
+      margin-bottom: 0;
+    }
+    /* Tablonun altındaki "Borç geçmişim" bağlantısı: satırı boydan boya kaplayan liste satırı */
+    .debt-history-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 15px;
+      border-top: 1px solid #dee5e7;
+      color: #23b7e5;
+      font-weight: 600;
+    }
+    .debt-history-link:hover,
+    .debt-history-link:focus {
+      background: #f6f8f8;
+      color: #1c9ac2;
+      text-decoration: none;
+    }
+    .debt-history-link .chevron {
+      font-size: 22px;
+      line-height: 1;
+      margin-left: 10px;
+    }
   </style>
 {% endblock %}
 
@@ -299,11 +325,10 @@
               </div>
             </div>
             {# Tablonun Toplam satırı borç geçmişi sayfasındaki bugünkü borçla aynı sayıdır #}
-            <div class="panel-footer text-right">
-              <a class="btn btn-default btn-sm" href="{{ url_for('general_page_bp.debt_history_page') }}">
-                <i class="fas fa-chart-line"></i> Borç geçmişim
-              </a>
-            </div>
+            <a class="debt-history-link" href="{{ url_for('general_page_bp.debt_history_page') }}">
+              <span><i class="fas fa-chart-line"></i> Borcumun zaman içindeki değişimini gör</span>
+              <span class="chevron" aria-hidden="true">›</span>
+            </a>
             <script>
               (function () {
                 var show = false;

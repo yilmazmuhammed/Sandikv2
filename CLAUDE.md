@@ -173,7 +173,7 @@ pozitiftir, kırmızıdır, grafikte sıfırın üstü kırmızı taranır; eksi
 (`member_values`, `total`), sayfa borcu (`member_debts`, `debt_total`, grafik verisi) kullanır.
 Sayfaya iki yerden gidilir (kullanıcı istedi): sol menünün en üstündeki "Tüm sandıklarım" →
 "Borç geçmişim" (hangi sandığın sayfasında olunursa olunsun görünür, `left_menu.html`) ve ana sayfada
-"Aylık ödemelerim" tablosunun altındaki düğme. "Sandıklardaki son durumlarım" tablosunda bilerek
+"Aylık ödemelerim" tablosunun altındaki bağlantı satırı ("Borcumun zaman içindeki değişimini gör"). "Sandıklardaki son durumlarım" tablosunda bilerek
 bağlantı yoktur.
 Hesap `general/utils.py` → `get_mile_end_history`, sorgular `general/db.py` → `select_*_rows`,
 sayfa `general/page.py` → `debt_history_page`, şablon `general/debt_history_page.html`, testler
