@@ -117,6 +117,11 @@ class EmailBot:
 
 # --- Uygulamanın kullandığı giriş kapısı ---------------------------------------------------
 
+def is_configured() -> bool:
+    """Gönderen hesap tanımlı mı? (Parola sıfırlama sayfası, tanımlı değilse bunu kullanıcıya söyler.)"""
+    return bool(os.getenv("SANDIKv2_EMAIL_BOT_EMAIL_ADDRESS") and os.getenv("SANDIKv2_EMAIL_BOT_PASSWORD"))
+
+
 def create_email_bot_from_env() -> EmailBot:
     """Ortam değişkenlerinden bir `EmailBot` kurar. Bağlantı `EmailBot.__init__` içinde açılır."""
     email_address = os.getenv("SANDIKv2_EMAIL_BOT_EMAIL_ADDRESS")

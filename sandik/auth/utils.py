@@ -1,7 +1,5 @@
-from datetime import datetime, timedelta
-
 import jwt
-from flask import current_app, url_for, Flask
+from flask import current_app, Flask
 from flask_login import LoginManager
 
 from sandik.auth import db
@@ -36,35 +34,11 @@ class Notification:
                 )
 
 
-def send_renew_password_email(web_user):
-    expiration_time = datetime.now() + timedelta(hours=5)
-    info = {
-        'email_address': web_user.email_address,
-        'password_hash': web_user.password_hash,
-        'expiration_time': {
-            "year": expiration_time.year,
-            "month": expiration_time.month,
-            "day": expiration_time.day,
-            "hour": expiration_time.hour,
-            "minute": expiration_time.minute
-        }
-    }
-    token = jwt.encode(info, current_app.secret_key, algorithm="HS256")
+def is_email_configured() -> bool:
+    return email_bot.is_configured()
 
-    url = url_for("auth_page_bp.password_reset_page", token=token, _external=True)
-    email_body = f"""
-        <h3>Sayın {web_user.name_surname}</h3>
-        <p>Sandıkv2 hesap parolanızın sıfırlanması için talepte bulunuldu.</p>
-        <a href="{url}" ><button type="button">Şifremi sıfırla</button></a>
-        <p>Eğer üstteki düğme çalışmazsa aşağıdaki bağlantıyı tarayıcınızın adres çubuğuna yapıştırabilirsiniz:
-        <br>
-        <a href="{url}">{url}</a></p>
-        <p>Eğer parola sıfırlama talebinde bulunmadıysanız bu epostayı önemsemeyiniz.</p>
-    """
-    # NOT: e-posta gövdesi ve mesajın tamamı bilerek yazdırılmıyor; içinde tek kullanımlık parola
-    # sıfırlama bağlantısı var ve sunucu günlüğüne düşmemeli.
-    email_bot.send_single_html_email(to_address=web_user.email_address, subject="Parola sıfırlama",
-                                     html=email_body)
+
+# Parola sıfırlama ortak modüldedir: auth/password_reset.py (myilmaz_tr deposundaki beş uygulamada birebir aynı).
 
 
 REMINDER_PREFERENCE_TOKEN_PURPOSE = "reminder_preference"
@@ -100,23 +74,6 @@ def get_web_user_from_reminder_preference_token(token):
     if web_user.email_address != data.get("email_address"):
         raise AuthException("E-posta adresi değiştiği için bağlantı geçerliliğini yitirdi. "
                             "Lütfen siteye giriş yaparak tercihlerinizi güncelleyiniz.")
-
-    return web_user
-
-
-def get_web_user_from_password_reset_token(token):
-    data = jwt.decode(token, current_app.secret_key, algorithms=["HS256"])
-
-    if datetime.now() > datetime(**data.get("expiration_time")):
-        raise AuthException("Parola sıfırlama bağlantısının süresi dolmuş. "
-                            "Lütfen tekrar parola sıfırlama isteği gönderiniz.")
-
-    web_user = db.get_web_user(email_address=data.get("email_address"))
-    if not web_user:
-        raise WebUserNotFound("Kullanıcı bulunamadı.")
-
-    if web_user.password_hash != data.get("password_hash"):
-        raise AuthException("Kullanıcı şifresi değiştirildiği için bağlantı geçerliliği iptal edildi.")
 
     return web_user
 
