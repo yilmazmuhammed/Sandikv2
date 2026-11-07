@@ -323,6 +323,43 @@ def _values_at(member_events, points):
     return values
 
 
+# API'de para birimleri sayı yerine bu kodlarla gönderilir (Cüzdan uygulaması bu kodları tanır)
+API_CURRENCY_CODES = {1: "TRY", 2: "USD", 3: "EUR", 4: "XAU", 5: "XAG"}
+
+
+def get_debt_events(web_user, today=None):
+    """Borç geçmişinin ham hâli: sandık başına borcu değiştiren olaylar (`/api/borc-gecmisi`).
+
+    `get_mile_end_history` ile aynı üyeler (kullanıcının hâlâ üyesi olduğu sandıklar) ve aynı olaylar;
+    fark, dilimlenmemiş olması ve **borç** olarak (mil sonunun işaret çevrilmiş hâli) verilmesidir.
+    Aynı günün olayları birleştirilir, toplamı sıfır olan günler atlanır. Olayların toplamı bugünkü
+    borçtur (`debt`), yani `/borc-gecmisi` sayfasının bugünkü değeriyle aynıdır.
+    """
+    today = today or date.today()
+    members = sorted(
+        web_user.members_set.filter(lambda m: m.is_active)[:],
+        key=lambda m: turkish_sort_key(m.sandik_ref.name)
+    )
+    events = _mile_end_events(member_ids=[member.id for member in members], today=today) if members else {}
+
+    sandiks = []
+    for member in members:
+        daily = {}
+        for day, delta in events.get(member.id, []):
+            daily[day] = daily.get(day, Decimal(0)) - delta
+        rows = [(day, value) for day, value in sorted(daily.items()) if value != 0]
+        sandik = member.sandik_ref
+        sandiks.append({
+            "sandik_id": sandik.id,
+            "member_id": member.id,
+            "name": sandik.name,
+            "currency": API_CURRENCY_CODES.get(sandik.currency, "TRY"),
+            "debt": str(sum((value for _, value in rows), Decimal(0))),
+            "events": [[day.isoformat(), str(value)] for day, value in rows],
+        })
+    return {"today": today.isoformat(), "sandiks": sandiks}
+
+
 def get_mile_end_history(web_user, selection, today=None):
     """Kullanıcının hâlâ üyesi olduğu sandıklardaki mil sonunun dilim dilim değeri.
 

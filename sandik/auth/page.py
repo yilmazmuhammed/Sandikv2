@@ -1,4 +1,4 @@
-from flask import Blueprint, flash, request, redirect, render_template, url_for, g
+from flask import Blueprint, flash, request, redirect, render_template, url_for, g, make_response
 from flask_login import login_user, login_required, logout_user, current_user
 
 from sandik.auth import db, forms, utils
@@ -204,6 +204,32 @@ def reminder_preference_by_token_page(token):
 
     return _reminder_preference_page_base(web_user=web_user, title="E-posta hatırlatma tercihi",
                                           template=template)
+
+
+@auth_page_bp.route("/cuzdan-baglantisi", methods=["GET", "POST"])
+@login_required
+def api_token_page():
+    """Cüzdan uygulamasının borç geçmişini okuyabilmesi için kişisel API anahtarı.
+
+    Anahtar yalnızca oluşturulduğu anda bir kez gösterilir (saklanan, özetidir).
+    """
+    form = forms.ApiTokenForm()
+    new_token = None
+    if form.validate_on_submit():
+        if form.action.data == "create":
+            new_token = utils.create_api_token(current_user)
+        elif form.action.data == "revoke":
+            utils.revoke_api_token(current_user)
+            flash("Anahtar silindi; Cüzdan artık borç geçmişinizi okuyamaz.", "success")
+            return redirect(url_for("auth_page_bp.api_token_page"))
+
+    response = make_response(render_template(
+        "auth/api_token_page.html", page_info=LayoutPI(title="Cüzdan bağlantısı"), form=form,
+        new_token=new_token, created_at=utils.api_token_created_at(current_user),
+        api_url=url_for("general_api_bp.debt_events_api", _external=True)))
+    # Anahtar sayfada bir kez görünür; tarayıcı geçmişinden geri gelmesin
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @auth_page_bp.route("/parola-guncelle", methods=["GET", "POST"])

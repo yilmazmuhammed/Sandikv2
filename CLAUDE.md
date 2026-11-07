@@ -221,6 +221,29 @@ sayfa `general/page.py` → `debt_history_page`, şablon `general/debt_history_p
 - Bağlam sözlüğünde `values`, `items`, `keys` gibi anahtar adları kullanılmaz: Jinja `h.values`'u
   sözlüğün kendi metoduna çözer (bu yüzden `member_values`).
 
+## Cüzdan bağlantısı (`/cuzdan-baglantisi`, `/api/borc-gecmisi`)
+
+Ana depodaki **Cüzdan** uygulaması (`myilmaz_tr/cuzdan/`, kişisel borç/alacak/varlık/zekât takibi) sandık borcunu
+ve geçmişini buradan okur (kullanıcı istedi: sandık borcu diğer borçlarının yanında görünsün).
+
+- **Kişisel API anahtarı**: kullanıcı menüsü → "Cüzdan bağlantısı" (`auth/page.py` → `api_token_page`). Biçim
+  `<web_user_id>.<rastgele>`; `WebUser.preferences` Json'unda **yalnızca SHA-256 özeti** (`api_token_hash`) ve
+  oluşturulma zamanı durur (`auth/db.py` → `set_api_token_hash`, diğer tercihlere dokunmaz, `Log` yazar). Anahtar
+  bir kez gösterilir; yeni anahtar eskisini geçersiz kılar, "Anahtarı sil" bağlantıyı keser. Sayfa `no-store`.
+  Doğrulama `auth/utils.py` → `get_web_user_from_api_token` (`hmac.compare_digest`; etkin olmayan kullanıcı reddedilir).
+- **Anahtar yalnızca okuma yetkisi verir ve yalnızca `/api/borc-gecmisi`ye geçer**; oturum açmaz.
+- **Uç**: `GET /api/borc-gecmisi` (`general/api.py` → `debt_events_api`), `Authorization: Bearer <anahtar>`;
+  geçersizse 401. Yanıt (`version: 1`) `general/utils.py` → `get_debt_events`: "Borç geçmişim" ile **aynı üyeler
+  ve aynı olaylar** (`_mile_end_events`), dilimlenmeden, **borç** olarak (mil sonunun tersi), aynı günün olayları
+  birleşik: `sandiks: [{sandik_id, member_id, name, currency, debt, events: [[gün, değişim], ...]}]`. Para birimi
+  sayı değil kodla gider (`API_CURRENCY_CODES`: TRY/USD/EUR/XAU/XAG; altın/gümüş gramdır). Olayların toplamı
+  `debt`tir ve "Borç geçmişim"in bugünkü değeridir (`tests/test_api_token.py` sabitler). **Yanıtın biçimi
+  değişirse `version` artırılmalıdır**; Cüzdan tanımadığı sürümü reddeder.
+- Cüzdan Sandıkv2 ile aynı süreçte çalışırken (kökteki `app.py`) bu uca **ağa çıkmadan**, WSGI uygulamasına
+  doğrudan istek atar; bu yüzden uç bir `before_request`/oturum yan etkisine dayanmamalı ve yalnızca okumalıdır
+  (iç içe Pony `db_session`'ında çalışır).
+- "Borç geçmişim" sayfasının altında bu sayfaya bir bağlantı vardır.
+
 ## Gecelik işler ve hatırlatma e-postaları
 
 `sandik/utils/clock.py` PythonAnywhere'de zamanlanmış görev olarak **her gece 01:01'de** çalışır ve
