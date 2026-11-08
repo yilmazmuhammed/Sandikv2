@@ -1,6 +1,6 @@
 from flask import Blueprint, json, flash, render_template
 from flask_login import current_user, login_user
-from pony.orm import rollback
+from sandik.utils import rollback_and_reload
 
 from sandik.auth import db as auth_db
 from sandik.auth.requirement import admin_required
@@ -33,12 +33,12 @@ def restore_backup_page():
         except InconsistentBackupData as e:
             # Geri yükleme mevcut verileri silerek başlar; tutarsızlık tespit edildiğinde
             # işlemin geri alınması şarttır, aksi halde veritabanı yarım kalmış olur.
-            rollback()
+            rollback_and_reload()
             flash(str(e), "danger")
             for inconsistency in e.inconsistencies:
                 flash(inconsistency, "danger")
         except Exception as e:
-            rollback()
+            rollback_and_reload()
             flash(str(e), "danger")
             raise e
 
