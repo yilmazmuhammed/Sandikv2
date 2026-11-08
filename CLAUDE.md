@@ -248,7 +248,15 @@ ve geçmişini buradan okur (kullanıcı istedi: sandık borcu diğer borçları
   birleşik: `sandiks: [{sandik_id, member_id, name, currency, debt, events: [[gün, değişim], ...]}]`. Para birimi
   sayı değil kodla gider (`API_CURRENCY_CODES`: TRY/USD/EUR/XAU/XAG; altın/gümüş gramdır). Olayların toplamı
   `debt`tir ve "Borç geçmişim"in bugünkü değeridir (`tests/test_api_token.py` sabitler). **Yanıtın biçimi
-  değişirse `version` artırılmalıdır**; Cüzdan tanımadığı sürümü reddeder.
+  değişirse `version` artırılmalıdır**; Cüzdan tanımadığı sürümü reddeder. Yeni bir alan **eklemek** sürüm
+  artırmaz (eski Cüzdan onu okumaz); var olan bir alanın anlamı değişirse artırılır.
+- **Ödeme planı** (Cüzdan'ın "Aylık plan" sayfası için; kullanıcı istedi: sandık sandık aidat bilgisi çekilsin): her
+  sandıkta `payments: [{term, contribution, installment}]` ve `undistributed`. `general/utils.py → get_payment_plan`:
+  ödenmemiş (kısmen ödenmişse kalan) bütün aidat ve taksit kayıtları kendi aylarında, vadesi geçmişler dahil; üstüne
+  gelecek `PAYMENT_PLAN_MONTHS` (36) ayın henüz oluşturulmamış aidatları ana sayfadaki "Gelecek ayların aidatlarını da
+  göster" ile aynı formülle (`_future_contribution_amounts`) **hesaplanır, yazılmaz**. İşleme konmamış para düşülmez;
+  hangi ödemeyi karşılayacağına Cüzdan karar verir (en eski ödemeden başlayarak). Kayıtlı ödemelerin toplamı −
+  işleme konmamış para = `debt` (test sabitler).
 - Cüzdan Sandıkv2 ile aynı süreçte çalışırken (kökteki `app.py`) bu uca **ağa çıkmadan**, WSGI uygulamasına
   doğrudan istek atar; bu yüzden uç bir `before_request`/oturum yan etkisine dayanmamalı ve yalnızca okumalıdır
   (iç içe Pony `db_session`'ında çalışır).
