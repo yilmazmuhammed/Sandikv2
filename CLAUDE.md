@@ -244,6 +244,19 @@ ve geçmişini buradan okur (kullanıcı istedi: sandık borcu diğer borçları
   (iç içe Pony `db_session`'ında çalışır).
 - "Borç geçmişim" sayfasının altında bu sayfaya bir bağlantı vardır.
 
+## Parola sıfırlama (`/parola-sifirla`, `/parola-sifirla/<jeton>`)
+
+Kurallar, metinler ve jeton `sandik/auth/password_reset.py`dedir; bu dosya myilmaz_tr deposundaki apartman,
+davetiye ve family_tree uygulamalarındakilerle **birebir aynıdır** (yalnızca başındaki `APP_NAME` /
+`TOKEN_SALT` bloğu farklı). Kullanıcı istedi: bütün uygulamalarda "Parolamı unuttum" aynı olsun. **Değişiklik
+oralara da taşınmalıdır**; kuralların tamamı ana depo CLAUDE.md → "Parola sıfırlama (ortak modül)" bölümündedir.
+
+Sandıkv2'deki eski sürümden farkları: kayıtlı olmayan adres için "Kullanıcı bulunamadı" demez (aynı yanıt), bozuk
+bağlantı 500 vermez, jetonda parola özetinin tamamı (JWT) yerine kısa izi vardır (itsdangerous, 2 saat), e-postadaki
+ad kaçırılır, istek sınırı vardır, e-posta ayarı yoksa sayfa bunu söyler (`bot/email_bot.py → is_configured`).
+Şablon `auth/password_reset_page.html`; giriş sayfasındaki bağlantı "Parolamı unuttum". Testler
+`tests/test_password_reset.py` (sayfalar myilmaz_tr deposundaki uygulamaların testlerinde sınanır).
+
 ## Gecelik işler ve hatırlatma e-postaları
 
 `sandik/utils/clock.py` PythonAnywhere'de zamanlanmış görev olarak **her gece 01:01'de** çalışır ve

@@ -1,7 +1,7 @@
-from flask import Blueprint, flash, request, redirect, render_template, url_for, g, make_response
+from flask import Blueprint, current_app, flash, request, redirect, render_template, url_for, g, make_response
 from flask_login import login_user, login_required, logout_user, current_user
 
-from sandik.auth import db, forms, utils
+from sandik.auth import db, forms, password_reset, utils
 from sandik.auth.exceptions import RegisterException, EmailAlreadyExist, AuthException
 from sandik.auth.requirement import admin_required, web_user_required
 from sandik.auth.utils import Notification
@@ -68,37 +68,58 @@ def logout_page():
     return redirect(url_for("general_page_bp.index_page"))
 
 
+# --------------------------------------------------------------------------------------
+# Parola sıfırlama: kurallar ve metinler ortak modüldedir (auth/password_reset.py; myilmaz_tr deposundaki beş
+# uygulamada birebir aynı, yalnızca üstteki ayar bloğu farklı)
+# --------------------------------------------------------------------------------------
+
+def _send_reset_email(to_address, subject, html):
+    from sandik.bot import email_bot
+    email_bot.send_single_html_email(to_address=to_address, subject=subject, html=html)
+
+
 @auth_page_bp.route("/parola-sifirla", methods=['GET', 'POST'])
 def forgotten_password_page():
+    if current_user.is_authenticated:
+        return redirect(url_for("general_page_bp.index_page"))
     form = forms.ForgottenPasswordForm()
-
-    if form.validate_on_submit():
-        web_user = db.get_web_user(email_address=form.email_address.data)
-        if web_user:
-            utils.send_renew_password_email(web_user=web_user)
-            flash("Parola sıfırlama bağlantısı e-posta adresinize gönderildi.", "success")
-            form = None
+    error = None
+    configured = utils.is_email_configured()
+    if not configured:
+        error, form = password_reset.NOT_CONFIGURED, None
+    elif form.validate_on_submit():
+        try:
+            password_reset.request_reset(
+                form.email_address.data, ip=password_reset.client_ip(request), secret_key=current_app.secret_key,
+                find_user=lambda email: db.get_web_user(email_address=email), send_email=_send_reset_email,
+                make_url=lambda token: url_for("auth_page_bp.password_reset_page", token=token, _external=True))
+        except password_reset.ResetError as exception:
+            error = str(exception)
         else:
-            flash("Kullanıcı bulunamadı.", "success")
-
-    return render_template("auth/register_page.html",
-                           page_info=FormPI(title="Parola sıfırlama isteği", form=form))
+            flash(password_reset.SENT, "success")
+            return redirect(url_for("auth_page_bp.login_page"))
+    return password_reset.private(make_response(render_template(
+        "auth/password_reset_page.html", reset=password_reset, error=error,
+        intro=password_reset.INTRO if configured else None,
+        page_info=FormPI(title=password_reset.TITLE_REQUEST, form=form))))
 
 
 @auth_page_bp.route("/parola-sifirla/<string:token>", methods=['GET', 'POST'])
 def password_reset_page(token):
     form = forms.PasswordResetForm()
-
+    error = None
     try:
-        web_user = utils.get_web_user_from_password_reset_token(token=token)
-        if form.validate_on_submit():
-            db.password_reset(web_user=web_user, new_password=form.new_password.data)
-            return redirect(url_for("auth_page_bp.login_page"))
-    except AuthException as e:
-        flash(f"{e}", "danger")
-        form = None
-
-    return render_template("auth/auth_forms.html", page_info=FormPI(title="Parola sıfırlama", form=form))
+        web_user = password_reset.read_token(token, current_app.secret_key,
+                                             get_user=lambda web_user_id: db.get_web_user(id=web_user_id))
+    except password_reset.ResetError as exception:
+        web_user, form, error = None, None, str(exception)
+    if web_user and form.validate_on_submit():
+        db.password_reset(web_user=web_user, new_password=form.new_password.data)
+        flash(password_reset.DONE, "success")
+        return redirect(url_for("auth_page_bp.login_page"))
+    return password_reset.private(make_response(render_template(
+        "auth/password_reset_page.html", reset=password_reset, error=error, new_reset_link=bool(error),
+        page_info=FormPI(title=password_reset.TITLE_RESET, form=form))))
 
 
 @auth_page_bp.route("/kullanicilar")
