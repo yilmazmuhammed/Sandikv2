@@ -188,6 +188,12 @@ sayfa `general/page.py` → `debt_history_page`, şablon `general/debt_history_p
   Tek istisna henüz sayılmayan bir kaleme önceden yapılan ödemedir (ör. gelecek ayın aidatı); onun
   tarihi para işleminin tarihi ile `SubReceipt.creation_time`dan hangisi geçse odur. Gelecek tarihli
   kayıtlar bugüne çekilir.
+- **Tarihsiz hareketler** (kullanıcı söyledi): tarihten bağımsız işlemler bilerek **01.01.1900 gibi bir tarihle**
+  girilir. `UNDATED_BEFORE` (1990)'dan eski olaylar silinmez (bugünkü değer bozulmasın), `_place_undated_events` ile
+  üyenin ilk gerçek gününe (yoksa bugüne) taşınır; "Tümü" aralığı da 1990'dan eski üyelik tarihlerini saymaz. Yoksa
+  aralık 1900'den başlıyordu. Sayfa açıklamasının sonunda kaç hareketin böyle sayıldığı yazar (`undated_count`). Aynı
+  olaylar Cüzdan API'sine de gider, yani Cüzdan'a 1990'dan eski gün gitmez (Cüzdan'da aynı kural ayrıca vardır: 1. yıla
+  yakın bir tarih orada `OverflowError` veriyordu). Test: `test_undated_events_are_counted_from_the_first_real_day`.
 - **Olaylar bir kez sıralanıp taranır** (`_mile_end_events`, `_values_at`); sorgu sayısı dilime ve
   aralığa bağlı değildir (bütün sandıklar için 6 sorgu + üyeler). 5 yıllık örnek veride günlük dilim
   (1.824 nokta) ~35 ms sürdü.
