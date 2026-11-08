@@ -164,19 +164,19 @@ class ForgottenPasswordForm(CustomFlaskForm):
             max_length_validator("E-posta adresi", 254),
             Email("Geçerli bir e-posta adresi giriniz")
         ],
-        render_kw={"placeholder": "Email address"}
+        render_kw={"placeholder": "ornek@eposta.com", "autocomplete": "email", "autofocus": True}
     )
 
-    submit = SubmitField(label="Gönder")
+    submit = SubmitField(label="Sıfırlama bağlantısı gönder")
 
-    def __init__(self, form_title='Parola sıfırlama isteği formu', *args, **kwargs):
+    def __init__(self, form_title='Parolamı unuttum', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
 
 
 class PasswordResetForm(UpdatePasswordForm):
     old_password = None
 
-    def __init__(self, form_title='Parola sıfırlama formu', *args, **kwargs):
+    def __init__(self, form_title='Yeni parola belirle', *args, **kwargs):
         super().__init__(form_title=form_title, *args, **kwargs)
 
 
