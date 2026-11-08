@@ -91,12 +91,17 @@ def test_api_requires_a_valid_bearer_token():
         token = auth_utils.create_api_token(wu)
 
     client = _api_client()
-    assert client.get("/api/borc-gecmisi").status_code == 401
-    assert client.get("/api/borc-gecmisi", headers={"Authorization": "Bearer yanlis"}).status_code == 401
+    for headers in ({}, {"Authorization": "Bearer yanlis"}, {"Authorization": f"Basic {token}"}):
+        response = client.get("/api/borc-gecmisi", headers=headers)
+        assert response.status_code == 401
+        assert response.get_json()["result"] is False
+        assert response.headers["Cache-Control"] == "no-store"
 
     response = client.get("/api/borc-gecmisi", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["X-Robots-Tag"] == "noindex"
+    assert "Set-Cookie" not in response.headers  # anahtar oturum açmaz
     body = response.get_json()
     assert body["result"] is True and body["version"] == 1
     assert len(body["sandiks"]) == 1 and Decimal(body["sandiks"][0]["debt"]) > 0

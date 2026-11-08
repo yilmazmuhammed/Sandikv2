@@ -231,9 +231,13 @@ ve geçmişini buradan okur (kullanıcı istedi: sandık borcu diğer borçları
   oluşturulma zamanı durur (`auth/db.py` → `set_api_token_hash`, diğer tercihlere dokunmaz, `Log` yazar). Anahtar
   bir kez gösterilir; yeni anahtar eskisini geçersiz kılar, "Anahtarı sil" bağlantıyı keser. Sayfa `no-store`.
   Doğrulama `auth/utils.py` → `get_web_user_from_api_token` (`hmac.compare_digest`; etkin olmayan kullanıcı reddedilir).
-- **Anahtar yalnızca okuma yetkisi verir ve yalnızca `/api/borc-gecmisi`ye geçer**; oturum açmaz.
-- **Uç**: `GET /api/borc-gecmisi` (`general/api.py` → `debt_events_api`), `Authorization: Bearer <anahtar>`;
-  geçersizse 401. Yanıt (`version: 1`) `general/utils.py` → `get_debt_events`: "Borç geçmişim" ile **aynı üyeler
+- **Uçlar `auth/requirement.py` → `@api_token_required` ile korunur** (`login_required`/`admin_required` gibi;
+  kullanıcı istedi, doğrulama uç fonksiyonunun içinde yazılmaz). `Authorization: Bearer <anahtar>` başlığını okur,
+  sahibini `g.api_web_user`a koyar; geçersizse 401 + JSON döner. Yanıt her durumda `no-store` + `X-Robots-Tag:
+  noindex`tir. `current_user`a dokunmaz.
+- **Anahtar yalnızca okuma yetkisi verir ve yalnızca `@api_token_required` taşıyan uçlara (bugün yalnızca
+  `/api/borc-gecmisi`) geçer**; oturum açmaz. Bu dekoratör yalnızca okuyan uçlara konmalıdır.
+- **Uç**: `GET /api/borc-gecmisi` (`general/api.py` → `debt_events_api`). Yanıt (`version: 1`) `general/utils.py` → `get_debt_events`: "Borç geçmişim" ile **aynı üyeler
   ve aynı olaylar** (`_mile_end_events`), dilimlenmeden, **borç** olarak (mil sonunun tersi), aynı günün olayları
   birleşik: `sandiks: [{sandik_id, member_id, name, currency, debt, events: [[gün, değişim], ...]}]`. Para birimi
   sayı değil kodla gider (`API_CURRENCY_CODES`: TRY/USD/EUR/XAU/XAG; altın/gümüş gramdır). Olayların toplamı
