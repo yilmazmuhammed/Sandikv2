@@ -114,6 +114,7 @@
               <li>
                 <a href="{{ url_for('auth_page_bp.reminder_preference_page') }}">E-posta tercihlerim</a>
               </li>
+              <li><a href="{{ url_for('auth_page_bp.api_token_page') }}">Cüzdan bağlantısı</a></li>
               <li class="divider"></li>
               {% if g.sandik %}
               <li><a href="{{ url_for('sandik_page_bp.update_member_preferences_page', sandik_id=g.sandik.id) }}">Sandık tercihlerim</a></li>

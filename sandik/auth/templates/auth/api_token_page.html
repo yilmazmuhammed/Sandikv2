@@ -1,0 +1,52 @@
+{# Cüzdan bağlantısı: kişisel, yalnızca okuma yetkili API anahtarı (auth/page.py → api_token_page) #}
+{% extends "utils/layout.html" %}
+
+{% block content_block %}
+  {{ macros.page_header(page_info.title) }}
+  <div class="wrapper-md">
+    <div class="panel panel-default" style="max-width:640px; margin: auto;">
+      <div class="panel-heading font-bold">Borç geçmişimi Cüzdan'a bağla</div>
+      <div class="panel-body">
+        {% for category, msg in get_flashed_messages(with_categories=true) %}
+          <div class="alert alert-{{ category }}" role="alert">{{ msg }}</div>
+        {% endfor %}
+
+        <p>
+          <b>Cüzdan</b> (borç, alacak, varlık ve zekât takibi) uygulaması, sandıklardaki borcunuzu ve
+          geçmişini bu anahtarla okur. Anahtar <b>yalnızca okuma</b> yetkisi verir: sandıklarda işlem
+          yapamaz, oturum açmaz. "Borç geçmişim" sayfasındaki sayıların aynısı aktarılır.
+        </p>
+
+        {% if new_token %}
+          <div class="alert alert-success">
+            <p><b>Anahtarınız oluşturuldu.</b> Aşağıdaki anahtarı kopyalayıp Cüzdan'daki
+              "Sandık bağlantısı" sayfasına yapıştırınız. <b>Bu anahtar bir daha gösterilmeyecek.</b></p>
+            <input type="text" class="form-control" readonly value="{{ new_token }}" onclick="this.select()"
+                   style="font-family: monospace;">
+          </div>
+        {% elif created_at %}
+          <p class="text-success"><i class="fas fa-check-circle"></i>
+            Bir anahtarınız var (oluşturulma: {{ created_at }}).</p>
+        {% else %}
+          <p class="text-muted">Henüz bir anahtarınız yok.</p>
+        {% endif %}
+
+        <form method="post" style="display:inline-block; margin-right: 8px;">
+          {{ form.csrf_token }}<input type="hidden" name="action" value="create">
+          <button class="btn btn-primary"
+                  {% if created_at and not new_token %}onclick="return confirm('Yeni anahtar oluşturulunca eskisi geçersiz olur. Devam edilsin mi?')"{% endif %}>
+            {{ "Yeni anahtar oluştur" if created_at else "Anahtar oluştur" }}</button>
+        </form>
+        {% if created_at %}
+          <form method="post" style="display:inline-block;">
+            {{ form.csrf_token }}<input type="hidden" name="action" value="revoke">
+            <button class="btn btn-default" onclick="return confirm('Anahtar silinsin mi? Cüzdan borç geçmişinizi okuyamaz.')">
+              Anahtarı sil</button>
+          </form>
+        {% endif %}
+
+        <p class="text-muted m-t" style="font-size: 12px;">Adres: <code>{{ api_url }}</code></p>
+      </div>
+    </div>
+  </div>
+{% endblock %}

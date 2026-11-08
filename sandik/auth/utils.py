@@ -76,3 +76,58 @@ def get_web_user_from_reminder_preference_token(token):
                             "Lütfen siteye giriş yaparak tercihlerinizi güncelleyiniz.")
 
     return web_user
+
+
+# --------------------------------------------------------------------------------------
+# Kişisel API anahtarı (Cüzdan bağlantısı)
+# --------------------------------------------------------------------------------------
+#
+# Cüzdan uygulaması (myilmaz_tr deposundaki `cuzdan/`) borç geçmişini bu anahtarla okur
+# (`/api/borc-gecmisi`). Anahtar yalnızca **okuma** yetkisi verir ve yalnızca o uca geçer; oturum
+# açmaz. Biçimi `<web_user_id>.<rastgele>`: kimlik kısmı kullanıcıyı bulmak içindir, doğrulama
+# rastgele kısmın tamamının SHA-256 özetiyle yapılır. Anahtar bir kez gösterilir, saklanmaz.
+
+def _hash_api_token(token: str) -> str:
+    import hashlib
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def create_api_token(web_user) -> str:
+    """Yeni anahtar üretir (eskisi geçersiz olur) ve **bir kez** döndürür."""
+    import secrets
+
+    from pony.orm import flush
+    if web_user.id is None:  # aynı istekte yeni oluşturulmuş kullanıcı
+        flush()
+    token = f"{web_user.id}.{secrets.token_urlsafe(32)}"
+    db.set_api_token_hash(web_user=web_user, updated_by=web_user, token_hash=_hash_api_token(token))
+    return token
+
+
+def revoke_api_token(web_user):
+    db.set_api_token_hash(web_user=web_user, updated_by=web_user, token_hash=None)
+
+
+def api_token_created_at(web_user):
+    """Anahtar varsa oluşturulduğu zaman (metin), yoksa None"""
+    preferences = web_user.preferences or {}
+    if not preferences.get(db.API_TOKEN_HASH_KEY):
+        return None
+    return preferences.get(db.API_TOKEN_CREATED_KEY) or "?"
+
+
+def get_web_user_from_api_token(token):
+    """Anahtar geçerliyse sahibi, değilse None. Etkin olmayan kullanıcı da None döner."""
+    import hmac
+    if not token or "." not in token:
+        return None
+    web_user_id, _ = token.split(".", 1)
+    if not web_user_id.isdigit():
+        return None
+    web_user = db.get_web_user(id=int(web_user_id))
+    if not web_user or not web_user.is_active:
+        return None
+    stored = (web_user.preferences or {}).get(db.API_TOKEN_HASH_KEY)
+    if not stored or not hmac.compare_digest(stored, _hash_api_token(token)):
+        return None
+    return web_user

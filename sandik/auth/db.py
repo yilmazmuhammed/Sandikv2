@@ -5,6 +5,11 @@ from sandik.auth.exceptions import EmailAlreadyExist
 from sandik.utils.db_models import WebUser, Log, ReminderPreference, get_updated_fields
 
 
+# Kişisel API anahtarı (Cüzdan bağlantısı) `WebUser.preferences` içinde bu anahtarlarla durur
+API_TOKEN_HASH_KEY = "api_token_hash"
+API_TOKEN_CREATED_KEY = "api_token_created_at"
+
+
 def get_web_user(password=None, web_user=None, **kwargs) -> WebUser:
     web_user = web_user or WebUser.get(**kwargs)
     if web_user and password:
@@ -130,3 +135,30 @@ def web_users_form_choices(exclusions=None, only_active_user=False):
             lambda wu: wu.name_surname.lower())
     ]
     return choices
+
+
+def set_api_token_hash(web_user, updated_by, token_hash):
+    """Kişisel API anahtarının özetini `WebUser.preferences` Json'una yazar; `None` anahtarı kaldırır.
+
+    Anahtarın kendisi saklanmaz, yalnızca SHA-256 özeti (bkz. `auth/utils.py` → `create_api_token`).
+    Json'daki diğer tercihlere dokunulmaz (`update_reminder_preference` ile aynı kalıp).
+    """
+    from datetime import datetime
+
+    preferences = dict(web_user.preferences or {})
+    had_token = bool(preferences.get(API_TOKEN_HASH_KEY))
+    if token_hash:
+        preferences[API_TOKEN_HASH_KEY] = token_hash
+        preferences[API_TOKEN_CREATED_KEY] = datetime.now().strftime("%Y-%m-%d %H:%M")
+        detail = "API anahtarı yenilendi" if had_token else "API anahtarı oluşturuldu"
+    else:
+        preferences.pop(API_TOKEN_HASH_KEY, None)
+        preferences.pop(API_TOKEN_CREATED_KEY, None)
+        detail = "API anahtarı silindi"
+
+    if updated_by:
+        Log(web_user_ref=updated_by, type=Log.TYPE.WEB_USER.UPDATE, logged_web_user_ref=web_user, detail=detail)
+
+    web_user.preferences = preferences
+    flush()
+    return web_user

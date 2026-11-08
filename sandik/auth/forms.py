@@ -1,4 +1,6 @@
-from wtforms import PasswordField, SubmitField, BooleanField, StringField, EmailField, TelField, SelectField
+from flask_wtf import FlaskForm
+from wtforms import PasswordField, SubmitField, BooleanField, StringField, EmailField, TelField, SelectField, \
+    HiddenField
 from wtforms.validators import Email, Optional, EqualTo
 
 from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator, PhoneNumberValidator
@@ -243,3 +245,8 @@ class ReminderPreferenceForm(CustomFlaskForm):
                        ReminderPreference.DEFAULT_MONTH_START_DAY),
                 day_of(self.next_month_enabled, self.next_month_day,
                        ReminderPreference.DEFAULT_NEXT_MONTH_DAY))
+
+
+class ApiTokenForm(FlaskForm):
+    """Cüzdan bağlantısı sayfasındaki düğmeler (anahtar oluştur / sil); yalnızca CSRF jetonu taşır."""
+    action = HiddenField()
