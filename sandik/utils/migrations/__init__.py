@@ -51,7 +51,7 @@ class Backend:
             import pymysql
             self.connection = pymysql.connect(
                 host=self.params["host"], user=self.params["user"],
-                password=self.params["passwd"], database=self.params["db"], autocommit=False)
+                password=self.params["password"], database=self.params["database"], autocommit=False)
         elif self.provider == "postgres":
             import psycopg2
             self.connection = psycopg2.connect(self.params["dsn"])
@@ -449,7 +449,7 @@ def database_target_from_env():
 
     if provider == "mysql":
         return "mysql", {"host": os.getenv("SANDIKv2_DATABASE_HOST"), "user": os.getenv("SANDIKv2_DATABASE_USER"),
-                         "passwd": os.getenv("SANDIKv2_DATABASE_PASSWORD"), "db": os.getenv("SANDIKv2_DATABASE_DB")}
+                         "password": os.getenv("SANDIKv2_DATABASE_PASSWORD"), "database": os.getenv("SANDIKv2_DATABASE_DB")}
 
     # Dosya yolu çalışma dizinine göre değil, bu dosyaya göre belirlenir (utils/database.sqlite)
     utils_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
