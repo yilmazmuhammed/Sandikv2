@@ -105,3 +105,23 @@ def test_api_requires_a_valid_bearer_token():
     body = response.get_json()
     assert body["result"] is True and body["version"] == 1
     assert len(body["sandiks"]) == 1 and Decimal(body["sandiks"][0]["debt"]) > 0
+
+
+@db_session
+def test_payment_plan_lists_unpaid_payments_and_projected_contributions():
+    wu, member = _setup_member_with_debt()
+
+    [row] = general_utils.get_debt_events(wu)["sandiks"]
+    plan = {item["term"]: (Decimal(item["contribution"]), Decimal(item["installment"])) for item in row["payments"]}
+    current = period_utils.current_period()
+    # Aylar artan sırada; gelecek 36 ayın aidatı hesaplanmış (veritabanına yazılmadan)
+    assert [item["term"] for item in row["payments"]] == sorted(plan)
+    assert plan[period_utils.next_period(36)][0] == member.contribution_amount
+    assert period_utils.next_period(37) not in plan
+    assert not [c for share in member.shares_set for c in share.contributions_set if c.term > current]
+    # Borcun üç taksiti planda; kayıtlı (hesaplanmamış) ödemelerin toplamından işleme konmamış para düşülünce bugünkü
+    # borç çıkar (ana sayfadaki mil sonunun tersi)
+    assert sum(installment for _, installment in plan.values()) == Decimal("600")
+    recorded = sum(contribution for term, (contribution, _) in plan.items() if term <= current) \
+        + sum(installment for _, installment in plan.values())
+    assert recorded - Decimal(row["undistributed"]) == Decimal(row["debt"])

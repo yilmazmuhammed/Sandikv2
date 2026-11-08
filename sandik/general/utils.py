@@ -7,6 +7,7 @@ from sandik.general.exceptions import BankAccountNotFound, PrimaryBankAccountCan
 from sandik.transaction import db as transaction_db
 from sandik.transaction import utils as transaction_utils
 from sandik.utils import period as period_utils
+from sandik.utils.db_models import Installment
 from sandik.utils.sorting import turkish_sort_key
 
 
@@ -349,6 +350,35 @@ def _values_at(member_events, points):
 
 # API'de para birimleri sayı yerine bu kodlarla gönderilir (Cüzdan uygulaması bu kodları tanır)
 API_CURRENCY_CODES = {1: "TRY", 2: "USD", 3: "EUR", 4: "XAU", 5: "XAG"}
+# Ödeme planında hesaplanan (henüz oluşturulmamış) aidatların kaç ay ileriye gideceği
+PAYMENT_PLAN_MONTHS = 36
+
+
+def get_payment_plan(member, months=PAYMENT_PLAN_MONTHS):
+    """Üyenin ay ay ödenecekleri (Cüzdan'ın aylık planı için, `/api/borc-gecmisi` → `payments`):
+    `[{"term", "contribution", "installment"}]`, aya göre artan.
+
+    Ödenmemiş (kısmen ödenmişse kalan) bütün aidat ve taksit kayıtları kendi aylarında — vadesi geçmişler dahil —,
+    üstüne gelecek `months` ayın henüz oluşturulmamış aidatları ana sayfadaki "Gelecek ayların aidatlarını da göster"
+    seçeneğiyle aynı formülle (`_future_contribution_amounts`) hesaplanır. İşleme konmamış para düşülmez, ayrıca
+    `undistributed` olarak gider (hangi ödemeyi karşılayacağına Cüzdan karar verir). **Veritabanına yazılmaz.**
+    """
+    plan = {}
+
+    def add(term, kind, amount):
+        row = plan.setdefault(term, {"contribution": Decimal(0), "installment": Decimal(0)})
+        row[kind] += amount
+
+    for payment in transaction_utils.get_payments(whose=member, is_fully_paid=False, prefetch_details=True):
+        unpaid = payment.get_unpaid_amount_in_memory()
+        if unpaid > 0:
+            add(payment.term, "installment" if isinstance(payment, Installment) else "contribution", unpaid)
+    future_periods = period_utils.get_periods_between_two_period(first_period=period_utils.next_period(),
+                                                                 last_period=period_utils.next_period(months))
+    for term, amount in _future_contribution_amounts(member=member, periods=future_periods).items():
+        add(term, "contribution", amount)
+    return [{"term": term, "contribution": str(row["contribution"]), "installment": str(row["installment"])}
+            for term, row in sorted(plan.items())]
 
 
 def get_debt_events(web_user, today=None):
@@ -380,6 +410,9 @@ def get_debt_events(web_user, today=None):
             "currency": API_CURRENCY_CODES.get(sandik.currency, "TRY"),
             "debt": str(sum((value for _, value in rows), Decimal(0))),
             "events": [[day.isoformat(), str(value)] for day, value in rows],
+            # Sonradan eklenen alanlar (eski Cüzdan bunları okumaz; `version` bu yüzden artmadı)
+            "undistributed": str(member.total_of_undistributed_amount() or Decimal(0)),
+            "payments": get_payment_plan(member),
         })
     return {"today": today.isoformat(), "sandiks": sandiks}
 
