@@ -181,3 +181,31 @@ def test_selection_parsing_falls_back_to_defaults_and_swaps_reversed_ranges():
     assert (selection["start_period"], selection["end_period"], selection["slice"]) == ("2025-01", "2026-05", "yil")
     # Eksik özel aralık hazır aralığa düşer.
     assert general_utils.parse_history_selection({"baslangic": "2026-05", "aralik": "tumu"})["range"] == "tumu"
+
+
+@db_session
+def test_undated_events_are_counted_from_the_first_real_day():
+    """Tarihten bağımsız işlemler bilerek 01.01.1900 gibi bir tarihle girilir (kullanıcı söyledi). Bugünkü değer
+    değişmez; "Tümü" aralığı 1900'den değil ilk gerçek günden başlar; Cüzdan API'sine 1990'dan eski gün gitmez."""
+    wu = factories.make_web_user()
+    sandik = factories.make_sandik(created_by=wu)
+    share = factories.make_member_with_share(sandik=sandik, web_user=wu, created_by=wu)
+    member = share.member_ref
+    member.date_of_membership = date(1900, 1, 1)
+    real_day = _first_day(2) + timedelta(days=4)
+    factories.make_money_transaction(member=member, amount=Decimal("70"), created_by=wu, date=date(1900, 1, 1))
+    factories.make_money_transaction(member=member, amount=Decimal("250"), created_by=wu, date=real_day)
+    factories.make_contribution(share=share, term=period_utils.current_period(), created_by=wu)
+
+    history = general_utils.get_mile_end_history(
+        wu, general_utils.parse_history_selection({"dilim": "ay", "aralik": "tumu"}))
+    assert history["start_date"] == real_day.replace(day=1)
+    assert history["undated_count"] == 1
+    by_date = dict(zip(history["points"], history["member_values"][member.id]))
+    assert by_date[_first_day(1) - timedelta(days=1)] == Decimal("320")  # 70 (tarihsiz) + 250, ilk gerçek günden
+    assert by_date[date.today()] == _home_mile_ends(wu)[member.id]
+
+    [row] = general_utils.get_debt_events(wu)["sandiks"]
+    days = [date.fromisoformat(day) for day, _ in row["events"]]
+    assert min(days) == real_day
+    assert sum(Decimal(value) for _, value in row["events"]) == Decimal(row["debt"]) == -_home_mile_ends(wu)[member.id]

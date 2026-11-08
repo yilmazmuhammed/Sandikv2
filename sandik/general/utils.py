@@ -259,7 +259,26 @@ def history_point_dates(start_date, end_date, history_slice):
     return points
 
 
-def _mile_end_events(member_ids, today):
+# Bundan eski tarihli hareketler **tarihsiz** sayılır. Kullanıcı söyledi: tarihten bağımsız işlemler bilerek
+# 01.01.1900 gibi bir tarihle giriliyor. Böyle olaylar silinmez (bugünkü borç bozulmasın), üyenin ilk gerçek
+# gününe sayılır; yoksa "Tümü" aralığı 1900'den başlıyordu. Cüzdan uygulamasının API'den aldığı olaylar da
+# bu yüzden 1990'dan eski tarih taşımaz (Cüzdan'da aynı kural ayrıca vardır).
+UNDATED_BEFORE = date(1990, 1, 1)
+
+
+def _place_undated_events(member_events, today):
+    """Tarihsiz olayları üyenin ilk gerçek gününe taşır (yoksa bugüne); taşınan olay sayısını döndürür.
+    `member_events` artan sıradadır ve yerinde değiştirilir."""
+    undated = [event for event in member_events if event[0] < UNDATED_BEFORE]
+    if not undated:
+        return 0
+    dated = [event for event in member_events if event[0] >= UNDATED_BEFORE]
+    first_day = dated[0][0] if dated else today
+    member_events[:] = [(first_day, delta) for _, delta in undated] + dated
+    return len(undated)
+
+
+def _mile_end_events(member_ids, today, undated_counts=None):
     """Mil sonunu değiştiren olaylar: `{member_id: [(tarih, değişim), ...]}`.
 
     Bugünkü mil sonu = işleme konmamış para - vadesi gelmiş ödenmemiş aidatlar - ödenmemiş bütün
@@ -274,7 +293,9 @@ def _mile_end_events(member_ids, today):
     aidatı): para, aidat sayılmaya başlayana kadar yalnızca işleme konmamış paradan düşer. Ödemenin
     tarihi, para işleminin tarihi ile ödemenin kaydedildiği andan hangisi geçse odur.
 
-    Gelecek tarihli kayıtlar bugüne çekilir: bugünkü mil sonu onları zaten sayıyor.
+    Gelecek tarihli kayıtlar bugüne çekilir: bugünkü mil sonu onları zaten sayıyor. Tarihsiz kayıtlar
+    (`UNDATED_BEFORE`dan eski) üyenin ilk gerçek gününe çekilir; `undated_counts` sözlüğü verilirse üye başına
+    kaç olayın taşındığı yazılır.
     """
     current_period = period_utils.date_to_period(today)
     events = {member_id: [] for member_id in member_ids}
@@ -305,8 +326,11 @@ def _mile_end_events(member_ids, today):
     for _, member_id, debt_date, mt_date, creation_time, amount in db.select_installment_payment_rows(member_ids):
         add_payment(member_id, mt_date, creation_time, amount, min(debt_date, today))
 
-    for member_events in events.values():
+    for member_id, member_events in events.items():
         member_events.sort(key=lambda event: event[0])
+        moved = _place_undated_events(member_events, today)
+        if undated_counts is not None and moved:
+            undated_counts[member_id] = moved
     return events
 
 
@@ -376,7 +400,8 @@ def get_mile_end_history(web_user, selection, today=None):
         key=lambda m: turkish_sort_key(m.sandik_ref.name)
     )
     member_ids = [member.id for member in members]
-    events = _mile_end_events(member_ids=member_ids, today=today) if members else {}
+    undated_counts = {}
+    events = _mile_end_events(member_ids=member_ids, today=today, undated_counts=undated_counts) if members else {}
 
     if selection["range"] is None:
         start_date = period_utils.period_to_date(selection["start_period"])
@@ -384,7 +409,9 @@ def get_mile_end_history(web_user, selection, today=None):
     else:
         month_count = HISTORY_RANGES[selection["range"]][1]
         if month_count is None:
-            first_days = [member.date_of_membership for member in members]
+            # Üyelik tarihi de tarihten bağımsız girilmiş olabilir (01.01.1900); aralığı ondan başlatmaz
+            first_days = [member.date_of_membership for member in members
+                          if member.date_of_membership >= UNDATED_BEFORE]
             first_days += [member_events[0][0] for member_events in events.values() if member_events]
             start_date = min(first_days).replace(day=1) if first_days else today.replace(day=1)
         else:
@@ -450,6 +477,9 @@ def get_mile_end_history(web_user, selection, today=None):
         "groups": groups,
         "row_indexes": row_indexes,
         "lists_only_changes": selection["slice"] in HISTORY_SLICES_LISTING_ONLY_CHANGES,
+        # Tarihsiz (UNDATED_BEFORE'dan eski tarihli) olup üyenin ilk gerçek gününe sayılan hareket sayısı
+        "undated_count": sum(undated_counts.values()),
+        "undated_before": UNDATED_BEFORE,
     }
 
 

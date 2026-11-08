@@ -188,6 +188,10 @@
           Borç: ödenmemiş bütün aidat ve taksitlerinizden işleme konmamış paranız düşüldükten sonra kalan
           tutar (ana sayfadaki "Mil sonu"nun tersi). Her nokta dilimin son günündeki borcunuzdur, son nokta
           bugündür. Eksi değer o gün alacaklı olduğunuzu gösterir.
+          {% if h.undated_count %}
+            {{ h.undated_count }} tarihsiz hareket ({{ h.undated_before.year }}'dan önceki bir tarihle girilmiş)
+            sandığın ilk gerçek gününe sayıldı.
+          {% endif %}
         </div>
 
         <!-- Tablo: varsayılan olarak kapalı -->
