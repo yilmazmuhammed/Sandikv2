@@ -34,7 +34,7 @@ def main():
     show_status = "--durum" in sys.argv
 
     provider, params = migrations.database_target_from_env()
-    target = params.get("filename") or params.get("db") or params.get("dsn")
+    target = params.get("filename") or params.get("database") or params.get("dsn")
     print(f"Veritabanı: {provider} · {target}\n")
 
     if show_status:

@@ -399,6 +399,8 @@ Böylece deploy **elle bir adım gerektirmez**: `/paw` → git pull → reload y
   mysql/sqlite'ta `JSON`, postgres'te `JSONB`'dir; ayrıca **MySQL JSON sütununa DEFAULT kabul etmez**,
   bu yüzden orada sütun NULL eklenip satırlar `RunSql` ile doldurulur ve sonra NOT NULL yapılır.
   (Bu iki eklenti eşlerdeki sürümlerde de vardır; paketler birebir aynıdır.)
+- MySQL bağlantı parametreleri `password` / `database`dir (`passwd` / `db` değil): PyMySQL 1.2'de eski adlar
+  eskidi. `database_target_from_env()`in döndürdüğü sözlük Pony üzerinden olduğu gibi `pymysql.connect`e gider.
 - Kapatmak için `SANDIKv2_AUTO_MIGRATE='0'`; o zaman elle: `python scripts/migrate.py`
   (`--durum` / `--kuru-calistir` seçenekleri vardır).
 - **Testlerde kapalıdır**: `tests/conftest.py` `SANDIKv2_AUTO_MIGRATE=0` yazar. `Database.bind`
@@ -936,6 +938,13 @@ sayfada basar — süresinin çoğu artık Pony'nin nesneleri kurması ve şablo
 sayfalama olmadan daha fazla kısalmaz. Güven bağlı sandığın özet sayfaları bağlı her üye için
 bakiyeyi ayrı sorgularla hesaplar; borç limiti (`max_amount_can_borrow`) de hisse başına kural
 değerlendirir.
+
+## Bağımlılıklar
+
+Sunucu **Python 3.9**'dur: `requirements.txt`teki sürümler 3.9'u destekleyen son sürümlerdir (2026-11'de
+güncellendi). `cexprtk` 0.4.1'de durur: 0.4.2 yalnızca kaynak kodu olarak yayınlandı, sunucuda C++ derlemesi
+ister. Uygulama ana sitenin altında yayınlandığında sunucuya kurulan, ana deponun kökündeki birleşik
+`requirements.txt`tir; buradaki dosya onunla aynı sürümlerde tutulur.
 
 ## Yerelde çalıştırma ve test
 
