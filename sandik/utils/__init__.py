@@ -3,6 +3,8 @@ from datetime import date, datetime, time, timedelta
 from json import JSONEncoder
 
 from flask import g
+from pony.orm import ObjectNotFound, rollback
+from pony.orm.core import Entity
 
 
 class LayoutPI:
@@ -23,6 +25,26 @@ class LayoutPI:
         # Paylaşımda görünecek görselin site içi adresi (og:image)
         self.image = image
         g.now = tz_to_tr(datetime.now(), tz="UTC")
+
+
+def rollback_and_reload():
+    """İşlemi geri alır ve isteğin `g` üzerindeki nesnelerini (`g.sandik`, `g.member`, oturum açmış
+    kullanıcı = `g._login_user` ...) yeni oturumdan yeniden yükler.
+
+    Pony'de `rollback()` o ana kadar yüklenen nesnelerin önbelleğini kapatır; hatadan sonra sayfa
+    yeniden çizilirken (sol menü `g.sandik.applicant_web_users_set`i okur) bu eski nesneler
+    `DatabaseSessionIsOver` / "mix objects belonging to different transactions" hatası verir. Bu
+    yüzden sayfa route'larında çıplak `rollback()` değil bu fonksiyon çağrılır. Geri alınan işlemde
+    oluşturulmuş (artık var olmayan) bir nesne `None` olur.
+    """
+    rollback()
+    for name in list(g):
+        value = g.get(name)
+        if isinstance(value, Entity):
+            try:
+                setattr(g, name, type(value)[value._pkval_])
+            except ObjectNotFound:
+                setattr(g, name, None)
 
 
 class CustomJSONEncoder(JSONEncoder):

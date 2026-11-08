@@ -1,6 +1,6 @@
 from flask import Blueprint, request, render_template, g, flash, url_for, abort
 from flask_login import current_user
-from pony.orm import desc, rollback
+from pony.orm import desc
 from werkzeug.utils import redirect
 
 from sandik.sandik import db as sandik_db, utils as sandik_utils
@@ -10,7 +10,7 @@ from sandik.transaction import forms, utils, db
 from sandik.transaction.authorization import money_transaction_required, contribution_required
 from sandik.transaction.exceptions import MaximumDebtAmountExceeded, ThereIsNoDebt, MaximumAmountExceeded, \
     MaximumInstallmentExceeded, InvalidStartingTerm, TransactionException
-from sandik.utils import LayoutPI
+from sandik.utils import LayoutPI, rollback_and_reload
 from sandik.utils.db_models import MoneyTransaction, get_paging_variables
 from sandik.utils.forms import FormPI, flask_form_to_dict
 from sandik.utils.period import NotValidPeriod
@@ -54,7 +54,7 @@ def add_money_transaction_by_manager_page(sandik_id):
             flash(str(e), "danger")
         except Exception as e:
             # raise e
-            rollback()
+            rollback_and_reload()
             flash(str(e), "danger")
 
     return render_template("transaction/add_money_transaction_by_manager_page.html",
@@ -100,7 +100,7 @@ def add_money_transaction_for_debt_payment_by_manager_page(sandik_id):
             flash(str(e), "danger")
         except Exception as e:
             raise e
-            rollback()
+            rollback_and_reload()
             flash(str(e), "danger")
 
     return render_template(
@@ -145,7 +145,7 @@ def add_money_transaction_for_contribution_payment_by_manager_page(sandik_id):
             flash(str(e), "danger")
         except Exception as e:
             raise e
-            rollback()
+            rollback_and_reload()
             flash(str(e), "danger")
 
     return render_template(
@@ -246,7 +246,7 @@ def add_custom_debt_by_manager_page(sandik_id):
 
         except Exception as e:
             raise e
-            rollback()
+            rollback_and_reload()
             flash(str(e), "danger")
 
     return render_template("transaction/add_custom_contribution_by_manager_page.html",
@@ -262,7 +262,7 @@ def remove_money_transaction_by_manager_page(sandik_id, money_transaction_id):
     try:
         utils.remove_money_transaction(money_transaction=g.money_transaction, removed_by=current_user)
     except Exception as e:
-        rollback()
+        rollback_and_reload()
         flash(str(e), "danger")
     return redirect(request.referrer or url_for("transaction_page_bp.money_transactions_of_sandik_page"))
 

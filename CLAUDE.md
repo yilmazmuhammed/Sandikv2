@@ -780,6 +780,14 @@ Kural formüllerinde artık **ondalık** kullanılabilir (`{hisse_toplam_aidat}*
 
 ## Dikkat edilmesi gereken yerler
 
+- **Sayfa route'larında çıplak `rollback()` çağırma, `sandik.utils.rollback_and_reload()` kullan.**
+  Pony'de `rollback()` o ana kadar yüklenen nesnelerin önbelleğini kapatır; hatadan sonra form sayfası
+  yeniden çizilirken `g.sandik`, `g.member` ve oturum açmış kullanıcı (`g._login_user`) eski oturumun
+  nesneleri olarak kalır ve sol menü `g.sandik.applicant_web_users_set`i okurken
+  `DatabaseSessionIsOver` ile 500 verir (sunucuda 2026-09, `POST /sandik/<id>/islem-ekle`).
+  `rollback_and_reload()` geri alıp `g` üzerindeki bütün entity'leri yeni oturumdan yeniden yükler
+  (test: `tests/test_rollback_page.py`). `g` dışında tutulan entity'ler (yerel değişkenler) geri
+  almadan sonra kullanılmamalıdır.
 - **Para hesabında `int()`, `//`, `round()`, `math.ceil()` kullanma.** Tutarlar `Decimal`'dir ve
   sandığın para birimine göre ondalıklı olabilir. Yuvarlama gerekiyorsa `utils/money.py` →
   `ceil_to_unit()` / `floor_to_unit()` kullanılır ve adım **sandığın en küçük parçasıdır**

@@ -3,7 +3,7 @@ from flask_login import current_user
 
 from sandik.auth import db as auth_db
 from sandik.auth.requirement import admin_required
-from sandik.utils import LayoutPI
+from sandik.utils import LayoutPI, rollback_and_reload
 from sandik.utils.db_models import get_paging_variables
 from sandik.utils.forms import flask_form_to_dict, FormPI
 from sandik.utils.requirement import paging_must_be_verified
@@ -31,7 +31,7 @@ def add_website_transaction_page():
             return redirect(url_for("website_transaction_page_bp.add_website_transaction_page"))
         except Exception as e:
             raise e
-            rollback()
+            rollback_and_reload()
             flash(str(e), "danger")
 
     return render_template("website_transaction/add_website_transaction_page.html",
