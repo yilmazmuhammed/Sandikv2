@@ -420,11 +420,17 @@ def web_app_manifest() -> dict:
 
     from sandik.utils import LayoutPI
 
+    icon_192 = url_for("static", filename="my_custom/img/icon-192.png")
+
+    def shortcut(name, endpoint):
+        return {"name": name, "url": url_for(endpoint), "icons": [{"src": icon_192, "sizes": "192x192", "type": "image/png"}]}
+
     home = url_for("general_page_bp.index_page")
     return {
         "id": home,
         "name": LayoutPI.website_name,
         "short_name": LayoutPI.short_website_name,
+        "description": "Sandık (yardımlaşma kasası) yönetimi: aidat, faizsiz borç ve taksit takibi.",
         "lang": "tr",
         "dir": "ltr",
         "start_url": home,
@@ -432,7 +438,19 @@ def web_app_manifest() -> dict:
         "display": "standalone",
         "background_color": "#ffffff",
         "theme_color": "#3a3f51",
+        # Android 192 ve 512 piksel ister; "maskable" olan, Android'in daire/yuvarlak kare maskesine göre kenarından
+        # boşluk bırakılarak çizilmiştir (bütün simge görünür). 180'lik iPhone içindir.
         "icons": [
+            {"src": icon_192, "sizes": "192x192", "type": "image/png"},
+            {"src": url_for("static", filename="my_custom/img/icon-512.png"), "sizes": "512x512", "type": "image/png"},
+            {"src": url_for("static", filename="my_custom/img/icon-maskable-512.png"), "sizes": "512x512", "type": "image/png",
+             "purpose": "maskable"},
             {"src": url_for("static", filename="my_custom/img/apple-touch-icon.png"), "sizes": "180x180", "type": "image/png"},
+        ],
+        # Android'de simgeye basılı tutunca çıkan kısayollar (iPhone desteklemez, yok sayar).
+        "shortcuts": [
+            shortcut("Aylık ödemelerim", "general_page_bp.home_page"),
+            shortcut("Borç geçmişim", "general_page_bp.debt_history_page"),
+            shortcut("İstatistikler", "intro_page_bp.statistics_page"),
         ],
     }

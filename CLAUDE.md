@@ -616,8 +616,16 @@ Kullanıcı istedi: iPhone'da "Ana Ekrana Ekle" ile kurulan uygulamada sayfa de�
 simgenin eklendiği sayfanın klasöründen tahmin ediyor, alt sayfadan eklenen simgede o klasörün dışını "dışarısı" sayıyordu.
 
 - Tanım `sandik/intro/utils.py` → `web_app_manifest`, adres `sandik/intro/page.py`dedir. `scope`, `start_url` ve `id` uygulamanın köküdür ve
-  `url_for` ile üretilir: mount noktasında `/sandikv2/`, kendi alt alan adında `/`. Simgeler `my_custom/img/apple-touch-icon.png` (180×180).
+  `url_for` ile üretilir: mount noktasında `/sandikv2/`, kendi alt alan adında `/`. iPhone simgesi `my_custom/img/apple-touch-icon.png` (180×180).
 - `<link rel="manifest">` üç kabukta da (`utils/layout.html`, `intro/_layout.html`, `auth/auth_layout.html`)dadır; yeni bir kabuk şablonu eklenirse oraya da konmalıdır.
+- **Android** (kullanıcı istedi): simgeler `my_custom/img/icon-192.png`, `icon-512.png` ve `icon-maskable-512.png`dir
+  (maskelenebilir olan kenarından boşluk bırakılarak, köşesiz çizilmiştir). `apple-touch-icon.png` ile aynı görünümdür
+  (dikey `#1a9bd7` → `#0b6a99` gradyan, simgenin yarısını kaplayan beyaz sandık) ve `logo.png`den üretildi: logo
+  256 px olduğu için maske (eşik 128) 4 kat büyütülüp yeniden eşiklenmiş, sonra küçültülmüştür (kenarlar
+  yumuşak kalsın diye). Chromium ile üretildi, betik depoda değildir.
+- **Kısayollar** (`shortcuts`; Android'de simgeye basılı tutunca çıkar, iPhone yok sayar): Aylık ödemelerim
+  (`/ana-sayfa`), Borç geçmişim, İstatistikler. Adresler uygulamanın sınırı içinde kalmalıdır (test sabitler).
+- Service worker yoktur: çevrimdışı çalışma ve bildirim yok, kurulabilirlik için de gerekmiyor.
 - Daha önce eklenmiş simgeler kendiliğinden güncellenmez: silinip yeniden eklenmelidir.
 - Aynı fonksiyon myilmaz_tr deposundaki uygulamalarda da vardır (yalnızca ad, renk ve simge farklı);
   birinde yapılan değişiklik diğerlerine de taşınmalıdır. Test: `tests/test_web_app_manifest.py`.

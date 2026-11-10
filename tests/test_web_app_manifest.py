@@ -12,7 +12,8 @@ from sandik.intro.page import intro_page_bp
 def _client():
     app = Flask(__name__, static_folder="../sandik/utils/static", static_url_path="/assets")
     app.register_blueprint(intro_page_bp, url_prefix="/")  # sandik/app.py ile aynı
-    app.add_url_rule("/", endpoint="general_page_bp.index_page", view_func=lambda: "")
+    for rule, endpoint in [("/", "index_page"), ("/ana-sayfa", "home_page"), ("/borc-gecmisi", "debt_history_page")]:
+        app.add_url_rule(rule, endpoint=f"general_page_bp.{endpoint}", view_func=lambda: "")
     return app.test_client()
 
 
@@ -23,7 +24,13 @@ def test_scope_is_the_mount_point():
     manifest = response.get_json(force=True)
     assert manifest["scope"] == manifest["start_url"] == manifest["id"] == "/sandikv2/"
     assert manifest["display"] == "standalone"
-    assert manifest["icons"][0]["src"] == "/sandikv2/assets/my_custom/img/apple-touch-icon.png"
+    # Android 192 ve 512 piksel ile maskelenebilir simge ister.
+    icons = {(icon["sizes"], icon.get("purpose", "any")): icon["src"] for icon in manifest["icons"]}
+    assert icons[("192x192", "any")] == "/sandikv2/assets/my_custom/img/icon-192.png"
+    assert ("512x512", "any") in icons and ("512x512", "maskable") in icons
+    # Kısayollar uygulamanın sınırı içinde kalmalıdır, yoksa Android onları yok sayar.
+    assert manifest["shortcuts"]
+    assert all(shortcut["url"].startswith("/sandikv2/") for shortcut in manifest["shortcuts"])
 
 
 def test_scope_is_the_root_on_its_own_domain():
