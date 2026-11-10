@@ -609,6 +609,19 @@ kayıtlar" kartları, yıllara göre borç grafiği ve sandığa giden bağlant�
 - Kutuların ızgarası `.stat-grid`tir; `.stat-strip` aynı ızgaranın hero'nun altına taşan hâlidir
   (ikisi tek yerde tanımlıdır, kopyalanmaz).
 
+## Ana ekrana ekleme (`/manifest.webmanifest`)
+
+Kullanıcı istedi: iPhone'da "Ana Ekrana Ekle" ile kurulan uygulamada sayfa değiştirince üstte X'li, alan adlı bir
+"uygulama dışı" çubuğu açılıyordu. Sebep web uygulaması tanımının (manifest) olmamasıydı: iPhone uygulamanın sınırını
+simgenin eklendiği sayfanın klasöründen tahmin ediyor, alt sayfadan eklenen simgede o klasörün dışını "dışarısı" sayıyordu.
+
+- Tanım `sandik/intro/utils.py` → `web_app_manifest`, adres `sandik/intro/page.py`dedir. `scope`, `start_url` ve `id` uygulamanın köküdür ve
+  `url_for` ile üretilir: mount noktasında `/sandikv2/`, kendi alt alan adında `/`. Simgeler `my_custom/img/apple-touch-icon.png` (180×180).
+- `<link rel="manifest">` üç kabukta da (`utils/layout.html`, `intro/_layout.html`, `auth/auth_layout.html`)dadır; yeni bir kabuk şablonu eklenirse oraya da konmalıdır.
+- Daha önce eklenmiş simgeler kendiliğinden güncellenmez: silinip yeniden eklenmelidir.
+- Aynı fonksiyon myilmaz_tr deposundaki uygulamalarda da vardır (yalnızca ad, renk ve simge farklı);
+  birinde yapılan değişiklik diğerlerine de taşınmalıdır. Test: `tests/test_web_app_manifest.py`.
+
 ## Arama motorları (SEO)
 
 Yardımcılar **`sandik/utils/seo.py`** içindedir; `app.py` → `jinja2_integration` içinde

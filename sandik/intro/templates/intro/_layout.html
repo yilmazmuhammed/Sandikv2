@@ -39,6 +39,7 @@
 
   <link rel="shortcut icon" href="{{ url_for('static', filename='my_custom/img/favicon.ico') }}"/>
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='my_custom/img/apple-touch-icon.png') }}"/>
+  <link rel="manifest" href="{{ url_for('intro_page_bp.web_app_manifest') }}" />
 
   {% block head_extra %}{% endblock %}
 

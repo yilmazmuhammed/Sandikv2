@@ -1,3 +1,5 @@
+import json
+
 from flask import Blueprint, Response, g, render_template, request
 from flask_login import current_user
 
@@ -54,3 +56,12 @@ def robots_txt():
 @intro_page_bp.route("/sitemap.xml")
 def sitemap_xml():
     return Response(utils.sitemap_xml(), mimetype="application/xml")
+
+
+# Telefonda ana ekrana eklenen uygulamanın tanımı; ayrıntı: `utils.web_app_manifest`.
+@intro_page_bp.route("/manifest.webmanifest")
+def web_app_manifest():
+    response = Response(json.dumps(utils.web_app_manifest(), ensure_ascii=False),
+                        mimetype="application/manifest+json")
+    response.headers["Cache-Control"] = "public, max-age=86400"
+    return response

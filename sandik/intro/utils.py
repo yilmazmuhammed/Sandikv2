@@ -398,3 +398,41 @@ def about_structured_data() -> dict:
             "Sandık kurallarıyla borç limiti hesabı",
         ],
     }
+
+
+# --------------------------------------------------------------------------------------
+# Web uygulaması tanımı (manifest)
+# --------------------------------------------------------------------------------------
+
+def web_app_manifest() -> dict:
+    """
+    `/manifest.webmanifest`: telefonda "Ana Ekrana Ekle" ile kurulan uygulamanın tanımı.
+
+    Asıl işi `scope`tur. Tanım yokken iPhone uygulamanın sınırını simgenin eklendiği sayfanın
+    klasöründen tahmin ediyordu; alt sayfadan eklenen simgede o klasörün dışındaki her sayfa
+    "uygulama dışı" sayılıyor ve üstte X'li, alan adlı bir çubuk açılıyordu. Sınır uygulamanın
+    kendi kökü olunca bütün sayfaları uygulamanın içinde açılır.
+
+    Adresler `url_for` ile üretilir: mount noktasında (`www.myilmaz.tr/sandikv2`) `/sandikv2/`,
+    kendi alt alan adında `/` olur.
+    """
+    from flask import url_for
+
+    from sandik.utils import LayoutPI
+
+    home = url_for("general_page_bp.index_page")
+    return {
+        "id": home,
+        "name": LayoutPI.website_name,
+        "short_name": LayoutPI.short_website_name,
+        "lang": "tr",
+        "dir": "ltr",
+        "start_url": home,
+        "scope": home,
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": "#3a3f51",
+        "icons": [
+            {"src": url_for("static", filename="my_custom/img/apple-touch-icon.png"), "sizes": "180x180", "type": "image/png"},
+        ],
+    }
