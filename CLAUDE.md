@@ -257,6 +257,11 @@ ve geçmişini buradan okur (kullanıcı istedi: sandık borcu diğer borçları
   göster" ile aynı formülle (`_future_contribution_amounts`) **hesaplanır, yazılmaz**. İşleme konmamış para düşülmez;
   hangi ödemeyi karşılayacağına Cüzdan karar verir (en eski ödemeden başlayarak). Kayıtlı ödemelerin toplamı −
   işleme konmamış para = `debt` (test sabitler).
+- **Para hareketleri** (Cüzdan'ın "sandık hareketlerini hesaba işle" özelliği için; kullanıcı istedi: sandığa yatırılan
+  para kendi banka hesabından düşülebilsin): her sandıkta `money_transactions: [{id, day, direction, amount, detail}]`
+  (`general/utils.py → get_member_money_transactions`). `deposit` = üye sandığa para yatırdı (`TYPE.REVENUE`, üyenin
+  hesabından çıkar), `withdrawal` = sandık üyeye para verdi (`TYPE.EXPENSE`: borç, iade; üyenin hesabına girer).
+  Cüzdan hareketi `id` ile tanır (bir kez işlenir); `id`ler kalıcı olmalıdır. Alan eklendiği için `version` artmadı.
 - Cüzdan Sandıkv2 ile aynı süreçte çalışırken (kökteki `app.py`) bu uca **ağa çıkmadan**, WSGI uygulamasına
   doğrudan istek atar; bu yüzden uç bir `before_request`/oturum yan etkisine dayanmamalı ve yalnızca okumalıdır
   (iç içe Pony `db_session`'ında çalışır).

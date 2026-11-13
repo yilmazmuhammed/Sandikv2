@@ -125,3 +125,17 @@ def test_payment_plan_lists_unpaid_payments_and_projected_contributions():
     recorded = sum(contribution for term, (contribution, _) in plan.items() if term <= current) \
         + sum(installment for _, installment in plan.values())
     assert recorded - Decimal(row["undistributed"]) == Decimal(row["debt"])
+
+
+@db_session
+def test_money_transactions_are_sent_for_wallet_accounts():
+    """Cüzdan, sandığa yatırılan / sandıktan alınan paraları kendi hesaplarına işleyebilsin diye ayrı ayrı alır"""
+    wu, member = _setup_member_with_debt()
+    [row] = general_utils.get_debt_events(wu)["sandiks"]
+    transactions = row["money_transactions"]
+    expected = sorted(member.money_transactions_set, key=lambda mt: (mt.date, mt.id))
+    assert [item["id"] for item in transactions] == [mt.id for mt in expected]
+    assert {item["direction"] for item in transactions} == {"deposit", "withdrawal"}  # aidat ödemesi + borç
+    for item, mt in zip(transactions, expected):
+        assert Decimal(item["amount"]) == mt.amount and item["day"] == mt.date.isoformat()
+        assert (item["direction"] == "deposit") == mt.is_type_revenue()

@@ -7,7 +7,7 @@ from sandik.general.exceptions import BankAccountNotFound, PrimaryBankAccountCan
 from sandik.transaction import db as transaction_db
 from sandik.transaction import utils as transaction_utils
 from sandik.utils import period as period_utils
-from sandik.utils.db_models import Installment
+from sandik.utils.db_models import Installment, MoneyTransaction
 from sandik.utils.sorting import turkish_sort_key
 
 
@@ -413,8 +413,23 @@ def get_debt_events(web_user, today=None):
             # Sonradan eklenen alanlar (eski Cüzdan bunları okumaz; `version` bu yüzden artmadı)
             "undistributed": str(member.total_of_undistributed_amount() or Decimal(0)),
             "payments": get_payment_plan(member),
+            "money_transactions": get_member_money_transactions(member),
         })
     return {"today": today.isoformat(), "sandiks": sandiks}
+
+
+def get_member_money_transactions(member):
+    """Üyenin sandığa yatırdığı ve sandıktan aldığı paralar (Cüzdan için; kullanıcı istedi: sandık ödemeleri de
+    kendi banka hesabından düşülebilsin). `[{id, day, direction, amount, detail}]`, tarih sırasıyla.
+
+    `direction`: `deposit` = üye sandığa para yatırdı (para girişi, `TYPE.REVENUE`; üyenin hesabından çıkar),
+    `withdrawal` = sandık üyeye para verdi (para çıkışı, `TYPE.EXPENSE`: borç, iade; üyenin hesabına girer).
+    Neye dağıtıldığı (aidat, taksit) gönderilmez: Cüzdan için önemli olan paranın hesaptan çıkması / girmesidir.
+    """
+    rows = sorted(member.money_transactions_set, key=lambda mt: (mt.date, mt.id))
+    return [{"id": mt.id, "day": mt.date.isoformat(),
+             "direction": "deposit" if mt.type == MoneyTransaction.TYPE.REVENUE else "withdrawal",
+             "amount": str(mt.amount), "detail": mt.detail or ""} for mt in rows]
 
 
 def get_mile_end_history(web_user, selection, today=None):
