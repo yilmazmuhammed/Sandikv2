@@ -214,6 +214,14 @@ sayfa `general/page.py` → `debt_history_page`, şablon `general/debt_history_p
   etiket başına ~62 px). Aralık 2 ay ya da daha kısaysa ayın 15'i de etiketlenir ("1 Eyl", "15 Eyl")
   ve eksen aralığın ilk gününden başlar. Chart.js'in zaman ekseni tarih kütüphanesi istediği için
   doğrusal eksen + `afterBuildTicks` kullanılır. Nokta üzerindeki tarih `chart.labels`tan gelir.
+- **Grafik yakınlaştırılır ve kaydırılır** (kullanıcı istedi): chartjs-plugin-zoom 2.2.0 + Hammer.js 2.0.8
+  (`sandik/utils/static/vendor/chartjs-plugin-zoom-2.2.0/`, `hammerjs-2.0.8/`; MIT, lisansları yanında, `sourceMappingURL`
+  çıkarıldı). Telefonda iki parmakla yakınlaştırılır, tek parmakla yana kaydırılır; `Hammer.defaults.touchAction = "pan-y"`
+  olduğu için grafiğin üstünde dikey kaydırma sayfayı kaydırmaya devam eder. Bilgisayarda Ctrl + tekerlek (Mac'te
+  iki parmakla sıkıştırma) ve sürükleme. Yalnızca yatay eksen; sınır verinin aralığı, en az 7 gün. Yakınlaştırılınca
+  grafiğin altında "Tümünü göster" çıkar (`resetZoom`); bitince dokunuştan kalan ipucu kapatılır. Eksen etiketleri
+  görünen aralığa göre yeniden seçilir (`xAxisTicks(maxCount, lo, hi)`; 2 aydan kısa görünümde ayın 15'i de).
+  Cüzdan'ın geçmiş grafiğinde de aynısı vardır.
 - **Tablo varsayılan olarak kapalıdır** (kullanıcı istedi), `<details>` ile açılır; açık/kapalı durumu
   saklanmaz, sayfa her açılışta kapalı gelir.
 - Farklı para birimleri toplanmaz: sandıklar birime göre gruplanır, her grubun ayrı grafiği vardır.

@@ -49,6 +49,10 @@
       position: relative;
       height: 300px;
     }
+    .history-zoom-reset {
+      display: block;
+      margin: 8px 0 0 auto;
+    }
     @media (max-width: 767px) {
       .history-chart {
         height: 240px;
@@ -187,7 +191,8 @@
         <div class="text-muted history-note">
           Borç: ödenmemiş bütün aidat ve taksitlerinizden işleme konmamış paranız düşüldükten sonra kalan
           tutar (ana sayfadaki "Mil sonu"nun tersi). Her nokta dilimin son günündeki borcunuzdur, son nokta
-          bugündür. Eksi değer o gün alacaklı olduğunuzu gösterir.
+          bugündür. Eksi değer o gün alacaklı olduğunuzu gösterir. Grafiği iki parmakla büyütüp küçültebilir, yana
+          kaydırabilirsiniz (bilgisayarda Ctrl + fare tekerleği ve sürükleme).
           {% if h.undated_count %}
             {{ h.undated_count }} tarihsiz hareket ({{ h.undated_before.year }}'dan önceki bir tarihle girilmiş)
             sandığın ilk gerçek gününe sayıldı.
@@ -257,6 +262,8 @@
 {% block js_block %}
   {% if g.history.points %}
     <script src="{{ url_for('static', filename='vendor/chartjs-4.5.1/chart.umd.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/hammerjs-2.0.8/hammer.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/chartjs-plugin-zoom-2.2.0/chartjs-plugin-zoom.min.js') }}"></script>
     <script>
       jQuery(function ($) {
         var HISTORY = {{ g.history.chart|tojson }};
@@ -290,8 +297,13 @@
         var xMin = isShortRange || xs.length === 1
           ? Math.min(isoToX(HISTORY.start_date), xs[0], xMax - DAY_MS) : xs[0];
 
-        function xAxisTicks(maxCount) {
-          var first = new Date(xMin);
+        /* Yakınlaştırınca etiketler görünen aralığa göre yeniden seçilir (kısa aralıkta ayın 15'i de) */
+        var currentShort = isShortRange;
+
+        function xAxisTicks(maxCount, lo, hi) {
+          var shortRange = hi - lo <= 62 * DAY_MS;
+          currentShort = shortRange;
+          var first = new Date(lo);
           var monthIndex = first.getUTCFullYear() * 12 + first.getUTCMonth();
           var monthStarts = [];
           var ticks = [];
@@ -299,23 +311,23 @@
             var year = Math.floor(monthIndex / 12);
             var month = monthIndex % 12;
             var monthStart = Date.UTC(year, month, 1);
-            if (monthStart > xMax) {
+            if (monthStart > hi) {
               break;
             }
-            if (monthStart >= xMin) {
+            if (monthStart >= lo) {
               monthStarts.push({value: monthStart, monthIndex: monthIndex});
             }
-            if (isShortRange) {
+            if (shortRange) {
               var middle = Date.UTC(year, month, 15);
-              if (monthStart >= xMin) {
+              if (monthStart >= lo) {
                 ticks.push(monthStart);
               }
-              if (middle >= xMin && middle <= xMax) {
+              if (middle >= lo && middle <= hi) {
                 ticks.push(middle);
               }
             }
           }
-          if (!isShortRange) {
+          if (!shortRange) {
             var step = MONTH_STEPS.filter(function (candidate) {
               return monthStarts.filter(function (m) { return m.monthIndex % candidate === 0; }).length <= maxCount;
             })[0] || MONTH_STEPS[MONTH_STEPS.length - 1];
@@ -323,13 +335,13 @@
               .map(function (m) { return m.value; });
           }
           /* Aralıkta hiç ay başı/ortası yoksa (birkaç günlük aralık) uçlar etiketlenir */
-          return ticks.length ? ticks : [xMin, xMax];
+          return ticks.length ? ticks : [lo, hi];
         }
 
         function formatXTick(value) {
           var day = new Date(value);
           var monthName = TR_MONTHS[day.getUTCMonth()];
-          if (isShortRange || day.getUTCDate() !== 1) {
+          if (currentShort || day.getUTCDate() !== 1) {
             return day.getUTCDate() + " " + monthName;
           }
           return monthName + " " + day.getUTCFullYear();
@@ -337,6 +349,18 @@
 
         function toPoints(values) {
           return values.map(function (value, i) { return {x: xs[i], y: parseFloat(value)}; });
+        }
+
+        if (window.Hammer) {
+          Hammer.defaults.touchAction = "pan-y";
+        }
+
+        function updateZoomButton(context) {
+          var chart = context.chart;
+          $(chart.canvas).closest(".history-chart").next(".history-zoom-reset").toggle(chart.isZoomedOrPanned());
+          /* Dokunuştan kalan ipucu eski noktayı göstermesin */
+          chart.tooltip.setActiveElements([], {x: 0, y: 0});
+          chart.update("none");
         }
 
         function isPerSandikShown() {
@@ -377,7 +401,8 @@
             });
           });
 
-          charts.push(new Chart(this, {
+          var canvas = this;
+          charts.push(new Chart(canvas, {
             type: "line",
             data: {datasets: datasets},
             options: {
@@ -390,6 +415,15 @@
                   display: group.series.length > 0 && isPerSandikShown(),
                   position: "bottom",
                   labels: {boxWidth: 12, boxHeight: 12}
+                },
+                /* Yakınlaştırma / kaydırma (kullanıcı istedi): telefonda iki parmakla yakınlaştırılır, tek parmakla
+                   yana kaydırılır (dikey kaydırma sayfayı kaydırır); bilgisayarda Ctrl + tekerlek ve sürükleme.
+                   Eklenti yüklenmediyse bu ayar yok sayılır. */
+                zoom: {
+                  limits: {x: {min: "original", max: "original", minRange: 7 * DAY_MS}},
+                  pan: {enabled: true, mode: "x", onPanComplete: updateZoomButton},
+                  zoom: {wheel: {enabled: true, modifierKey: "ctrl"}, pinch: {enabled: true}, mode: "x",
+                         onZoomComplete: updateZoomButton}
                 },
                 tooltip: {
                   callbacks: {
@@ -407,7 +441,7 @@
                   max: xMax,
                   afterBuildTicks: function (axis) {
                     var maxCount = Math.max(2, Math.floor((axis.width || 300) / MIN_TICK_WIDTH));
-                    axis.ticks = xAxisTicks(maxCount).map(function (value) { return {value: value}; });
+                    axis.ticks = xAxisTicks(maxCount, axis.min, axis.max).map(function (value) { return {value: value}; });
                   },
                   ticks: {maxRotation: 0, autoSkip: false, callback: formatXTick}
                 },
@@ -424,6 +458,21 @@
               }
             }
           }));
+        });
+
+        /* "Tümünü göster": yakınlaştırmayı sıfırlar; yalnızca yakınlaştırılmış / kaydırılmışken görünür */
+        charts.forEach(function (chart) {
+          if (!chart.resetZoom) {
+            return;
+          }
+          $('<button type="button" class="btn btn-default btn-xs history-zoom-reset">' +
+            '<i class="fa fa-search-minus"></i> Tümünü göster</button>')
+            .hide()
+            .insertAfter($(chart.canvas).closest(".history-chart"))
+            .on("click", function () {
+              chart.resetZoom();
+              $(this).hide();
+            });
         });
 
         var $toggle = $("#per-sandik-toggle");
