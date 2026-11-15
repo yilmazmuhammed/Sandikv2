@@ -103,10 +103,43 @@ def set_parameters_of_url(url, parameters: dict):
     return url
 
 
+def safe_next_url(next_url, default_url):
+    """Açık yönlendirme (open redirect) olmasın diye yalnızca bu sitedeki yollara izin verir.
+
+    Kurallar myilmaz_tr deposundaki uygulamalardaki (`family_tree` → `utils.safe_next_url`) eşiyle aynıdır:
+    yol "/" ile başlamalı, "//" ile başlamamalı; ters bölü ve kontrol karakterleri reddedilir (tarayıcılar
+    "\\" işaretini "/" sayar, tab ve satır sonunu siler: "/\\kotu.com" ve "/<tab>/kotu.com" ikisi de
+    "//kotu.com", yani başka bir site olur). Tam adresler (`https://...`) de reddedilir; adresler
+    `url_for` ile üretildiği için mount noktası (`/sandikv2`) zaten yolun içindedir.
+    """
+    if (next_url and next_url.startswith("/") and not next_url.startswith("//")
+            and "\\" not in next_url and not any(ord(c) < 32 or ord(c) == 127 for c in next_url)):
+        return next_url
+    return default_url
+
+
 def get_next_url(args, parameters=None, default_url=""):
+    """`?next=` adresi; güvenli değilse (`safe_next_url`) `default_url`"""
     if parameters is None:
         parameters = {}
-    next_url = args.get("next", default_url)
+    next_url = safe_next_url(args.get("next"), default_url)
     if next_url:
         next_url = add_parameters_to_url(next_url, parameters)
     return next_url
+
+
+def safe_referrer(default_url):
+    """İşlemden sonra kullanıcının geldiği sayfaya dönmek için: `Referer` aynı siteden değilse ya da hiç yoksa
+    `default_url`. Eskiden `redirect(request.referrer)` başlık yoksa `None`a (500), başka bir siteyse oraya
+    yönlendiriyordu."""
+    from urllib.parse import urlsplit
+    from flask import request
+
+    referrer = request.referrer
+    if not referrer:
+        return default_url
+    parts = urlsplit(referrer)
+    if parts.scheme not in ("http", "https") or parts.netloc != request.host:
+        return default_url
+    path = parts.path + (f"?{parts.query}" if parts.query else "")
+    return safe_next_url(path, default_url)

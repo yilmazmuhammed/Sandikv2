@@ -14,7 +14,7 @@ from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelatio
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, to_be_member_of_sandik_required, \
     trust_relationship_required, to_be_member_or_manager_of_sandik_required, sandik_type_required, sandik_rule_required, \
     member_required
-from sandik.utils import LayoutPI, get_next_url, sandik_preferences
+from sandik.utils import LayoutPI, get_next_url, safe_referrer, sandik_preferences
 from sandik.utils.db_models import Sandik
 
 from sandik.utils.forms import flask_form_to_dict, FormPI
@@ -128,7 +128,7 @@ def trust_links_page(sandik_id):
                            page_info=LayoutPI(title="Güven halkam", active_dropdown="sandik"))
 
 
-@sandik_page_bp.route("/<int:sandik_id>/u-<int:member_id>/gb-gonder")
+@sandik_page_bp.route("/<int:sandik_id>/u-<int:member_id>/gb-gonder", methods=["POST"])
 @sandik_type_required(sandik_type=Sandik.TYPE.WITH_TRUST_RELATIONSHIP)
 @to_be_member_of_sandik_required
 def send_request_trust_link_page(sandik_id, member_id):
@@ -145,10 +145,10 @@ def send_request_trust_link_page(sandik_id, member_id):
     except TrustRelationshipCreationException as e:
         flash(str(e), "warning")
 
-    return redirect(request.referrer or url_for("sandik_page_bp.trust_links_page", sandik_id=sandik_id))
+    return redirect(safe_referrer(url_for("sandik_page_bp.trust_links_page", sandik_id=sandik_id)))
 
 
-@sandik_page_bp.route("/<int:sandik_id>/gb-<int:trust_relationship_id>/onayla")
+@sandik_page_bp.route("/<int:sandik_id>/gb-<int:trust_relationship_id>/onayla", methods=["POST"])
 @sandik_type_required(sandik_type=Sandik.TYPE.WITH_TRUST_RELATIONSHIP)
 @to_be_member_of_sandik_required
 @trust_relationship_required
@@ -157,10 +157,10 @@ def accept_trust_relationship_request_page(sandik_id, trust_relationship_id):
         abort(403, "Size gönderilmeyen bir güven bağı isteğini kabul edemezsiniz.")
 
     db.accept_trust_relationship_request(trust_relationship=g.trust_relationship, confirmed_by=current_user)
-    return redirect(request.referrer)
+    return redirect(safe_referrer(url_for("sandik_page_bp.trust_links_page", sandik_id=sandik_id)))
 
 
-@sandik_page_bp.route("/<int:sandik_id>/gb-<int:trust_relationship_id>/kaldir")
+@sandik_page_bp.route("/<int:sandik_id>/gb-<int:trust_relationship_id>/kaldir", methods=["POST"])
 @sandik_type_required(sandik_type=Sandik.TYPE.WITH_TRUST_RELATIONSHIP)
 @to_be_member_of_sandik_required
 @trust_relationship_required
@@ -170,7 +170,7 @@ def remove_trust_relationship_request_page(sandik_id, trust_relationship_id):
         abort(403, "Başkasının güven bağını kaldıramazsınız")
 
     db.remove_trust_relationship_request(trust_relationship=g.trust_relationship, rejected_by=current_user)
-    return redirect(request.referrer)
+    return redirect(safe_referrer(url_for("sandik_page_bp.trust_links_page", sandik_id=sandik_id)))
 
 
 """
@@ -185,7 +185,8 @@ def remove_trust_relationship_request_page(sandik_id, trust_relationship_id):
 def apply_for_membership_page():
     if not current_user.get_primary_bank_account():
         flash("Üyelik başvurusu yapmadan önce birincil banka hesabı oluşturmalısınız'", "danger")
-        return redirect(url_for("general_page_bp.create_bank_account_page", next=request.url))
+        return redirect(url_for("general_page_bp.create_bank_account_page",
+                                next=url_for("sandik_page_bp.apply_for_membership_page")))
 
     form = forms.SelectSandikForm(form_title="Sandık başvurusu")
     if form.validate_on_submit():
@@ -273,7 +274,7 @@ def update_member_of_sandik_page(sandik_id, member_id):
                            page_info=FormPI(title="Sandığa üye ekle", form=form, active_dropdown='members'))
 
 
-@sandik_page_bp.route("/<int:sandik_id>/basvuru-onayla/<int:web_user_id>")
+@sandik_page_bp.route("/<int:sandik_id>/basvuru-onayla/<int:web_user_id>", methods=["POST"])
 @sandik_authorization_required(permission="write")
 @web_user_required
 def confirm_membership_application_page(sandik_id, web_user_id):
@@ -283,15 +284,15 @@ def confirm_membership_application_page(sandik_id, web_user_id):
     except WebUserIsAlreadyMember:
         flash("Kullanıcı zaten bu sandığın üyesi.", "danger")
 
-    return redirect(request.referrer)
+    return redirect(safe_referrer(url_for("sandik_page_bp.membership_applications_to_sandik_page", sandik_id=sandik_id)))
 
 
-@sandik_page_bp.route("/<int:sandik_id>/basvuru-reddet/<int:web_user_id>")
+@sandik_page_bp.route("/<int:sandik_id>/basvuru-reddet/<int:web_user_id>", methods=["POST"])
 @sandik_authorization_required(permission="write")
 @web_user_required
 def reject_membership_application_page(sandik_id, web_user_id):
     db.reject_membership_application(sandik=g.sandik, web_user=g.web_user, rejected_by=current_user)
-    return redirect(request.referrer)
+    return redirect(safe_referrer(url_for("sandik_page_bp.membership_applications_to_sandik_page", sandik_id=sandik_id)))
 
 
 @sandik_page_bp.route("/<int:sandik_id>/uyeler")
@@ -348,8 +349,8 @@ def add_share_to_member_page(sandik_id, member_id):
     finally:
         if danger_msg:
             flash(danger_msg, "danger")
-            return redirect(request.referrer or url_for("sandik_page_bp.member_summary_for_management_page",
-                                                        sandik_id=sandik_id, member_id=member_id))
+            return redirect(safe_referrer(url_for("sandik_page_bp.member_summary_for_management_page",
+                                                        sandik_id=sandik_id, member_id=member_id)))
 
     form = forms.AddShareForm()
     form.share_order_of_member.data = db.get_last_share_order(g.member) + 1
@@ -371,7 +372,7 @@ def add_share_to_member_page(sandik_id, member_id):
                            page_info=FormPI(title="Hisse ekle", form=form, active_dropdown='members'))
 
 
-@sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/sil")
+@sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/sil", methods=["POST"])
 @sandik_authorization_required(permission="write")
 @member_required
 def remove_member_from_sandik_page(sandik_id, member_id):
@@ -382,10 +383,10 @@ def remove_member_from_sandik_page(sandik_id, member_id):
             RemoveMemberException, RemoveShareException) as e:
         flash(str(e), "danger")
 
-    return redirect(request.referrer or url_for("sandik_page_bp.members_of_sandik_page", sandik_id=sandik_id))
+    return redirect(safe_referrer(url_for("sandik_page_bp.members_of_sandik_page", sandik_id=sandik_id)))
 
 
-@sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/hisse-<int:share_id>/sil")
+@sandik_page_bp.route("/<int:sandik_id>/uye-<int:member_id>/hisse-<int:share_id>/sil", methods=["POST"])
 @sandik_authorization_required(permission="write")
 @member_required
 def remove_share_from_member_page(sandik_id, member_id, share_id):
@@ -399,8 +400,8 @@ def remove_share_from_member_page(sandik_id, member_id, share_id):
         flash(str(e), "danger")
         print(type(e), e)
 
-    return redirect(request.referrer or url_for("sandik_page_bp.member_summary_for_management_page",
-                                                sandik_id=sandik_id, member_id=member_id))
+    return redirect(safe_referrer(url_for("sandik_page_bp.member_summary_for_management_page",
+                                                sandik_id=sandik_id, member_id=member_id)))
 
 
 @sandik_page_bp.route("/<int:sandik_id>/tercihlerim", methods=["GET", "POST"])
@@ -459,7 +460,7 @@ def create_sandik_authority_page(sandik_id):
     )
 
 
-@sandik_page_bp.route("/<int:sandik_id>/sandik-yetkileri/<int:sandik_authority_id>/sil")
+@sandik_page_bp.route("/<int:sandik_id>/sandik-yetkileri/<int:sandik_authority_id>/sil", methods=["POST"])
 @sandik_authorization_required(permission="admin")
 def delete_sandik_authority_page(sandik_id, sandik_authority_id):
     authority = db.get_sandik_authority(id=sandik_authority_id, sandik_ref=g.sandik)
@@ -467,7 +468,7 @@ def delete_sandik_authority_page(sandik_id, sandik_authority_id):
         abort(404, "Sandık yetkisi bulunamadı")
 
     db.delete_sandik_authority(sandik_authority=authority, deleted_by=current_user)
-    return redirect(request.referrer)
+    return redirect(safe_referrer(url_for("sandik_page_bp.sandik_authorities_page", sandik_id=sandik_id)))
 
 
 @sandik_page_bp.route("/<int:sandik_id>/yetkili-kullanicilar")
@@ -513,7 +514,7 @@ def add_authorized_to_sandik_page(sandik_id):
     )
 
 
-@sandik_page_bp.route("/<int:sandik_id>/sandik-yetkilileri/<int:web_user_id>/kaldir")
+@sandik_page_bp.route("/<int:sandik_id>/sandik-yetkilileri/<int:web_user_id>/kaldir", methods=["POST"])
 @sandik_authorization_required(permission="admin")
 @web_user_required
 def remove_authorized_from_sandik_page(sandik_id, web_user_id):
@@ -522,7 +523,7 @@ def remove_authorized_from_sandik_page(sandik_id, web_user_id):
         abort(404, "Kullanıcı bu sandıkta yetkili değil.")
 
     db.delete_authorized_from_sandik(sandik_authority=authority, web_user=g.web_user, removed_by=current_user)
-    return redirect(request.referrer)
+    return redirect(safe_referrer(url_for("sandik_page_bp.authorized_web_users_of_sandik_page", sandik_id=sandik_id)))
 
 
 """
@@ -581,30 +582,30 @@ def sandik_rules_page(sandik_id):
                            page_info=LayoutPI(title="Sandık kuralları", active_dropdown="sandik-rules"))
 
 
-@sandik_page_bp.route("/<int:sandik_id>/sk-<int:sandik_rule_id>/yukari-tasi")
+@sandik_page_bp.route("/<int:sandik_id>/sk-<int:sandik_rule_id>/yukari-tasi", methods=["POST"])
 @sandik_authorization_required(permission="write")
 @sandik_rule_required
 def raise_order_of_sandik_rule_page(sandik_id, sandik_rule_id):
     if not db.raise_order_of_sandik_rule(sandik_rule=g.sandik_rule, updated_by=current_user):
         flash("Sandık kuralı zaten en öncelikli durumda", "warning")
-    return redirect(request.referrer or url_for("sandik_page_bp.sandik_rules_page", sandik_id=sandik_id))
+    return redirect(safe_referrer(url_for("sandik_page_bp.sandik_rules_page", sandik_id=sandik_id)))
 
 
-@sandik_page_bp.route("/<int:sandik_id>/sk-<int:sandik_rule_id>/asagi-tasi")
+@sandik_page_bp.route("/<int:sandik_id>/sk-<int:sandik_rule_id>/asagi-tasi", methods=["POST"])
 @sandik_authorization_required(permission="write")
 @sandik_rule_required
 def lower_order_of_sandik_rule_page(sandik_id, sandik_rule_id):
     if not db.lower_order_of_sandik_rule(sandik_rule=g.sandik_rule, updated_by=current_user):
         flash("Sandık kuralı zaten en az öncelikli durumda", "warning")
-    return redirect(request.referrer or url_for("sandik_page_bp.sandik_rules_page", sandik_id=sandik_id))
+    return redirect(safe_referrer(url_for("sandik_page_bp.sandik_rules_page", sandik_id=sandik_id)))
 
 
-@sandik_page_bp.route("/<int:sandik_id>/sk-<int:sandik_rule_id>/sil")
+@sandik_page_bp.route("/<int:sandik_id>/sk-<int:sandik_rule_id>/sil", methods=["POST"])
 @sandik_authorization_required(permission="write")
 @sandik_rule_required
 def remove_sandik_rule_page(sandik_id, sandik_rule_id):
     db.remove_sandik_rule(sandik_rule=g.sandik_rule, deleted_by=current_user)
-    return redirect(request.referrer)
+    return redirect(safe_referrer(url_for("sandik_page_bp.sandik_rules_page", sandik_id=sandik_id)))
 
 
 """

@@ -37,10 +37,10 @@ jQuery(function($){
 		"rows": [
     {% for t in g.transactions %}
       {
-        "id": `<span title='ID: {{ t.id_prefix }}-{{ t.transaction.id }}'>{{ loop.revindex }}</span>`,
+        {% set _cell %}<span title='ID: {{ t.id_prefix }}-{{ t.transaction.id }}'>{{ loop.revindex }}</span>{% endset %}"id": {{ _cell|js_html }},
         "term": "{{ t.term }}",
         "name_surname": "{{ t.transaction.member_ref.web_user_ref.name_surname }}",
-        "transaction_type": `{{ t.transaction_type }}`,
+        {% set _cell %}{{ t.transaction_type }}{% endset %}"transaction_type": {{ _cell|js_html }},
         "amount": {{ t.transaction.amount }},
         "is_fully_paid": "{{ "Ödendi" if t.transaction.is_fully_paid else "Tamamlanmadı" }}",
         "detail": "{{ t.detail }}",

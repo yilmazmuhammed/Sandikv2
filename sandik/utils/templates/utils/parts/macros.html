@@ -4,18 +4,23 @@
   </div>
 {%- endmacro %}
 
-{% macro button(url, icon, type='default', size='sm', title='', confirm_msg='') -%}
+{#
+  `method="post"`: bağlantı durum değiştiren bir uca gidiyorsa (silme, onaylama, taşıma ...). Tıklanınca
+  `custom.js` gizli bir form kurup CSRF jetonuyla POST eder (`data-method="post"`); `confirm_msg` varsa önce
+  onay penceresi açılır, yalnızca onaylanırsa gönderilir. Bu uçlar GET kabul etmez (405).
+#}
+{% macro button(url, icon, type='default', size='sm', title='', confirm_msg='', method='get') -%}
   {% set btn_class = "btn btn-"+ size +" btn-"+ type %}
   {% set confirm_msg_class = "dialog-confirm" if confirm_msg else ""%}
   {% set sm_btn_style = "display: initial; padding-left: 8px; padding-right: 8px;" if size=='sm' else ""%}
-  <a href='{{ url }}' title='{{ title }}' class="{{btn_class}} {{ confirm_msg_class }}" style="{{ sm_btn_style }}" confirm-message="{{ confirm_msg }}"><i class="{{ icon }}"></i></a>
+  <a href='{{ url }}' title='{{ title }}' class="{{btn_class}} {{ confirm_msg_class }}" style="{{ sm_btn_style }}" confirm-message="{{ confirm_msg }}"{% if method|lower == 'post' %} data-method="post"{% endif %}><i class="{{ icon }}"></i></a>
 {%- endmacro %}
 
-{% macro switch_button(is_checked, is_disabled=False, url="", size='xs', title='', confirm_msg='') -%}
+{% macro switch_button(is_checked, is_disabled=False, url="", size='xs', title='', confirm_msg='', method='get') -%}
   {% set confirm_msg_class = "dialog-confirm" if confirm_msg else ""%}
   <label class="i-switch m-t-{{ size }} m-r">
     {% if url %}
-    <a href="{{ url }}" class="{{ confirm_msg_class }}" confirm-message="{{ confirm_msg }}" title='{{ title }}'>
+    <a href="{{ url }}" class="{{ confirm_msg_class }}" confirm-message="{{ confirm_msg }}" title='{{ title }}'{% if method|lower == 'post' %} data-method="post"{% endif %}>
     {% endif %}
       <input {% if is_checked %}checked='' {% endif %} type="checkbox" value="y" {% if is_disabled %}disabled='' {% endif %}>
       <i></i>

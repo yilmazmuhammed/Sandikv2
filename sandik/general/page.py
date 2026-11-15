@@ -10,7 +10,7 @@ from sandik.general.exceptions import BankAccountException
 from sandik.general.requirement import notification_required
 from sandik.sandik import db as sandik_db
 from sandik.sandik.exceptions import ThereIsNoSandik, ThereIsNotAuthorizedOfSandik
-from sandik.utils import LayoutPI, get_next_url
+from sandik.utils import LayoutPI, get_next_url, safe_referrer
 from sandik.utils.db_models import get_paging_variables
 from sandik.utils.forms import flask_form_to_dict, FormPI
 from sandik.utils.requirement import paging_must_be_verified
@@ -85,14 +85,14 @@ def bank_accounts_page():
     return render_template("general/bank_accounts_page.html", page_info=LayoutPI(title="Ana sayfa"))
 
 
-@general_page_bp.route("/banka-hesaplarim/<int:bank_account_id>/sil")
+@general_page_bp.route("/banka-hesaplarim/<int:bank_account_id>/sil", methods=["POST"])
 @login_required
 def delete_bank_account_page(bank_account_id):
     try:
         utils.remove_bank_account(bank_account_id=bank_account_id, deleted_by=current_user)
     except BankAccountException as e:
         flash(str(e), "danger")
-    return redirect(request.referrer or url_for("general_page_bp.bank_accounts_page"))
+    return redirect(safe_referrer(url_for("general_page_bp.bank_accounts_page")))
 
 
 @general_page_bp.route("/banka-hesabi-ekle", methods=["GET", "POST"])
@@ -158,7 +158,7 @@ def update_bank_account_page(bank_account_id):
                            page_info=FormPI(title="Banka hesabını düzenle", form=form))
 
 
-@general_page_bp.route("/bildirim/<int:notification_id>")
+@general_page_bp.route("/bildirim/<int:notification_id>", methods=["POST"])
 @login_required
 @notification_required
 def read_notification_page(notification_id):
@@ -166,7 +166,7 @@ def read_notification_page(notification_id):
     if g.notification.url:
         return redirect(g.notification.url)
     else:
-        return redirect(request.referrer)
+        return redirect(safe_referrer(url_for("general_page_bp.notifications_page")))
 
 
 @general_page_bp.route("/bildirimler")

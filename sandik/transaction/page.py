@@ -10,7 +10,7 @@ from sandik.transaction import forms, utils, db
 from sandik.transaction.authorization import money_transaction_required, contribution_required
 from sandik.transaction.exceptions import MaximumDebtAmountExceeded, ThereIsNoDebt, MaximumAmountExceeded, \
     MaximumInstallmentExceeded, InvalidStartingTerm, TransactionException
-from sandik.utils import LayoutPI, rollback_and_reload
+from sandik.utils import LayoutPI, rollback_and_reload, safe_referrer
 from sandik.utils.db_models import MoneyTransaction, get_paging_variables
 from sandik.utils.forms import FormPI, flask_form_to_dict
 from sandik.utils.period import NotValidPeriod
@@ -254,7 +254,7 @@ def add_custom_debt_by_manager_page(sandik_id):
                                             active_dropdown="management-transactions"))
 
 
-@transaction_page_bp.route('mt-<int:money_transaction_id>/sil')
+@transaction_page_bp.route('mt-<int:money_transaction_id>/sil', methods=["POST"])
 @sandik_authorization_required("write")
 @money_transaction_required
 def remove_money_transaction_by_manager_page(sandik_id, money_transaction_id):
@@ -264,23 +264,23 @@ def remove_money_transaction_by_manager_page(sandik_id, money_transaction_id):
     except Exception as e:
         rollback_and_reload()
         flash(str(e), "danger")
-    return redirect(request.referrer or url_for("transaction_page_bp.money_transactions_of_sandik_page"))
+    return redirect(safe_referrer(url_for("transaction_page_bp.money_transactions_of_sandik_page", sandik_id=sandik_id)))
 
 
-@transaction_page_bp.route('c-<int:contribution_id>/sil')
+@transaction_page_bp.route('c-<int:contribution_id>/sil', methods=["POST"])
 @sandik_authorization_required("write")
 @contribution_required
 def remove_contribution_by_manager_page(sandik_id, contribution_id):
     utils.remove_contribution(contribution=g.contribution, removed_by=current_user)
-    return redirect(request.referrer or url_for("transaction_page_bp.payments_of_sandik_page"))
+    return redirect(safe_referrer(url_for("transaction_page_bp.payments_of_sandik_page", sandik_id=sandik_id)))
 
 
-@transaction_page_bp.route('butun-uyeler-icin-vadesi-gelmis-aidatlari-olustur', methods=["GET", "POST"])
+@transaction_page_bp.route('butun-uyeler-icin-vadesi-gelmis-aidatlari-olustur', methods=["POST"])
 @sandik_authorization_required("write")
 def create_due_contributions_for_all_members_page(sandik_id):
     utils.create_due_contributions_for_sandik(sandik=g.sandik, created_by=current_user,
                                               created_from="create_due_contributions_for_all_members_page")
-    return redirect(request.referrer or url_for("sandik_page_bp.sandik_index_page", sandik_id=sandik_id))
+    return redirect(safe_referrer(url_for("sandik_page_bp.sandik_index_page", sandik_id=sandik_id)))
 
 
 @transaction_page_bp.route('s-para-giris-cikislari')
@@ -412,7 +412,7 @@ def debts_of_member_page(sandik_id):
                            page_info=LayoutPI(title="Borçlarım", active_dropdown="member-transactions"))
 
 
-@transaction_page_bp.route("u-odemeleri-yenile")
+@transaction_page_bp.route("u-odemeleri-yenile", methods=["POST"])
 @to_be_member_of_sandik_required
 def pay_unpaid_payments_from_untreated_amount_of_member_page(sandik_id):
     pay_future_payments = False
@@ -421,10 +421,10 @@ def pay_unpaid_payments_from_untreated_amount_of_member_page(sandik_id):
 
     utils.pay_unpaid_payments_from_untreated_amount_for_member(member=g.member, pay_future_payments=pay_future_payments,
                                                                created_by=current_user)
-    return redirect(request.referrer or url_for("transaction_page_bp.payments_of_member_page", sandik_id=sandik_id))
+    return redirect(safe_referrer(url_for("transaction_page_bp.payments_of_member_page", sandik_id=sandik_id)))
 
 
-@transaction_page_bp.route("s-odemeleri-yenile")
+@transaction_page_bp.route("s-odemeleri-yenile", methods=["POST"])
 @sandik_authorization_required("write")
 def pay_unpaid_payments_from_untreated_amount_of_sandik_page(sandik_id):
     pay_future_payments = False
@@ -432,10 +432,10 @@ def pay_unpaid_payments_from_untreated_amount_of_sandik_page(sandik_id):
         pay_future_payments = True
     utils.pay_unpaid_payments_from_untreated_amount_for_sandik(sandik=g.sandik, pay_future_payments=pay_future_payments,
                                                                created_by=current_user)
-    return redirect(request.referrer or url_for("transaction_page_bp.payments_of_sandik_page", sandik_id=sandik_id))
+    return redirect(safe_referrer(url_for("transaction_page_bp.payments_of_sandik_page", sandik_id=sandik_id)))
 
 
-@transaction_page_bp.route("uye-<int:member_id>/odemeleri-yenile")
+@transaction_page_bp.route("uye-<int:member_id>/odemeleri-yenile", methods=["POST"])
 @sandik_authorization_required("write")
 @member_required
 def pay_unpaid_payments_from_untreated_amount_of_member_for_management_page(sandik_id, member_id):
@@ -445,5 +445,5 @@ def pay_unpaid_payments_from_untreated_amount_of_member_for_management_page(sand
 
     utils.pay_unpaid_payments_from_untreated_amount_for_member(member=g.member, pay_future_payments=pay_future_payments,
                                                                created_by=current_user)
-    return redirect(request.referrer or url_for("sandik_page_bp.member_summary_for_management_page",
-                                                sandik_id=sandik_id, member_id=member_id))
+    return redirect(safe_referrer(url_for("sandik_page_bp.member_summary_for_management_page",
+                                                sandik_id=sandik_id, member_id=member_id)))

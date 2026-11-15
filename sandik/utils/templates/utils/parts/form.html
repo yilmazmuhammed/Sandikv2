@@ -2,7 +2,7 @@
   <div class="col-12 alert alert-danger" role="alert">
     <ul>
       {% for error in (errors + form.get_all_errors()) %}
-      <li>{{ error|safe }}</li>
+      <li>{{ error|flash_message }}</li>
       {% endfor %}
     </ul>
   </div>

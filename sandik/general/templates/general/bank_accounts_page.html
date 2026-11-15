@@ -21,19 +21,19 @@
         "rows": [
         {% for bank_account in g.bank_accounts %}
           {
-            "index": `<span title='ID: {{ bank_account.id }}'>{{ loop.index }}</span>`,
-            "title": `{{ bank_account.title }}`,
-            "holder": `{{ bank_account.holder }}`,
-            "iban": `TR{{ bank_account.iban }}`,
+            {% set _cell %}<span title='ID: {{ bank_account.id }}'>{{ loop.index }}</span>{% endset %}"index": {{ _cell|js_html }},
+            {% set _cell %}{{ bank_account.title }}{% endset %}"title": {{ _cell|js_html }},
+            {% set _cell %}{{ bank_account.holder }}{% endset %}"holder": {{ _cell|js_html }},
+            {% set _cell %}TR{{ bank_account.iban }}{% endset %}"iban": {{ _cell|js_html }},
             {# TODO Varsayılan olma özelliğini switch buton ile göster. #}
-            "is_primary": `{{ "Evet" if bank_account.is_primary else "Hayır" }}`,
-            "actions": `
+            {% set _cell %}{{ "Evet" if bank_account.is_primary else "Hayır" }}{% endset %}"is_primary": {{ _cell|js_html }},
+            {% set _cell %}
               <tr>
                 <td>{{ macros.button(url=url_for('general_page_bp.update_bank_account_page', bank_account_id=bank_account.id), icon='fa fa-pencil', type='info', size='xs', title='Düzenle') }}</td>
                 <td style='padding:5px;'></td>
-                <td>{{ macros.button(url=url_for("general_page_bp.delete_bank_account_page", bank_account_id=bank_account.id) , icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
+                <td>{{ macros.button(url=url_for("general_page_bp.delete_bank_account_page", bank_account_id=bank_account.id) , icon='fa fa-trash', type='danger', size='xs', title='Sil', method='post') }}</td>
               </tr>
-            `,
+            {% endset %}"actions": {{ _cell|js_html }},
           },
         {% endfor %}
         ]

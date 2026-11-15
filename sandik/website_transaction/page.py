@@ -3,7 +3,7 @@ from flask_login import current_user
 
 from sandik.auth import db as auth_db
 from sandik.auth.requirement import admin_required
-from sandik.utils import LayoutPI, rollback_and_reload
+from sandik.utils import LayoutPI, rollback_and_reload, safe_referrer
 from sandik.utils.db_models import get_paging_variables
 from sandik.utils.forms import flask_form_to_dict, FormPI
 from sandik.utils.requirement import paging_must_be_verified
@@ -51,9 +51,9 @@ def website_transactions_of_sandik_page():
                            page_info=LayoutPI(title="Websitesi masrafları", active_dropdown="website-transactions"))
 
 
-@website_transaction_page_bp.route("wt-<int:website_transaction_id>/sil")
+@website_transaction_page_bp.route("wt-<int:website_transaction_id>/sil", methods=["POST"])
 @admin_required
 @website_transaction_required
 def delete_website_transaction_page(website_transaction_id):
     db.delete_website_transaction(website_transaction=g.website_transaction, deleted_by=current_user)
-    return redirect(request.referrer)
+    return redirect(safe_referrer(url_for("website_transaction_page_bp.website_transactions_of_sandik_page")))

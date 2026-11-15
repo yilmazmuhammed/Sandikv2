@@ -59,7 +59,7 @@
             {% if get_flashed_messages(category_filter=["success", "warning"]) %}
               {% for category, msg in get_flashed_messages(with_categories=true, category_filter=["success", "warning"]) %}
                 <div class="col-12 alert alert-{{ category }} text-center" role="alert">
-                  {{ msg|safe }}
+                  {{ msg|flash_message }}
                 </div>
               {% endfor %}
             {% endif %}

@@ -30,10 +30,10 @@
         "rows": [
         {% for member in g.sandik.members_set.order_by("lambda m: m.web_user_ref.name_surname.lower()") %}
           {
-            "index": `<span title='ID: {{ member.id }}'>{{ loop.index }}</span>`,
-            "name_surname": `{{ member.web_user_ref.name_surname }}`,
-            "is_active": `{{ "Aktif" if member.is_active else "Pasif" }}`,
-            "date_of_membership": `{{ member.date_of_membership.strftime("%Y-%m-%d") }}`,
+            {% set _cell %}<span title='ID: {{ member.id }}'>{{ loop.index }}</span>{% endset %}"index": {{ _cell|js_html }},
+            {% set _cell %}{{ member.web_user_ref.name_surname }}{% endset %}"name_surname": {{ _cell|js_html }},
+            {% set _cell %}{{ "Aktif" if member.is_active else "Pasif" }}{% endset %}"is_active": {{ _cell|js_html }},
+            {% set _cell %}{{ member.date_of_membership.strftime("%Y-%m-%d") }}{% endset %}"date_of_membership": {{ _cell|js_html }},
           },
         {% endfor %}
         ]
@@ -57,16 +57,16 @@
         "rows": [
         {% for web_user in g.sandik.applicant_web_users_set.order_by("lambda wu: wu.name_surname.lower()") %}
           {
-            "index": `<span title='ID: {{ web_user.id }}'>{{ loop.index }}</span>`,
-            "name_surname": `{{ web_user.name_surname }}`,
+            {% set _cell %}<span title='ID: {{ web_user.id }}'>{{ loop.index }}</span>{% endset %}"index": {{ _cell|js_html }},
+            {% set _cell %}{{ web_user.name_surname }}{% endset %}"name_surname": {{ _cell|js_html }},
             {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
-            "actions": `
+            {% set _cell %}
               <tr>
-                <td>{{ macros.button(url=url_for('sandik_page_bp.confirm_membership_application_page', sandik_id=g.sandik.id, web_user_id=web_user.id), icon='fa fa-check', type='info', size='xs', title='Onayla', confirm_msg='Üyeyi onaylamak istediğinize emin misiniz?') }}</td>
+                <td>{{ macros.button(url=url_for('sandik_page_bp.confirm_membership_application_page', sandik_id=g.sandik.id, web_user_id=web_user.id), icon='fa fa-check', type='info', size='xs', title='Onayla', confirm_msg='Üyeyi onaylamak istediğinize emin misiniz?', method='post') }}</td>
                 <td style='padding:5px;'></td>
-                <td>{{ macros.button(url=url_for('sandik_page_bp.reject_membership_application_page', sandik_id=g.sandik.id, web_user_id=web_user.id), icon='fa fa-trash', type='danger', size='xs', title='Reddet', confirm_msg='Üyeyi reddetmek istediğinize emin misiniz?') }}</td>
+                <td>{{ macros.button(url=url_for('sandik_page_bp.reject_membership_application_page', sandik_id=g.sandik.id, web_user_id=web_user.id), icon='fa fa-trash', type='danger', size='xs', title='Reddet', confirm_msg='Üyeyi reddetmek istediğinize emin misiniz?', method='post') }}</td>
               </tr>
-            `,
+            {% endset %}"actions": {{ _cell|js_html }},
             {% endif %}
           },
         {% endfor %}

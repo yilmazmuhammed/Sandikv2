@@ -60,14 +60,14 @@
         {% set detail='' %}
       {% endif %}
       {
-        "id": `<span title='ID: {{ id_prefix }}-{{ p.id }}'>{% if rev_index %}{{ loop.revindex }}{% else %}{{ loop.index }}{% endif %}</span>`,
+        {% set _cell %}<span title='ID: {{ id_prefix }}-{{ p.id }}'>{% if rev_index %}{{ loop.revindex }}{% else %}{{ loop.index }}{% endif %}</span>{% endset %}"id": {{ _cell|js_html }},
         "term": "{{ p.term }}",
         "name_surname": "{{ p.member_ref.web_user_ref.name_surname }} - {{ p.share_ref.share_order_of_member }}",
-        "transaction_type": `{{ transaction_type }}`,
+        {% set _cell %}{{ transaction_type }}{% endset %}"transaction_type": {{ _cell|js_html }},
         "amount": {{ p.amount }},
         "remaining_amount": {"value": {{ p.get_unpaid_amount_in_memory() }}, "options": {"classes": (({{ p.get_unpaid_amount_in_memory() }} === 0) ? "text-success" : "text-danger")}},
-        "is_fully_paid": `{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount_in_memory()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
-        "sub_receipts": `
+        {% set _cell %}{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount_in_memory()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}{% endset %}"is_fully_paid": {{ _cell|js_html }},
+        {% set _cell %}
           {% if p.sub_receipts_set.is_empty() %}
           İşlem yok
           {% else %}
@@ -99,15 +99,15 @@
               </table>
             </div>
           {% endif %}
-        `,
+        {% endset %}"sub_receipts": {{ _cell|js_html }},
         "detail": "{{ detail }}",
-        "action":`
+        {% set _cell %}
           <tr>
             {% if isinstance(p, Contribution) %}
-              <td>{{ utils_macros.button(url=url_for("transaction_page_bp.remove_contribution_by_manager_page", sandik_id=g.sandik.id, contribution_id=p.id), icon='fa fa-trash', type='danger', size='xs', title='İşlemi sil', confirm_msg='Aidatı silmek üzeresiniz. Bu işlem geri alınamaz. Silme işlemine devam etmek istiyor musunuz?') }}</td>
+              <td>{{ utils_macros.button(url=url_for("transaction_page_bp.remove_contribution_by_manager_page", sandik_id=g.sandik.id, contribution_id=p.id), icon='fa fa-trash', type='danger', size='xs', title='İşlemi sil', confirm_msg='Aidatı silmek üzeresiniz. Bu işlem geri alınamaz. Silme işlemine devam etmek istiyor musunuz?', method='post') }}</td>
             {% endif %}
           </tr>
-        `
+        {% endset %}"action":{{ _cell|js_html }}
       },
     {% endfor %}
     ]
@@ -150,17 +150,17 @@
 		"rows": [
     {% for pg in payment_groups %}
       {
-        "id": `{% if rev_index %}{{ loop.revindex }}{% else %}{{ loop.index }}{% endif %}`,
+        {% set _cell %}{% if rev_index %}{{ loop.revindex }}{% else %}{{ loop.index }}{% endif %}{% endset %}"id": {{ _cell|js_html }},
         "term": "{{ pg["term"] }}",
-        "name_surname": `
+        {% set _cell %}
           {% if g.type == "management"%}
             <a href="{{ url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=g.sandik.id, member_id=pg["payments"][0].member_ref.id) }}" title="Üye özeti için tıklayınız..." class="font-bold text-primary">{{ pg["name_surname"] }}</a>
           {% else %}
             {{ pg["name_surname"] }}
-          {% endif %}`,
+          {% endif %}{% endset %}"name_surname": {{ _cell|js_html }},
         "remaining_amount": {"value": {{ pg["remaining_amount"] }}, "options": {"classes": (({{ pg["remaining_amount"] }} === 0) ? "text-success" : "text-danger")}},
-        "is_fully_paid": `{% if pg["remaining_amount"] == 0 %}<span class="text-success">Ödendi</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
-        "payments": `
+        {% set _cell %}{% if pg["remaining_amount"] == 0 %}<span class="text-success">Ödendi</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}{% endset %}"is_fully_paid": {{ _cell|js_html }},
+        {% set _cell %}
           <div class="table table-responsive">
             <table class="table table-striped table-bordered text-center">
               <tr>
@@ -200,14 +200,14 @@
                   <td>{{ detail }}</td>
                   <td>
                     {% if isinstance(p, Contribution) %}
-                      {{ utils_macros.button(url=url_for("transaction_page_bp.remove_contribution_by_manager_page", sandik_id=g.sandik.id, contribution_id=p.id), icon='fa fa-trash', type='danger', size='xs', title='İşlemi sil', confirm_msg='Aidatı silmek üzeresiniz. Bu işlem geri alınamaz. Silme işlemine devam etmek istiyor musunuz?') }}
+                      {{ utils_macros.button(url=url_for("transaction_page_bp.remove_contribution_by_manager_page", sandik_id=g.sandik.id, contribution_id=p.id), icon='fa fa-trash', type='danger', size='xs', title='İşlemi sil', confirm_msg='Aidatı silmek üzeresiniz. Bu işlem geri alınamaz. Silme işlemine devam etmek istiyor musunuz?', method='post') }}
                     {% endif %}
                   </td>
                 </tr>
               {% endfor %}
             </table>
           </div>
-        `,
+        {% endset %}"payments": {{ _cell|js_html }},
       },
     {% endfor %}
     ]

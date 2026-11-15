@@ -5,7 +5,7 @@ from sandik.auth import db, forms, password_reset, utils
 from sandik.auth.exceptions import RegisterException, EmailAlreadyExist, AuthException
 from sandik.auth.requirement import admin_required, web_user_required
 from sandik.auth.utils import Notification
-from sandik.utils import LayoutPI, get_next_url
+from sandik.utils import LayoutPI, get_next_url, safe_referrer
 from sandik.utils.forms import flask_form_to_dict, FormPI
 
 auth_page_bp = Blueprint(
@@ -60,7 +60,7 @@ def login_page():
     return render_template("auth/login_page.html", page_info=FormPI(form=form, title="Giriş yap"))
 
 
-@auth_page_bp.route("/cikis")
+@auth_page_bp.route("/cikis", methods=["POST"])
 @login_required
 def logout_page():
     logout_user()
@@ -130,18 +130,18 @@ def web_users_page():
                            page_info=LayoutPI(title="Kullanıcı listesi", active_dropdown="web-users"))
 
 
-@auth_page_bp.route("/kullanici/<int:web_user_id>/onayla")
+@auth_page_bp.route("/kullanici/<int:web_user_id>/onayla", methods=["POST"])
 @admin_required
 def confirm_web_user_page(web_user_id):
     db.confirm_web_user(web_user_id, updated_by=current_user)
-    return redirect(request.referrer)
+    return redirect(safe_referrer(url_for("auth_page_bp.web_users_page")))
 
 
-@auth_page_bp.route("/kullanici/<int:web_user_id>/engelle")
+@auth_page_bp.route("/kullanici/<int:web_user_id>/engelle", methods=["POST"])
 @admin_required
 def block_web_user_page(web_user_id):
     db.block_web_user(web_user_id, updated_by=current_user)
-    return redirect(request.referrer)
+    return redirect(safe_referrer(url_for("auth_page_bp.web_users_page")))
 
 
 @web_user_required

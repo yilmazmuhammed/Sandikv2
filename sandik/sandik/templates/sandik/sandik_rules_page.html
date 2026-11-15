@@ -22,16 +22,16 @@
           "rows": [
           {% for r in g.sandik_rules[rule_type_key] %}
             {
-              "order": `<span title='ID: {{ r.id }}'>{{ r.order }}</span>`,
-              "condition_formula": `{{ r.condition_formula }}`,
-              "value_formula": `{{ r.value_formula }}`,
-              "move_actions": `
-              {{ macros.button(url=url_for("sandik_page_bp.raise_order_of_sandik_rule_page", sandik_id=g.sandik.id, sandik_rule_id=r.id), icon="fa-solid fa-arrow-up", type='default', size='xs', title='Yukarı taşı') }}
-              {{ macros.button(url=url_for("sandik_page_bp.lower_order_of_sandik_rule_page", sandik_id=g.sandik.id, sandik_rule_id=r.id), icon="fa-solid fa-arrow-down", type='default', size='xs', title='Aşağı taşı') }}
-              `,
-              "other_actions": `
-              {{ macros.button(url=url_for("sandik_page_bp.remove_sandik_rule_page", sandik_id=g.sandik.id, sandik_rule_id=r.id), icon="fa-solid fa-trash", type='danger', size='xs', title='Sil', confirm_msg='Kuralı silmek istediğinizden emin misiniz?') }}
-              `,
+              {% set _cell %}<span title='ID: {{ r.id }}'>{{ r.order }}</span>{% endset %}"order": {{ _cell|js_html }},
+              {% set _cell %}{{ r.condition_formula }}{% endset %}"condition_formula": {{ _cell|js_html }},
+              {% set _cell %}{{ r.value_formula }}{% endset %}"value_formula": {{ _cell|js_html }},
+              {% set _cell %}
+              {{ macros.button(url=url_for("sandik_page_bp.raise_order_of_sandik_rule_page", sandik_id=g.sandik.id, sandik_rule_id=r.id), icon="fa-solid fa-arrow-up", type='default', size='xs', title='Yukarı taşı', method='post') }}
+              {{ macros.button(url=url_for("sandik_page_bp.lower_order_of_sandik_rule_page", sandik_id=g.sandik.id, sandik_rule_id=r.id), icon="fa-solid fa-arrow-down", type='default', size='xs', title='Aşağı taşı', method='post') }}
+              {% endset %}"move_actions": {{ _cell|js_html }},
+              {% set _cell %}
+              {{ macros.button(url=url_for("sandik_page_bp.remove_sandik_rule_page", sandik_id=g.sandik.id, sandik_rule_id=r.id), icon="fa-solid fa-trash", type='danger', size='xs', title='Sil', confirm_msg='Kuralı silmek istediğinizden emin misiniz?', method='post') }}
+              {% endset %}"other_actions": {{ _cell|js_html }},
             },
           {% endfor %}
           ]
@@ -55,7 +55,7 @@
             <div class="panel-heading font-bold">
               <span>{{ rule_type_value }}</span>
               <span class="pull-right">
-                {{ macros.button(url=url_for("sandik_page_bp.add_sandik_rule_page", sandik_id=g.sandik.id, type=rule_type_key, next=request.base_url), icon='fa fa-plus', type='default', size='sm', title='Yeni kural ekle') }}
+                {{ macros.button(url=url_for("sandik_page_bp.add_sandik_rule_page", sandik_id=g.sandik.id, type=rule_type_key, next=url_for("sandik_page_bp.sandik_rules_page", sandik_id=g.sandik.id)), icon='fa fa-plus', type='default', size='sm', title='Yeni kural ekle') }}
               </span>
             </div>
             <div>

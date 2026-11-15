@@ -37,12 +37,12 @@
             {% set detail='' %}
           {% endif %}
           {
-            "id": `<span title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.index }}</span>`,
-            "term": `{{ p.term }}`,
-            "transaction_type": `{{ transaction_type }}`,
-            "amount": `<span title="Toplam miktar:\t{{ p.amount|tr_number_format }} \nKalan miktar:\t{{ p.get_unpaid_amount()|tr_number_format }}">{{ p.get_unpaid_amount()|money(g.sandik) }}</span>`,
-            "is_fully_paid": `{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}`,
-            "detail": `{{ detail | replace("\n", "<br>")| safe }}`,
+            {% set _cell %}<span title='ID: {{ id_prefix }}-{{ p.id }}'>{{ loop.index }}</span>{% endset %}"id": {{ _cell|js_html }},
+            {% set _cell %}{{ p.term }}{% endset %}"term": {{ _cell|js_html }},
+            {% set _cell %}{{ transaction_type }}{% endset %}"transaction_type": {{ _cell|js_html }},
+            {% set _cell %}<span title="Toplam miktar:&#9;{{ p.amount|tr_number_format }} &#10;Kalan miktar:&#9;{{ p.get_unpaid_amount()|tr_number_format }}">{{ p.get_unpaid_amount()|money(g.sandik) }}</span>{% endset %}"amount": {{ _cell|js_html }},
+            {% set _cell %}{% if p.is_fully_paid %}<span class="text-success">Ödendi</span>{% elif p.get_paid_amount()>0 %}<span class="text-danger">Eksik</span>{% else %}<span class="text-danger">Ödenmedi</span>{% endif %}{% endset %}"is_fully_paid": {{ _cell|js_html }},
+            {% set _cell %}{{ detail|nl2br }}{% endset %}"detail": {{ _cell|js_html }},
           },
         {% endfor %}
         ]
@@ -67,14 +67,14 @@
         "rows": [
           {% for mt in g.summary_data.my_latest_money_transactions %}
             {
-              "id": `<span title='ID: {{ mt.id }}'>{{ loop.index }}</span>`,
-              "date": `{{ mt.date.strftime("%Y-%m-%d") }}`,
+              {% set _cell %}<span title='ID: {{ mt.id }}'>{{ loop.index }}</span>{% endset %}"id": {{ _cell|js_html }},
+              {% set _cell %}{{ mt.date.strftime("%Y-%m-%d") }}{% endset %}"date": {{ _cell|js_html }},
               "amount": {{ mt.amount }},
               "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}`Para girişi`{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}`Para çıkışı`{% else %}`---`{% endif %},
-              "detail": `{{ mt.detail | replace("\n", "<br>")| safe }}`,
-              "is_fully_distributed": `{{ "Evet" if mt.is_fully_distributed else "Hayır" }}`,
+              {% set _cell %}{{ mt.detail|nl2br }}{% endset %}"detail": {{ _cell|js_html }},
+              {% set _cell %}{{ "Evet" if mt.is_fully_distributed else "Hayır" }}{% endset %}"is_fully_distributed": {{ _cell|js_html }},
               "creation_type": {% if mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}`Manuel`{% elif mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}`Otomatik`{% else %}`---`{% endif %},
-              "bank_transaction": `{{ "Var" if mt.bank_transaction_ref else "Yok" }}`,
+              {% set _cell %}{{ "Var" if mt.bank_transaction_ref else "Yok" }}{% endset %}"bank_transaction": {{ _cell|js_html }},
             },
           {% endfor %}
         ]
@@ -96,32 +96,32 @@
         "rows": [
         {% for share in g.member.get_active_shares().order_by("lambda s: s.share_order_of_member") %}
           {
-            "order": `<span title='ID: {{ share.id }}'>{{ share.share_order_of_member }}</span>`,
-            "total_contribution": `{{ share.sum_of_paid_contributions()|tr_number_format }}`,
-            "total_debt": `{{ share.sum_of_debts()|tr_number_format }}`,
-            "total_installment": `{{ share.sum_of_paid_installments()|tr_number_format }}`,
+            {% set _cell %}<span title='ID: {{ share.id }}'>{{ share.share_order_of_member }}</span>{% endset %}"order": {{ _cell|js_html }},
+            {% set _cell %}{{ share.sum_of_paid_contributions()|tr_number_format }}{% endset %}"total_contribution": {{ _cell|js_html }},
+            {% set _cell %}{{ share.sum_of_debts()|tr_number_format }}{% endset %}"total_debt": {{ _cell|js_html }},
+            {% set _cell %}{{ share.sum_of_paid_installments()|tr_number_format }}{% endset %}"total_installment": {{ _cell|js_html }},
             {% if g.type == "management" %}
-            "final_status": `xxx{{ share.sum_of_unpaid_amount_of_debts()|tr_number_format }}`,
-            "actions": `
+            {% set _cell %}xxx{{ share.sum_of_unpaid_amount_of_debts()|tr_number_format }}{% endset %}"final_status": {{ _cell|js_html }},
+            {% set _cell %}
               {% if share.is_active %}
                 <tr>
                   <td>{{ macros.button(url="#", icon='fa fa-pencil', type='info', size='xs', title='Düzenle') }}</td>
                   <td style='padding:5px;'></td>
-                  <td>{{ macros.button(url=url_for("sandik_page_bp.remove_share_from_member_page", sandik_id=g.sandik.id, member_id=g.member.id, share_id=share.id), icon='fa fa-trash', type='danger', size='xs', title='Hisseyi sil', confirm_msg='Hisseyi silmek istediğinizden emin misiniz?') }}</td>
+                  <td>{{ macros.button(url=url_for("sandik_page_bp.remove_share_from_member_page", sandik_id=g.sandik.id, member_id=g.member.id, share_id=share.id), icon='fa fa-trash', type='danger', size='xs', title='Hisseyi sil', confirm_msg='Hisseyi silmek istediğinizden emin misiniz?', method='post') }}</td>
                 </tr>
               {% endif %}
-            `,
+            {% endset %}"actions": {{ _cell|js_html }},
             {% endif %}
           },
         {% endfor %}
         {
-          "order": `<span title='Member ID: {{ g.member.id }}'>Üye Durumu</span>`,
-          "total_contribution": `{{ g.member.sum_of_paid_contributions()|tr_number_format }}`,
-          "total_debt": `{{ g.member.sum_of_debts()|tr_number_format }}`,
-          "total_installment": `{{ g.member.sum_of_paid_installments()|tr_number_format }}`,
+          {% set _cell %}<span title='Member ID: {{ g.member.id }}'>Üye Durumu</span>{% endset %}"order": {{ _cell|js_html }},
+          {% set _cell %}{{ g.member.sum_of_paid_contributions()|tr_number_format }}{% endset %}"total_contribution": {{ _cell|js_html }},
+          {% set _cell %}{{ g.member.sum_of_debts()|tr_number_format }}{% endset %}"total_debt": {{ _cell|js_html }},
+          {% set _cell %}{{ g.member.sum_of_paid_installments()|tr_number_format }}{% endset %}"total_installment": {{ _cell|js_html }},
           {% if g.type == "management" %}
-          "final_status": `xxx{{ g.member.sum_of_unpaid_amount_of_debts()|tr_number_format }}`,
-          "actions": ``,
+          {% set _cell %}xxx{{ g.member.sum_of_unpaid_amount_of_debts()|tr_number_format }}{% endset %}"final_status": {{ _cell|js_html }},
+          {% set _cell %}{% endset %}"actions": {{ _cell|js_html }},
           {% endif %}
         },
         ]
@@ -142,10 +142,10 @@
             {% set tr = g.member.get_trust_link_with_member(other_member=member) %}
             {% if g.member != member and (not tr or not tr.is_accepted()) %}
               {
-                "index": `<span title='ID: {{ member.id }}'>{{ loop.index }}</span>`,
-                "name_surname": `{{ member.web_user_ref.name_surname  }}`,
+                {% set _cell %}<span title='ID: {{ member.id }}'>{{ loop.index }}</span>{% endset %}"index": {{ _cell|js_html }},
+                {% set _cell %}{{ member.web_user_ref.name_surname  }}{% endset %}"name_surname": {{ _cell|js_html }},
                 {# "status": `{{ tr.status }}`, #}
-                "time": `{% if tr %}{{ tr.time.strftime("%d.%m.%Y") }}{% else %}-{% endif %}`,
+                {% set _cell %}{% if tr %}{{ tr.time.strftime("%d.%m.%Y") }}{% else %}-{% endif %}{% endset %}"time": {{ _cell|js_html }},
               },
             {% endif %}
           {% endfor %}
@@ -163,10 +163,10 @@
           "rows": [
           {% for tr in g.accepted_trust_links %}
             {
-              "index": `<span title='ID: {{ tr.id }}'>{{ loop.index }}</span>`,
-              "name_surname": `{{ tr.other_member(g.member).web_user_ref.name_surname  }}`,
+              {% set _cell %}<span title='ID: {{ tr.id }}'>{{ loop.index }}</span>{% endset %}"index": {{ _cell|js_html }},
+              {% set _cell %}{{ tr.other_member(g.member).web_user_ref.name_surname  }}{% endset %}"name_surname": {{ _cell|js_html }},
               {# "status": `{{ tr.status }}`, #}
-              "time": `{{ tr.time.strftime("%d.%m.%Y") }}`,
+              {% set _cell %}{{ tr.time.strftime("%d.%m.%Y") }}{% endset %}"time": {{ _cell|js_html }},
             },
           {% endfor %}
           ]
@@ -269,8 +269,8 @@
                   <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" aria-labelledby="pay-unpaid-payments-buttons2">
-                  <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_page', sandik_id=g.sandik.id) }}">Vadesi gelmiş ödemeleri öde</a></li>
-                  <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_page', sandik_id=g.sandik.id, pay_future_payments='1') }}">Vadesi gelmemiş ödemeleri öde</a></li>
+                  <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_page', sandik_id=g.sandik.id) }}" data-method="post">Vadesi gelmiş ödemeleri öde</a></li>
+                  <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_page', sandik_id=g.sandik.id, pay_future_payments='1') }}" data-method="post">Vadesi gelmemiş ödemeleri öde</a></li>
                 </ul>
               </div>
             </span>
@@ -283,8 +283,8 @@
                   <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" aria-labelledby="pay-unpaid-payments-buttons">
-                  <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_for_management_page', member_id=g.member.id, sandik_id=g.sandik.id) }}">Vadesi gelmiş ödemeleri öde</a></li>
-                  <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_for_management_page', member_id=g.member.id, sandik_id=g.sandik.id, pay_future_payments='1') }}">Vadesi gelmemiş ödemeleri öde</a></li>
+                  <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_for_management_page', member_id=g.member.id, sandik_id=g.sandik.id) }}" data-method="post">Vadesi gelmiş ödemeleri öde</a></li>
+                  <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_for_management_page', member_id=g.member.id, sandik_id=g.sandik.id, pay_future_payments='1') }}" data-method="post">Vadesi gelmemiş ödemeleri öde</a></li>
                 </ul>
               </div>
             </span>

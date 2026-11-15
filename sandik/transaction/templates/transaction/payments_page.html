@@ -34,8 +34,8 @@ jQuery(function($){
                 <span class="caret"></span>
               </button>
               <ul class="dropdown-menu" aria-labelledby="pay-unpaid-payments-buttons2">
-                <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_page', sandik_id=g.sandik.id) }}">Vadesi gelmiş ödemeleri öde</a></li>
-                <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_page', sandik_id=g.sandik.id, pay_future_payments='1') }}">Vadesi gelmemiş ödemeleri öde</a></li>
+                <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_page', sandik_id=g.sandik.id) }}" data-method="post">Vadesi gelmiş ödemeleri öde</a></li>
+                <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_member_page', sandik_id=g.sandik.id, pay_future_payments='1') }}" data-method="post">Vadesi gelmemiş ödemeleri öde</a></li>
               </ul>
             </div>
           {% elif g.type == "management" %}
@@ -45,8 +45,8 @@ jQuery(function($){
                 <span class="caret"></span>
               </button>
               <ul class="dropdown-menu" aria-labelledby="pay-unpaid-payments-buttons">
-                <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_sandik_page', sandik_id=g.sandik.id) }}">Vadesi gelmiş ödemeleri öde</a></li>
-                <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_sandik_page', sandik_id=g.sandik.id, pay_future_payments='1') }}">Vadesi gelmemiş ödemeleri öde</a></li>
+                <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_sandik_page', sandik_id=g.sandik.id) }}" data-method="post">Vadesi gelmiş ödemeleri öde</a></li>
+                <li><a href="{{ url_for('transaction_page_bp.pay_unpaid_payments_from_untreated_amount_of_sandik_page', sandik_id=g.sandik.id, pay_future_payments='1') }}" data-method="post">Vadesi gelmemiş ödemeleri öde</a></li>
               </ul>
             </div>
           {% endif %}
