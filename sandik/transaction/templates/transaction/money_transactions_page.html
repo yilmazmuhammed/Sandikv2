@@ -43,16 +43,16 @@ jQuery(function($){
     "rows": [
     {% for mt in g.money_transactions %}
       {
-        "id": `<span title='ID: {{ mt.id }}'>{{ g.first_index - loop.index + 1 }}</span>`,
-        "date": `{{ mt.date.strftime("%Y-%m-%d") }}`,
+        {% set _cell %}<span title='ID: {{ mt.id }}'>{{ g.first_index - loop.index + 1 }}</span>{% endset %}"id": {{ _cell|js_html }},
+        {% set _cell %}{{ mt.date.strftime("%Y-%m-%d") }}{% endset %}"date": {{ _cell|js_html }},
         "amount": {{ mt.amount }},
-        "name_surname": `{% if g.type == "management"%}<a href="{{ url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=g.sandik.id, member_id=mt.member_ref.id) }}" title="Üye özeti için tıklayınız..." class="font-bold text-primary">{{ mt.member_ref.web_user_ref.name_surname }}</a>{% else %}{{ mt.member_ref.web_user_ref.name_surname }}{% endif %}`,
+        {% set _cell %}{% if g.type == "management"%}<a href="{{ url_for("sandik_page_bp.member_summary_for_management_page", sandik_id=g.sandik.id, member_id=mt.member_ref.id) }}" title="Üye özeti için tıklayınız..." class="font-bold text-primary">{{ mt.member_ref.web_user_ref.name_surname }}</a>{% else %}{{ mt.member_ref.web_user_ref.name_surname }}{% endif %}{% endset %}"name_surname": {{ _cell|js_html }},
         "type": {% if mt.type == MoneyTransaction.TYPE.REVENUE %}`Para girişi`{% elif mt.type == MoneyTransaction.TYPE.EXPENSE %}`Para çıkışı`{% else %}`---`{% endif %},
-        "detail": `{{ mt.detail | replace("\n", "<br>") | safe  }}`,
-        "is_fully_distributed": `{{ "Evet" if mt.is_fully_distributed else "Hayır" }}`,
-        "creation_type": `{% if mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}Manuel{% elif mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}Otomatik{% else %}---{% endif %}`,
-        "bank_transaction": `{{ "Var" if mt.bank_transaction_ref else "Yok" }}`,
-        "sub_receipts": `
+        {% set _cell %}{{ mt.detail|nl2br }}{% endset %}"detail": {{ _cell|js_html }},
+        {% set _cell %}{{ "Evet" if mt.is_fully_distributed else "Hayır" }}{% endset %}"is_fully_distributed": {{ _cell|js_html }},
+        {% set _cell %}{% if mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_MANUEL %}Manuel{% elif mt.creation_type == MoneyTransaction.CREATION_TYPE.BY_BANK_TRANSACTION %}Otomatik{% else %}---{% endif %}{% endset %}"creation_type": {{ _cell|js_html }},
+        {% set _cell %}{{ "Var" if mt.bank_transaction_ref else "Yok" }}{% endset %}"bank_transaction": {{ _cell|js_html }},
+        {% set _cell %}
           {% if mt.sub_receipts_set.is_empty() %}
           İşlem yok<br><span class="font-bold">Para girişinin {{ mt.get_undistributed_amount_in_memory()|money(g.sandik) }}'si işleme sokulmamış.</span>
           {% else %}
@@ -95,13 +95,13 @@ jQuery(function($){
               </table>
             </div>
           {% endif %}
-        `,
+        {% endset %}"sub_receipts": {{ _cell|js_html }},
         {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="write") %}
-        "actions":`
+        {% set _cell %}
           <tr>
-            <td>{{ macros.button(url=url_for("transaction_page_bp.remove_money_transaction_by_manager_page", sandik_id=g.sandik.id, money_transaction_id=mt.id), icon='fa fa-trash', type='danger', size='xs', title='İşlemi sil', confirm_msg='İşlemi silmek üzeresiniz. Bu işlem geri alınamaz. Silme işlemine devam etmek istiyor musunuz?') }}</td>
+            <td>{{ macros.button(url=url_for("transaction_page_bp.remove_money_transaction_by_manager_page", sandik_id=g.sandik.id, money_transaction_id=mt.id), icon='fa fa-trash', type='danger', size='xs', title='İşlemi sil', confirm_msg='İşlemi silmek üzeresiniz. Bu işlem geri alınamaz. Silme işlemine devam etmek istiyor musunuz?', method='post') }}</td>
           </tr>
-        `
+        {% endset %}"actions":{{ _cell|js_html }}
         {% endif %}
       },
     {% endfor %}

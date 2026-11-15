@@ -36,24 +36,24 @@
         "rows": [
         {% for member in g.members %}
           {
-            "index": `<span title='ID: {{ member.id }}'>{{ loop.index }}</span>`,
-            "name_surname": `{{ member.web_user_ref.name_surname }}`,
-            "shares_count": `{{ member.shares_count() }}`,
-            "is_active": `{{ "Aktif" if member.is_active else "Pasif" }}`,
-            "date_of_membership": `{{ member.date_of_membership.strftime("%Y-%m-%d") }}`,
+            {% set _cell %}<span title='ID: {{ member.id }}'>{{ loop.index }}</span>{% endset %}"index": {{ _cell|js_html }},
+            {% set _cell %}{{ member.web_user_ref.name_surname }}{% endset %}"name_surname": {{ _cell|js_html }},
+            {% set _cell %}{{ member.shares_count() }}{% endset %}"shares_count": {{ _cell|js_html }},
+            {% set _cell %}{{ "Aktif" if member.is_active else "Pasif" }}{% endset %}"is_active": {{ _cell|js_html }},
+            {% set _cell %}{{ member.date_of_membership.strftime("%Y-%m-%d") }}{% endset %}"date_of_membership": {{ _cell|js_html }},
             {% if current_user.is_authenticated and (current_user.is_admin() or current_user.has_permission(sandik=g.sandik, permission="read")) %}
-            "actions": `
+            {% set _cell %}
               <tr>
                 <td>{{ macros.button(url=url_for("sandik_page_bp.member_summary_for_management_page", member_id=member.id, sandik_id=g.sandik.id), icon='fa fa-search', type='info', size='xs', title='Üye özeti') }}</td>
                 <td style='padding:5px;'></td>
                 <td>{{ macros.button(url=url_for("transaction_page_bp.money_transactions_of_member_for_management_page", member_id=member.id, sandik_id=g.sandik.id), icon='fa fa-list', type='info', size='xs', title='Tüm para giriş/çıkışları') }}</td>
               </tr>
-            `,
-            "actions2": `
+            {% endset %}"actions": {{ _cell|js_html }},
+            {% set _cell %}
               <tr>
-                <td>{{ macros.button(url=url_for("sandik_page_bp.remove_member_from_sandik_page", member_id=member.id, sandik_id=g.sandik.id), icon='fa fa-trash', type='danger', size='xs', title='Üyeyi sil', confirm_msg='Üyeyi silmek istediğinizden emin misiniz?') }}</td>
+                <td>{{ macros.button(url=url_for("sandik_page_bp.remove_member_from_sandik_page", member_id=member.id, sandik_id=g.sandik.id), icon='fa fa-trash', type='danger', size='xs', title='Üyeyi sil', confirm_msg='Üyeyi silmek istediğinizden emin misiniz?', method='post') }}</td>
               </tr>
-            `,
+            {% endset %}"actions2": {{ _cell|js_html }},
             {% endif %}
           },
         {% endfor %}

@@ -877,6 +877,7 @@ Kural formüllerinde artık **ondalık** kullanılabilir (`{hisse_toplam_aidat}*
   `flask_form_to_dict()` çıktısını doğrudan entity'ye `**kwargs` olarak geçirir; uyuşmayan bir ad
   Pony'de `TypeError: Unknown attribute` (500) verir, eksik kalan `boolean_fields` anahtarı ise
   sessizce hep `False` olur. (`SandikAuthorityForm.is_admin` bu yüzden `is_primary` değildir.)
+  `flask_form_to_dict(..., allowed=form)` verilmelidir: yalnızca formun kendi alanları alınır (bkz. "Güvenlik").
 - **`Sandikv2UtilsException` türevlerinde `errcode` verilmezse** üst sınıftaki
   `0 < errcode < 1000` kontrolü asıl mesajı yok edip boş bir `ErrcodeException` fırlatır. Varsayılan
   bu nedenle `1`'dir; yeni istisna sınıflarında varsayılanı `0` bırakma.
@@ -909,8 +910,9 @@ Kural formüllerinde artık **ondalık** kullanılabilir (`{hisse_toplam_aidat}*
   - **Onaylı link** — `macros.html` → `button()` / `switch_button()` makrolarındaki `confirm_msg`
     parametresi hâlâ aynı şekilde kullanılır (bunlar `<a class="dialog-confirm"
     confirm-message="...">` üretir); `custom.js` bu linkin tıklamasını yakalayıp `preventDefault` +
-    `showConfirmDialog()` ile yalnızca `CONFIRM` sonucunda `window.location.href` ile yönlendirir,
-    `REJECT`/`DISMISS`'te hiçbir şey yapmaz. Yeni bir yerde onaylı link gerekiyorsa bu makrolar
+    `showConfirmDialog()` ile yalnızca `CONFIRM` sonucunda `window.location.href` ile yönlendirir
+    (bağlantı `data-method="post"` taşıyorsa, yani makroya `method="post"` verildiyse, CSRF jetonlu gizli
+    bir formla POST eder; bkz. "Güvenlik"), `REJECT`/`DISMISS`'te hiçbir şey yapmaz. Yeni bir yerde onaylı link gerekiyorsa bu makrolar
     kullanılmalı, `confirm()`'e geri dönülmemeli.
   - **Onaya bağlı form submit'i** — bkz. `transaction/add_money_transaction_by_manager_page.html`
     (`askAndSubmit()`): iki düğme de formu gönderir (yalnızca gizli alanın `true` olup olmaması
@@ -980,6 +982,75 @@ Kural formüllerinde artık **ondalık** kullanılabilir (`{hisse_toplam_aidat}*
   (`order_by(lambda m: m.web_user_ref.name_surname.lower())`), sıraları veritabanı collation'ına
   bağlıdır; tablolardaki istemci tarafı (footable) sıralama da türkçe bilmez. Testler:
   `tests/test_turkish_sorting.py`.
+
+## Güvenlik (2026-11 incelemesi)
+
+Bir güvenlik incelemesinde bulunan açıklar kapatıldı; aşağıdaki kurallar yeni kod için de geçerlidir. Testler:
+`tests/test_security.py`.
+
+### Şablonda kullanıcı verisi
+
+- **FooTable satırları ters tırnaklı JS şablon dizgisiyle (`` `{{ x }}` ``) yazılmaz.** Jinja'nın kaçırması
+  `<>&'"` kaçırır ama ters tırnağı ve `${` ifadesini kaçırmaz; kayıt herkese açık olduğu için adı
+  `` ${alert(...)} `` olan bir hesap, yöneticinin "Kullanıcılar" sayfasında ve üye listelerinde kod
+  çalıştırıyordu. Hücre `{{ x|js_html }}` ile basılır (`app.py` → `js_html`): değer HTML'e karşı kaçırılır,
+  sonra JSON dizgisi olur (`<`, `>`, `&`, `'` ve ters tırnak `\uXXXX`). FooTable hücreyi HTML olarak çizdiği için
+  ikisi de gerekir. Bilinçli HTML (span/title, makro düğmeleri) içeren hücre önce kurulur, sonra aynı süzgeçle
+  basılır; içindeki kullanıcı verisi otomatik kaçırılır, makro çıktısı `Markup` olduğu için bir daha kaçırılmaz:
+  ```jinja
+  {% set _cell %}<span title='ID: {{ m.id }}'>{{ m.web_user_ref.name_surname }}</span>{% endset %}"name": {{ _cell|js_html }},
+  ```
+  `title` içinde satır sonu/sekme gerekiyorsa `&#10;` / `&#9;` yazılır (JS dizgisindeki `\n` artık yorumlanmaz).
+- **Çok satırlı metin `|nl2br` ile basılır**, `|replace("\n", "<br>")|safe` ile değil (o, HTML'i hiç
+  kaçırmıyordu). `x|e|replace(...)` da çözüm değildir: `Markup.replace` argümanları da kaçırır, `<br>` yazı
+  olarak görünür. Seyir defterindeki hata ayrıntısı `|log_exception_detail` ile basılır.
+- **Bildirimler (flash) ve form hataları `|flash_message` ile basılır** (`layout.html`, `form_layout.html`,
+  `parts/form.html`, giriş/tercih sayfaları): metnin tamamı kaçırılır, yalnızca `<b>`, `<i>`, `<br>` geri
+  açılır (myilmaz_tr deposundaki uygulamalarla aynı). Bildirimlere üye/sandık adı ve istisna mesajları girer;
+  eskiden `|safe` ile basılıyordu. Bağlantı içeren bir bildirim gerekirse `Markup(...).format(...)` verilir.
+- Şablonlarda `|safe` yalnızca sunucunun ürettiği HTML'e (`form.open`, `intro/utils.py:FAQ`) kullanılır.
+
+### CSRF ve POST
+
+- `CSRFProtect` uygulama genelinde kuruludur (`app.py` → `initialize_csrf`; **Pony'den sonra**, bkz. ana depo
+  CLAUDE.md). Jetonsuz/hatalı jetonlu POST, Türkçe bir 400 sayfası alır ("Güvenlik doğrulaması başarısız").
+  HTTPS'te Flask-WTF aynı siteden bir `Referer` de ister: POST gönderen sayfa `Referrer-Policy: no-referrer`
+  taşımamalıdır (`same-origin` kullanılır). Testler `base_url="https://localhost"` + `Referer` ile yazılır.
+- **Durum değiştiren her uç yalnızca POST kabul eder** (GET 405). 2026-11'de POST'a çevrilenler: `/cikis`,
+  `/kullanici/<id>/onayla|engelle`, `/banka-hesaplarim/<id>/sil`, `/bildirim/<id>` (okundu işaretler),
+  sandıkta `u-<id>/gb-gonder`, `gb-<id>/onayla|kaldir`, `basvuru-onayla|reddet/<id>`, `uye-<id>/sil`,
+  `uye-<id>/hisse-<id>/sil`, `sandik-yetkileri/<id>/sil`, `sandik-yetkilileri/<id>/kaldir`,
+  `sk-<id>/yukari-tasi|asagi-tasi|sil`, `mt-<id>/sil`, `c-<id>/sil`,
+  `butun-uyeler-icin-vadesi-gelmis-aidatlari-olustur`, `u-|s-|uye-<id>/odemeleri-yenile`, `wt-<id>/sil`.
+- Bağlantı olarak duran işlemler: `macros.html` → `button(..., method="post")` / `switch_button(...,
+  method="post")` ya da elle `<a href="..." data-method="post">`. `custom.js` tıklamayı `document` üzerinden
+  yakalar (FooTable'ın sonradan çizdiği satırlarda da çalışır), gizli bir form kurup `csrf_token` ile POST eder
+  (`postToUrl`); `dialog-confirm` ise önce onay sorar. Adresteki sorgu parametreleri (`?pay_future_payments=1`)
+  korunur. Jeton `utils/layout.html` ve `auth/auth_layout.html`deki `<meta name="csrf-token">`dadır; tanıtım
+  kabuğuna konmadı (herkese açık sayfalarda oturum çerezi açılmasın), oradaki formlar jetonu kendileri taşır
+  (`/tercih/<token>`). jQuery AJAX'ın GET dışındaki isteklerine `X-CSRFToken` kendiliğinden eklenir
+  (`ajaxSend`); `/paw` sayfası ayrıca açıkça yazar.
+- İşlemden sonra geri dönüş `safe_referrer(varsayılan)` ile yapılır (`utils/__init__.py`): `Referer` yoksa
+  ya da başka bir siteyse varsayılan adres. Çıplak `redirect(request.referrer)` yazılmaz (yoksa 500 veriyordu).
+- `/api/borc-gecmisi` GET'tir ve etkilenmez (CSRF yalnızca POST/PUT/PATCH/DELETE'e bakar); Cüzdan'ın süreç
+  içi isteği oturum açmaz, çerez yazmaz.
+- CSRF jetonunun süresi yoktur (`WTF_CSRF_TIME_LIMIT = None`): sekme saatlerce açık kalsa da düğmeler çalışır; jeton oturuma bağlıdır.
+
+### Giriş, yönlendirme, toplu atama, çerezler
+
+- **Giriş denemesi sınırı** `auth/login_limit.py`dedir: myilmaz_tr deposundaki `apartman`, `cuzdan`,
+  `davetiye`, `family_tree` uygulamalarındaki dosyanın **birebir kopyası** (hiçbir şey import etmez; değişiklik
+  oralara da taşınmalıdır, `cmp` ile denetlenir). IP başına ve e-posta adresi başına ayrı sayaç, süreç
+  belleğinde; kilit mesajı tektir, kayıtlı olmayan adres de sayılır. IP `password_reset.client_ip`
+  (`X-Real-IP`, yoksa `remote_addr`).
+- **`?next=` yalnızca site içi yolu kabul eder** (`utils.safe_next_url`; `//`, ters bölü, kontrol
+  karakteri, tam adres reddedilir). Bu yüzden `next`e `request.url` / `request.base_url` (tam adres) değil
+  `url_for(...)` verilir.
+- **Toplu atama:** `flask_form_to_dict(..., allowed=form)` istekteki alanları formun kendi alanlarıyla
+  sınırlar. Verilmezse elle eklenen `password_hash`, `is_active_`, `preferences`, `web_user_ref`, `sandik_ref`
+  gibi adlar entity'ye yazılırdı (`/kayit`, `/bilgilerimi-guncelle`, banka hesabı düzenleme ...). Bütün
+  `page.py` çağrıları `allowed=form` taşır; yeni çağrılar da taşımalıdır.
+- Oturum ve "beni hatırla" çerezleri `HttpOnly`, `SameSite=Lax` ve (`FLASK_DEBUG` dışında) `Secure`dir.
 
 ## Listeleme sayfalarında performans
 

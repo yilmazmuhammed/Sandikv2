@@ -30,19 +30,19 @@
         "rows": [
         {% for wu in g.authorized_web_users %}
           {
-            "index": `<span title='ID: {{ wu.id }}'>{{ loop.index }}</span>`,
-            "name_surname": `<span title='E-posta: {{ wu.email_address }}'>{{ wu.name_surname }}</span>`,
-            "sandik_authority": `{{ wu.get_sandik_authority(sandik=g.sandik).name }}`,
-            "is_admin": `{{ macros.switch_button(is_checked=wu.get_sandik_authority(sandik=g.sandik).is_admin, is_disabled=True) }}`,
-            "can_read": `{{ macros.switch_button(is_checked=wu.get_sandik_authority(sandik=g.sandik).can_read, is_disabled=True) }}`,
-            "can_write": `{{ macros.switch_button(is_checked=wu.get_sandik_authority(sandik=g.sandik).can_write, is_disabled=True) }}`,
+            {% set _cell %}<span title='ID: {{ wu.id }}'>{{ loop.index }}</span>{% endset %}"index": {{ _cell|js_html }},
+            {% set _cell %}<span title='E-posta: {{ wu.email_address }}'>{{ wu.name_surname }}</span>{% endset %}"name_surname": {{ _cell|js_html }},
+            {% set _cell %}{{ wu.get_sandik_authority(sandik=g.sandik).name }}{% endset %}"sandik_authority": {{ _cell|js_html }},
+            {% set _cell %}{{ macros.switch_button(is_checked=wu.get_sandik_authority(sandik=g.sandik).is_admin, is_disabled=True) }}{% endset %}"is_admin": {{ _cell|js_html }},
+            {% set _cell %}{{ macros.switch_button(is_checked=wu.get_sandik_authority(sandik=g.sandik).can_read, is_disabled=True) }}{% endset %}"can_read": {{ _cell|js_html }},
+            {% set _cell %}{{ macros.switch_button(is_checked=wu.get_sandik_authority(sandik=g.sandik).can_write, is_disabled=True) }}{% endset %}"can_write": {{ _cell|js_html }},
             {% if current_user.is_authenticated and current_user.has_permission(sandik=g.sandik, permission="admin") %}
-            "actions": `
+            {% set _cell %}
               <tr>
                 <td>{{ macros.button(url="#", icon='fa fa-pencil', type='info', size='xs', title='Düzenle') }}</td>
                 <td style='padding:5px;'></td>
-                <td>{{ macros.button(url=url_for("sandik_page_bp.remove_authorized_from_sandik_page", sandik_id=g.sandik.id, web_user_id=wu.id), icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
-              </tr>`,
+                <td>{{ macros.button(url=url_for("sandik_page_bp.remove_authorized_from_sandik_page", sandik_id=g.sandik.id, web_user_id=wu.id), icon='fa fa-trash', type='danger', size='xs', title='Sil', method='post') }}</td>
+              </tr>{% endset %}"actions": {{ _cell|js_html }},
             {% endif %}
           },
         {% endfor %}

@@ -41,6 +41,7 @@
     jQuery.ajax({
       url: "{{ url_for("paw_api_bp.update_source_code_api") }}",
       type: "POST",
+      headers: {"X-CSRFToken": csrfToken()},  // CSRF jetonu (layout.html → meta csrf-token)
       error: function (xhr, ajaxOptions, thrownError) {
         console.log("xhr:", xhr);
         update_source_code_response.html("Status: " + xhr.statusText + "<br>Response: " + xhr.responseText);
@@ -63,6 +64,7 @@
     jQuery.ajax({
       url: "{{ url_for("paw_api_bp.install_dependencies_api") }}",
       type: "POST",
+      headers: {"X-CSRFToken": csrfToken()},  // CSRF jetonu (layout.html → meta csrf-token)
       error: function (xhr, ajaxOptions, thrownError) {
         console.log("xhr:", xhr);
         install_dependencies_response.text("Status: " + xhr.statusText + "\nResponse: " + xhr.responseText);
@@ -82,6 +84,7 @@
     jQuery.ajax({
       url: "{{ url_for("paw_api_bp.reload_webapp_api") }}",
       type: "POST",
+      headers: {"X-CSRFToken": csrfToken()},  // CSRF jetonu (layout.html → meta csrf-token)
       error: function (xhr, ajaxOptions, thrownError) {
         console.log("xhr:", xhr);
         if(xhr.responseText.includes("</html>")){

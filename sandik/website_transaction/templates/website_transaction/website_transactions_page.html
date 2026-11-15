@@ -41,15 +41,15 @@ jQuery(function($){
         "id": "<span title='ID: {{ wt.id }}'>{{ g.first_index - loop.index + 1 }}</span>",
         "date": "{{ wt.date.strftime("%Y-%m-%d") }}",
         "amount": {% if wt.type == wt.TYPE.EXPENSE %}{{ -wt.amount }}{% else %}{{ wt.amount }}{% endif %},
-        "payer": `{{ wt.get_payer_name(is_hidden=not (current_user.is_authenticated and (current_user.is_admin() or current_user == wt.web_user_ref))) }}`,
-        "category": `{{ wt.category }}`,
+        {% set _cell %}{{ wt.get_payer_name(is_hidden=not (current_user.is_authenticated and (current_user.is_admin() or current_user == wt.web_user_ref))) }}{% endset %}"payer": {{ _cell|js_html }},
+        {% set _cell %}{{ wt.category }}{% endset %}"category": {{ _cell|js_html }},
         "detail": "{{ wt.detail }}",
         {% if current_user.is_authenticated and current_user.is_admin() %}
-        "actions":`
+        {% set _cell %}
           <tr>
-            <td>{{ macros.button(url=url_for("website_transaction_page_bp.delete_website_transaction_page", website_transaction_id=wt.id), icon='fa fa-trash', type='danger', size='xs', title='İşlemi sil', confirm_msg='İşlemi silmek üzeresiniz. Bu işlem geri alınamaz. Silme işlemine devam etmek istiyor musunuz?') }}</td>
+            <td>{{ macros.button(url=url_for("website_transaction_page_bp.delete_website_transaction_page", website_transaction_id=wt.id), icon='fa fa-trash', type='danger', size='xs', title='İşlemi sil', confirm_msg='İşlemi silmek üzeresiniz. Bu işlem geri alınamaz. Silme işlemine devam etmek istiyor musunuz?', method='post') }}</td>
           </tr>
-        `
+        {% endset %}"actions":{{ _cell|js_html }}
         {% endif %}
       },
     {% endfor %}

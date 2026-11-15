@@ -78,7 +78,7 @@
                 </div>
                 <div class="list-group">
                   {% for n in current_user.my_unread_notifications() %}
-                  <a href="{{ url_for('general_page_bp.read_notification_page', notification_id=n.id) }}" class="list-group-item">
+                  <a href="{{ url_for('general_page_bp.read_notification_page', notification_id=n.id) }}" data-method="post" class="list-group-item">
                     <span class="clear block m-b-none">
                       {{ n.title }}<br>
                       <small class="text-muted">{{ n.text }}</small>
@@ -121,7 +121,7 @@
               <li class="divider"></li>
               {% endif %}
               <li>
-                <a href="{{ url_for("auth_page_bp.logout_page") }}">Çıkış</a>
+                <a href="{{ url_for("auth_page_bp.logout_page") }}" data-method="post">Çıkış</a>
               </li>
             </ul>
             <!-- / dropdown -->

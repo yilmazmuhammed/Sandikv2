@@ -29,24 +29,24 @@
         {% for log in g.logs %}
           {
             "id": "<span title='ID: {{ log.id }}'>{{ g.first_index - loop.index + 1 }}</span>",
-            "web_user_ref": `<span title="E-posta: {{ log.web_user_ref.email_address }}">{{ log.web_user_ref.name_surname }}</span>`,
-            "time": `{{ log.time.strftime("%Y-%m-%d %H:%M:%S") }}`,
-            "type": `<span title='{{ log.type }}'>{{log.TYPE.print_attributes(log.type)}}</span>`,
-            "special_type": `{{ log.special_type }}`,
-            "detail": `{{ log.detail.split("(ERRCODE")[0] }}`,
-            "exception_detail": `{% if log.detail.find("(ERRCODE") >= 0 %}{{ ("ERRCODE"+log.detail.split("(ERRCODE")[1][:-1]).replace("ERRCODE:", "<strong>ERRCODE:</strong>").replace("FUNCTION:", "<br><strong>FUNCTION:</strong>").replace("EXCEPTION:", "<br><strong>EXCEPTION:</strong>") | safe }}{% endif %}`,
-            "logged_refs": `
+            {% set _cell %}<span title="E-posta: {{ log.web_user_ref.email_address }}">{{ log.web_user_ref.name_surname }}</span>{% endset %}"web_user_ref": {{ _cell|js_html }},
+            {% set _cell %}{{ log.time.strftime("%Y-%m-%d %H:%M:%S") }}{% endset %}"time": {{ _cell|js_html }},
+            {% set _cell %}<span title='{{ log.type }}'>{{log.TYPE.print_attributes(log.type)}}</span>{% endset %}"type": {{ _cell|js_html }},
+            {% set _cell %}{{ log.special_type }}{% endset %}"special_type": {{ _cell|js_html }},
+            {% set _cell %}{{ log.detail.split("(ERRCODE")[0] }}{% endset %}"detail": {{ _cell|js_html }},
+            {% set _cell %}{{ log.detail|log_exception_detail }}{% endset %}"exception_detail": {{ _cell|js_html }},
+            {% set _cell %}
               {% for key, value in log.to_dict(related_objects=True, exclude=["id", 'web_user_ref', "time", "type", "special_type", "detail"]).items() %}
                 {% if value %}{{ value }} &emsp;->&emsp; {{ value.title or (value.name_surname + " <" + value.email_address + ">"  if value.email_address else "") or value.name or (value.member_ref.web_user_ref.name_surname if value.member_ref else "" ) or (value.web_user_ref.name_surname if value.web_user_ref else "" )}}<br>{% endif %}
               {% endfor %}
-            `,
-            "actions": `
+            {% endset %}"logged_refs": {{ _cell|js_html }},
+            {% set _cell %}
               <tr>
                 <td>{{ macros.button(url="#", icon='fa fa-pencil', type='info', size='xs', title='Düzenle') }}</td>
                 <td style='padding:5px;'></td>
                 <td>{{ macros.button(url="#" , icon='fa fa-trash', type='danger', size='xs', title='Sil') }}</td>
               </tr>
-            `,
+            {% endset %}"actions": {{ _cell|js_html }},
           },
         {% endfor %}
         ]

@@ -4,6 +4,8 @@
 <html lang="tr" class="">
 <head>
   <meta charset="utf-8" />
+  {# CSRF jetonu: `custom.js` POST bağlantılarına (`data-method="post"`) ve jQuery AJAX isteklerine ekler #}
+  <meta name="csrf-token" content="{{ csrf_token() }}" />
   <title>{% block page_title %}{{ page_info.title }}{% endblock %} | {{ page_info.website_name }}</title>
   <meta name="description" content="Yardımlaşma Sandığı takip sistemi" />
   {# Yönetim panelinin tamamı üyeye özeldir; koşulsuz dizin dışıdır. Sitenin arama motorlarına
@@ -53,7 +55,7 @@
           <div class="wrapper-md">
             {% for category, msg in get_flashed_messages(with_categories=true) %}
               <div class="col-12 alert alert-{{category}} text-center" role="alert">
-                {{ msg|safe }}
+                {{ msg|flash_message }}
               </div>
             {% endfor %}
           </div>

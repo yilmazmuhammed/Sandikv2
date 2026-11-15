@@ -140,6 +140,50 @@ function submitFormDirectly(form) {
   HTMLFormElement.prototype.submit.call(form);
 }
 
+/* --------------------------------------- CSRF ve POST bağlantıları ---------------------------------------
+ * Durum değiştiren bütün uçlar (silme, onaylama, taşıma ...) yalnızca POST kabul eder ve CSRF jetonu ister
+ * (bkz. CLAUDE.md → "CSRF"). Jeton kabuk şablonlarında `<meta name="csrf-token">` ile basılır.
+ * - `<a href="..." data-method="post">`: tıklanınca gizli bir formla POST edilir (`macros.html` →
+ *   `button(..., method="post")` / `switch_button(..., method="post")` bunu üretir). Olay dinleyicisi `document`
+ *   üzerindedir, yani FooTable'ın sonradan çizdiği satırlardaki bağlantılarda da çalışır.
+ * - jQuery AJAX ile gönderilen GET dışındaki isteklere `X-CSRFToken` başlığı kendiliğinden eklenir.
+ * ------------------------------------------------------------------------------------------------------ */
+
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute("content") : "";
+}
+
+/**
+ * Adrese CSRF jetonuyla POST eder (sayfa o adrese gider). Adresteki sorgu parametreleri (`?pay_future_payments=1`)
+ * olduğu gibi kalır.
+ * @param {string} url
+ */
+function postToUrl(url) {
+  const form = document.createElement("form");
+  form.method = "post";
+  form.action = url;
+  form.style.display = "none";
+  const input = document.createElement("input");
+  input.type = "hidden";
+  input.name = "csrf_token";
+  input.value = csrfToken();
+  form.appendChild(input);
+  document.body.appendChild(form);
+  submitFormDirectly(form);
+}
+
+function isPostLink($link) {
+  return String($link.attr("data-method") || "").toLowerCase() === "post";
+}
+
+// `ajaxSetup({beforeSend})` yerine global olay: isteğin kendi `beforeSend`i varsa ayar ezilirdi
+$(document).ajaxSend(function (event, xhr, settings) {
+  if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !settings.crossDomain) {
+    xhr.setRequestHeader("X-CSRFToken", csrfToken());
+  }
+});
+
 $(document)
   .on("click", "a.dialog-confirm", function (e) {
     e.preventDefault();
@@ -148,9 +192,21 @@ $(document)
     // Burada yalnızca onaylandığında devam edilir; reddetme de kapatma da işlemi iptal eder
     showConfirmDialog(message).then(function (result) {
       if (result === CONFIRM_DIALOG_RESULT.CONFIRM) {
-        window.location.href = $link.attr("href");
+        if (isPostLink($link)) {
+          postToUrl($link.attr("href"));
+        } else {
+          window.location.href = $link.attr("href");
+        }
       }
     });
+  })
+  .on("click", "a[data-method]:not(.dialog-confirm)", function (e) {
+    const $link = $(this);
+    if (!isPostLink($link)) {
+      return;
+    }
+    e.preventDefault();
+    postToUrl($link.attr("href"));
   });
 
 /* ------------------------------------ Para biçimlendirme ---------------------------------------

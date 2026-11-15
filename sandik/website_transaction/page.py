@@ -3,7 +3,7 @@ from flask_login import current_user
 
 from sandik.auth import db as auth_db
 from sandik.auth.requirement import admin_required
-from sandik.utils import LayoutPI, rollback_and_reload
+from sandik.utils import LayoutPI, rollback_and_reload, safe_referrer
 from sandik.utils.db_models import get_paging_variables
 from sandik.utils.forms import flask_form_to_dict, FormPI
 from sandik.utils.requirement import paging_must_be_verified
@@ -22,7 +22,7 @@ def add_website_transaction_page():
     form = forms.WebsiteTransactionForm(categories=db.get_categories(), form_title="Websitesi Masraf İşlemi Ekle ")
 
     if form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form, exclude=["category_list", "web_user"])
+        form_data = flask_form_to_dict(request_form=request.form, allowed=form, exclude=["category_list", "web_user"])
         try:
             web_user = auth_db.get_web_user(id=form.web_user.data) if form.web_user.data.isnumeric() else None
 
@@ -51,9 +51,9 @@ def website_transactions_of_sandik_page():
                            page_info=LayoutPI(title="Websitesi masrafları", active_dropdown="website-transactions"))
 
 
-@website_transaction_page_bp.route("wt-<int:website_transaction_id>/sil")
+@website_transaction_page_bp.route("wt-<int:website_transaction_id>/sil", methods=["POST"])
 @admin_required
 @website_transaction_required
 def delete_website_transaction_page(website_transaction_id):
     db.delete_website_transaction(website_transaction=g.website_transaction, deleted_by=current_user)
-    return redirect(request.referrer)
+    return redirect(safe_referrer(url_for("website_transaction_page_bp.website_transactions_of_sandik_page")))

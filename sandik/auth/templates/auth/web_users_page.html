@@ -40,23 +40,27 @@ jQuery(function($){
 		],
 		"rows": [
     {% for web_user in g.web_users %}
-      {
-        "id": `<span title='ID: {{ web_user.id }}'>{{ loop.index }}</span>`,
-        "email_address": `{{ web_user.email_address }}`,
-        "name_surname": `{{ web_user.name_surname }}`,
-        "is_active": `{{ "Onaylı" if web_user.is_active else "Onaysız" }}`,
-        "change_active":`
+      {# Hücreler `js_html` ile basılır: HTML'e karşı kaçırılır ve JS dizgisi olur (bkz. CLAUDE.md → "Şablonda kullanıcı verisi") #}
+      {% set id_cell %}<span title='ID: {{ web_user.id }}'>{{ loop.index }}</span>{% endset %}
+      {% set change_active_cell %}
           {% if web_user.is_active %}
-            {{ macros.switch_button(is_checked=True, confirm_msg="Kullanıcıyı engellemek istediğinizden emin misiniz?", url=url_for("auth_page_bp.block_web_user_page", web_user_id=web_user.id)) }}
+            {{ macros.switch_button(is_checked=True, confirm_msg="Kullanıcıyı engellemek istediğinizden emin misiniz?", url=url_for("auth_page_bp.block_web_user_page", web_user_id=web_user.id), method='post') }}
           {% else %}
-            {{ macros.switch_button(is_checked=False, confirm_msg="Kullanıcıyı onaylamak istediğinizden emin misiniz?", url=url_for("auth_page_bp.confirm_web_user_page", web_user_id=web_user.id)) }}
+            {{ macros.switch_button(is_checked=False, confirm_msg="Kullanıcıyı onaylamak istediğinizden emin misiniz?", url=url_for("auth_page_bp.confirm_web_user_page", web_user_id=web_user.id), method='post') }}
           {% endif %}
-        `,
-        "actions": `
+      {% endset %}
+      {% set actions_cell %}
           <tr>
             <td>{{ macros.button(url=url_for('auth_page_bp.update_web_user_page', web_user_id=web_user.id), icon='fa fa-pencil', type='info', size='xs', title='Düzenle') }}</td>
           </tr>
-        `,
+      {% endset %}
+      {
+        "id": {{ id_cell|js_html }},
+        "email_address": {{ web_user.email_address|js_html }},
+        "name_surname": {{ web_user.name_surname|js_html }},
+        "is_active": {{ ("Onaylı" if web_user.is_active else "Onaysız")|js_html }},
+        "change_active": {{ change_active_cell|js_html }},
+        "actions": {{ actions_cell|js_html }},
       },
     {% endfor %}
     ]

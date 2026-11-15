@@ -1,11 +1,11 @@
 from flask import Blueprint, current_app, flash, request, redirect, render_template, url_for, g, make_response
 from flask_login import login_user, login_required, logout_user, current_user
 
-from sandik.auth import db, forms, password_reset, utils
+from sandik.auth import db, forms, login_limit, password_reset, utils
 from sandik.auth.exceptions import RegisterException, EmailAlreadyExist, AuthException
 from sandik.auth.requirement import admin_required, web_user_required
 from sandik.auth.utils import Notification
-from sandik.utils import LayoutPI, get_next_url
+from sandik.utils import LayoutPI, get_next_url, safe_referrer
 from sandik.utils.forms import flask_form_to_dict, FormPI
 
 auth_page_bp = Blueprint(
@@ -26,7 +26,7 @@ def register_page():
             flash(u"Parolalar eşleşmiyor", 'danger')
         else:
             try:
-                form_data = flask_form_to_dict(request_form=request.form, exclude=['password_verification'])
+                form_data = flask_form_to_dict(request_form=request.form, allowed=form, exclude=['password_verification'])
                 web_user = db.add_web_user(is_active_=True, **form_data)
                 Notification.WebUserAuth.send_register_web_user_notification(registered_web_user=web_user)
 
@@ -45,22 +45,29 @@ def login_page():
     form = forms.LoginForm()
 
     if form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form, boolean_fields=['remember_me'])
-        remember_me = form_data.pop("remember_me")
-        web_user = db.get_web_user(**form_data)
-        if web_user:
-            if login_user(web_user, remember=remember_me):
-                flash("Giriş yapıldı", 'success')
-                next_page = get_next_url(request.args, default_url=url_for("general_page_bp.index_page"))
-                return redirect(next_page)
+        # Hatalı deneme sınırı: `auth/login_limit.py` (myilmaz_tr deposundaki uygulamalarla birebir aynı). Kilit
+        # mesajı tektir ve kayıtlı olmayan adres de sayılır; mesajdan hesabın varlığı anlaşılmaz.
+        email_address = form.email_address.data
+        ip = password_reset.client_ip(request)
+        if login_limit.is_locked(ip, email_address):
+            flash(login_limit.LOCKED, 'danger')
+        else:
+            web_user = db.get_web_user(email_address=email_address, password=form.password.data)
+            if not web_user:  # Kullanıcı yok ya da parola yanlış
+                login_limit.record_failure(ip, email_address)
+                flash("E-posta adresi veya parola doğru değil", 'danger')
             else:
-                flash("Kullanıcınız henüz onaylanmamış.", 'danger')
-        else:  # If password or username is incorrect
-            flash("E-posta adresi veya parola doğru değil", 'danger')
+                login_limit.record_success(ip, email_address)
+                if login_user(web_user, remember=bool(form.remember_me.data)):
+                    flash("Giriş yapıldı", 'success')
+                    next_page = get_next_url(request.args, default_url=url_for("general_page_bp.index_page"))
+                    return redirect(next_page)
+                else:
+                    flash("Kullanıcınız henüz onaylanmamış.", 'danger')
     return render_template("auth/login_page.html", page_info=FormPI(form=form, title="Giriş yap"))
 
 
-@auth_page_bp.route("/cikis")
+@auth_page_bp.route("/cikis", methods=["POST"])
 @login_required
 def logout_page():
     logout_user()
@@ -130,18 +137,18 @@ def web_users_page():
                            page_info=LayoutPI(title="Kullanıcı listesi", active_dropdown="web-users"))
 
 
-@auth_page_bp.route("/kullanici/<int:web_user_id>/onayla")
+@auth_page_bp.route("/kullanici/<int:web_user_id>/onayla", methods=["POST"])
 @admin_required
 def confirm_web_user_page(web_user_id):
     db.confirm_web_user(web_user_id, updated_by=current_user)
-    return redirect(request.referrer)
+    return redirect(safe_referrer(url_for("auth_page_bp.web_users_page")))
 
 
-@auth_page_bp.route("/kullanici/<int:web_user_id>/engelle")
+@auth_page_bp.route("/kullanici/<int:web_user_id>/engelle", methods=["POST"])
 @admin_required
 def block_web_user_page(web_user_id):
     db.block_web_user(web_user_id, updated_by=current_user)
-    return redirect(request.referrer)
+    return redirect(safe_referrer(url_for("auth_page_bp.web_users_page")))
 
 
 @web_user_required
@@ -151,7 +158,7 @@ def update_web_user_page_base(web_user_id):
     if not form.is_submitted():
         form.fill_from_web_user(web_user=g.web_user)
     elif form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form, exclude=["email_address"], with_empty_fields=True)
+        form_data = flask_form_to_dict(request_form=request.form, allowed=form, exclude=["email_address"], with_empty_fields=True)
         try:
             db.update_web_user(web_user=g.web_user, updated_by=current_user, **form_data)
             flash("Kullanıcı bilgileri güncellendi", "success")

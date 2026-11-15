@@ -10,7 +10,7 @@
           <div class="panel-heading font-bold">{{ page_info.form.form_title }}</div>
           <div class="panel-body">
             {% for category, msg in get_flashed_messages(with_categories=true) %}
-              <div class="alert alert-{{ category }} text-center" role="alert">{{ msg|safe }}</div>
+              <div class="alert alert-{{ category }} text-center" role="alert">{{ msg|flash_message }}</div>
             {% endfor %}
             {% with form = page_info.form %}
               {% include 'auth/parts/reminder_preference_form.html' %}
