@@ -47,6 +47,10 @@ def initialize_flask() -> Flask:
         SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax", SESSION_COOKIE_SECURE=secure_cookies,
         REMEMBER_COOKIE_HTTPONLY=True, REMEMBER_COOKIE_SAMESITE="Lax", REMEMBER_COOKIE_SECURE=secure_cookies,
     )
+    # CSRF jetonu oturum boyunca geçerlidir (varsayılan 1 saatti): siteye çoğunlukla telefondan giriliyor ve sekme
+    # saatlerce açık kalıyor; süre dolunca açık sayfadaki her düğme (çıkış dahil) 400 verirdi. Jeton yine oturuma
+    # bağlıdır, oturum kapanınca geçersiz olur.
+    flask_app.config["WTF_CSRF_TIME_LIMIT"] = None
     flask_app.json_encoder = CustomJSONEncoder
     return flask_app
 

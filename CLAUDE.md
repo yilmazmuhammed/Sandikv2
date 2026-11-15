@@ -1034,6 +1034,7 @@ Bir güvenlik incelemesinde bulunan açıklar kapatıldı; aşağıdaki kurallar
   ya da başka bir siteyse varsayılan adres. Çıplak `redirect(request.referrer)` yazılmaz (yoksa 500 veriyordu).
 - `/api/borc-gecmisi` GET'tir ve etkilenmez (CSRF yalnızca POST/PUT/PATCH/DELETE'e bakar); Cüzdan'ın süreç
   içi isteği oturum açmaz, çerez yazmaz.
+- CSRF jetonunun süresi yoktur (`WTF_CSRF_TIME_LIMIT = None`): sekme saatlerce açık kalsa da düğmeler çalışır; jeton oturuma bağlıdır.
 
 ### Giriş, yönlendirme, toplu atama, çerezler
 
