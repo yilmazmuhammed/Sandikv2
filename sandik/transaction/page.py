@@ -28,7 +28,7 @@ def add_money_transaction_by_manager_page(sandik_id):
     form = forms.MoneyTransactionForm(sandik=g.sandik, form_title="Para giriş/çıkışı")
 
     if form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form, exclude=["member"],
+        form_data = flask_form_to_dict(request_form=request.form, allowed=form, exclude=["member"],
                                        boolean_fields=["use_untreated_amount", "pay_future_payments"])
         try:
             member, _ = sandik_utils.validate_whose_of_sandik(sandik=g.sandik, member_id=form.member.data)
@@ -68,7 +68,7 @@ def add_money_transaction_for_debt_payment_by_manager_page(sandik_id):
     form = forms.DebtPaymentForm(sandik=g.sandik, form_title="Borç ödemesi")
 
     if form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form, exclude=["member", "debt"])
+        form_data = flask_form_to_dict(request_form=request.form, allowed=form, exclude=["member", "debt"])
         try:
             member = sandik_db.get_member(id=form.member.data)
             if not member:
@@ -115,7 +115,7 @@ def add_money_transaction_for_contribution_payment_by_manager_page(sandik_id):
     form = forms.ContributionPaymentForm(sandik=g.sandik, form_title="Aidat ödemesi")
 
     if form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form, exclude=["member", "contribution"])
+        form_data = flask_form_to_dict(request_form=request.form, allowed=form, exclude=["member", "contribution"])
         try:
             member = sandik_db.get_member(id=form.member.data)
             if not member:

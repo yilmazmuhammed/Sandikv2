@@ -101,7 +101,7 @@ def create_bank_account_page():
     form = forms.BankAccountForm()
 
     if form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form, boolean_fields=["is_primary"])
+        form_data = flask_form_to_dict(request_form=request.form, allowed=form, boolean_fields=["is_primary"])
         try:
             if request.args.get("sandik"):
                 sandik = sandik_db.get_sandik(id=request.args.get("sandik"))
@@ -145,7 +145,7 @@ def update_bank_account_page(bank_account_id):
         form.fill_with_bank_account(bank_account=bank_account)
 
     if form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form, boolean_fields=["is_primary"], with_empty_fields=True)
+        form_data = flask_form_to_dict(request_form=request.form, allowed=form, boolean_fields=["is_primary"], with_empty_fields=True)
         try:
             db.update_bank_account(bank_account=bank_account, updated_by=current_user, **form_data)
 

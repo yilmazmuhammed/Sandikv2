@@ -22,7 +22,7 @@ def add_website_transaction_page():
     form = forms.WebsiteTransactionForm(categories=db.get_categories(), form_title="Websitesi Masraf İşlemi Ekle ")
 
     if form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form, exclude=["category_list", "web_user"])
+        form_data = flask_form_to_dict(request_form=request.form, allowed=form, exclude=["category_list", "web_user"])
         try:
             web_user = auth_db.get_web_user(id=form.web_user.data) if form.web_user.data.isnumeric() else None
 

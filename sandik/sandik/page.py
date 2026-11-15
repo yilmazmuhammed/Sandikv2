@@ -37,7 +37,7 @@ def create_sandik_page():
     form = forms.SandikForm()
 
     if form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form)
+        form_data = flask_form_to_dict(request_form=request.form, allowed=form)
         sandik = db.create_sandik(created_by=current_user, **form_data)
         db.save()
         return redirect(url_for("sandik_page_bp.sandik_detail_page", sandik_id=sandik.id))
@@ -52,7 +52,7 @@ def update_sandik_page(sandik_id):
     form = forms.UpdateSandikForm(sandik=g.sandik)
 
     if form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form, with_empty_fields=True)
+        form_data = flask_form_to_dict(request_form=request.form, allowed=form, with_empty_fields=True)
         utils.update_sandik(sandik=g.sandik, updated_by=current_user, **form_data)
 
         return redirect(url_for("sandik_page_bp.sandik_detail_page", sandik_id=sandik_id))
@@ -410,7 +410,7 @@ def update_member_preferences_page(sandik_id):
     form = forms.MemberPreferencesForm()
 
     if form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form, boolean_fields=["pay_at_beginning_of_month"])
+        form_data = flask_form_to_dict(request_form=request.form, allowed=form, boolean_fields=["pay_at_beginning_of_month"])
         db.update_member_preferences(member=g.member, updated_by=current_user, preferences=form_data)
         return redirect(url_for("sandik_page_bp.update_member_preferences_page", sandik_id=sandik_id))
 
@@ -450,7 +450,7 @@ def create_sandik_authority_page(sandik_id):
     form = forms.SandikAuthorityForm()
 
     if form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form, boolean_fields=["is_admin", "can_read", "can_write"])
+        form_data = flask_form_to_dict(request_form=request.form, allowed=form, boolean_fields=["is_admin", "can_read", "can_write"])
         db.create_sandik_authority(created_by=current_user, sandik_ref=g.sandik, **form_data)
         return redirect(url_for("sandik_page_bp.sandik_authorities_page", sandik_id=sandik_id))
 
@@ -539,7 +539,7 @@ def send_sms_page(sandik_id):
     form = forms.SendSmsForm()
 
     if form.validate_on_submit():
-        form_data = flask_form_to_dict(request_form=request.form)
+        form_data = flask_form_to_dict(request_form=request.form, allowed=form)
         utils.send_sms_from_sandik(sandik=g.sandik, created_by=current_user, **form_data)
         return redirect(url_for("sandik_page_bp.send_sms_page", sandik_id=sandik_id))
 

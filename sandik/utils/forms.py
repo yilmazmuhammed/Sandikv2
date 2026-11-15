@@ -81,8 +81,22 @@ def custom_json_loads(string):
     return ret
 
 
+def form_field_names(form) -> set:
+    """Formun kendi alan adları (`csrf_token`/`submit` dahil; onları `flask_form_to_dict` zaten atar)"""
+    return {field.name for field in form}
+
+
 def flask_form_to_dict(request_form: MultiDict, exclude=None, boolean_fields=None, default_values=None,
-                       json_fields=None, json_loads=custom_json_loads, with_empty_fields=False):
+                       json_fields=None, json_loads=custom_json_loads, with_empty_fields=False, allowed=None):
+    """İstekteki form verisini sözlüğe çevirir; sonuç çoğu yerde entity'ye `**kwargs` olarak gider.
+
+    `allowed`: yalnızca bu adlardaki alanlar alınır (bir form nesnesi verilirse onun alan adları,
+    `form_field_names`). Verilmezse istekteki **bütün** alanlar geçer: formda olmayan bir ad (`password_hash`,
+    `is_active_`, `sandik_ref` ...) elle eklenerek entity'ye yazdırılabilir (toplu atama). Kullanıcının
+    gönderdiği veriyle entity oluşturan/güncelleyen yeni çağrılarda mutlaka verilmelidir.
+    """
+    if allowed is not None and not isinstance(allowed, (set, list, tuple, frozenset)):
+        allowed = form_field_names(allowed)
     if default_values is None:
         default_values = {}
     if json_fields is None:
@@ -96,7 +110,7 @@ def flask_form_to_dict(request_form: MultiDict, exclude=None, boolean_fields=Non
     result = {
         key: request_form.getlist(key)[0] if len(request_form.getlist(key)) == 1 else request_form.getlist(key)
         for key in request_form
-        if key not in exclude and not (
+        if key not in exclude and (allowed is None or key in allowed) and not (
                 not with_empty_fields and len(request_form.getlist(key)) == 1 and request_form.getlist(key)[0] == ""
         )
     }
