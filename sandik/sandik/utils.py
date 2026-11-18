@@ -412,6 +412,11 @@ def rule_formula_validator(formula_string, variables, operators, formula_type):
         raise InvalidArgument(f"type is {formula_type} not in {SandikRule.FORMULA_TYPE.strings.keys()}")
 
     data = formula_string.replace(' ', '')
+    # `//` ve `**` işaret tek tek kabul edildiği için geçiyordu; anlamları belirsiz (ExprTk'te `//` yorum
+    # başlatırdı, Python'da tam sayı bölmesidir), formül hesaplayıcı da ikisini reddeder.
+    for forbidden in ("//", "**"):
+        if forbidden in data:
+            raise InvalidRuleCharacter(data.index(forbidden))
     operators = sorted(operators, reverse=True, key=len)
     i = 0
     comp_operator_counts = 0
