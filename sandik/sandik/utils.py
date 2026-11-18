@@ -424,7 +424,7 @@ def rule_formula_validator(formula_string, variables, operators, formula_type):
             continue
         # Sayı tek tek rakam olarak değil bütün olarak okunur; aksi hâlde ondalık ayracı (".")
         # geçersiz karakter sayılıyor ve `{hisse_toplam_aidat}*1.5` gibi bir kural
-        # kaydedilemiyordu (oysa cexprtk ondalığı destekler). "1.2.3" yine reddedilir:
+        # kaydedilemiyordu (oysa formül hesaplayıcı ondalığı destekler). "1.2.3" yine reddedilir:
         # kalıp "1.2"yi yer, sıradaki "." hiçbir dala uymaz.
         number_match = RULE_NUMBER_PATTERN.match(data, i)
         if number_match:

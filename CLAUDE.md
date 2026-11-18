@@ -38,8 +38,9 @@ Kilit kavramlar:
 - **PieceOfDebt**: güven bağlı sandıkta bir borcun "kimin parasından" verildiğini tutar.
 - **Sandık tipleri**: `CLASSIC` (klasik) ve `WITH_TRUST_RELATIONSHIP` (güven bağlı). Borç limiti ve
   PieceOfDebt davranışı tipe göre değişir — yeni kod yazarken **iki tipi de** düşün.
-- **SandikRule**: borç limiti / taksit sayısı / hisse sayısı formülleri. `cexprtk` ile değerlendirilir,
-  `{uye_toplam_aidat}` gibi değişkenler içerir. Kural yoksa `NoValidRuleFound` atılır.
+- **SandikRule**: borç limiti / taksit sayısı / hisse sayısı formülleri. Kendi hesaplayıcımızla
+  (`utils/formula.py`, bkz. "Kural formülleri") değerlendirilir, `{uye_toplam_aidat}` gibi değişkenler
+  içerir. Kural yoksa `NoValidRuleFound` atılır.
 - **Log**: neredeyse her yazma işlemi `db.py` katmanında bir `Log` satırı da oluşturur.
 - **`WebUser.preferences`**: kişiye ait tercihler, `Member.preferences` ile aynı kalıpta bir Json
   sütunu. Şimdilik yalnızca ödeme hatırlatma günlerini tutar; yeni tercihler için sütun/tablo
@@ -1093,11 +1094,39 @@ sayfalama olmadan daha fazla kısalmaz. Güven bağlı sandığın özet sayfala
 bakiyeyi ayrı sorgularla hesaplar; borç limiti (`max_amount_can_borrow`) de hisse başına kural
 değerlendirir.
 
+## Kural formülleri (`sandik/utils/formula.py`)
+
+Sandık kurallarının formülleri (`SandikRule.calculate_formula`) eskiden `cexprtk` ile (ExprTk C++ kütüphanesi)
+hesaplanıyordu. Paket kurulu hâlde **~108 MB** tutuyordu ve PythonAnywhere'in disk kotası 2 GB'dir; bu yüzden
+2026-11'de yerine ek bağımlılığı olmayan saf Python bir hesaplayıcı yazıldı (kullanıcı istedi). `eval`/`ast`
+kullanılmaz: kendi sözcük çözümleyicisi ve özyinelemeli ayrıştırıcısı vardır, tanımadığı her şeyde
+`FormulaError` (bir `ValueError`) atar.
+
+- **Sonuçlar ExprTk ile birebir aynıdır**, kayıtlı formüller değişmeden çalışır. Sonuç `float`tır; karşılaştırma
+  1/0 verir; sıfıra bölme inf/nan verir, hata atmaz. Öncelik, işaret birleştirme (`5--3`), `=`/`==`/`<>`,
+  örtük çarpma (`2(3)`), yorumlar (`//`, `#`, `/* */`) ExprTk'in kaynak kodundan aynen alındı; ayrıntılar modülün
+  başındaki açıklamadadır.
+- **Sayı metni de ExprTk'in algoritmasıyla okunur** (`_parse_number`), Python'un `float()`uyla değil: ExprTk bazı
+  ondalıkları 1 ulp farklı okur (`2.486` → 2.4859999999999998) ve taksit/hisse sayısı `int()` ile kesildiği için
+  bu fark sonucu değiştirebilirdi.
+- `{x}//2` gibi bir formül **`{x}`** demektir: ExprTk'te `//` yorum başlatır ve form doğrulayıcısı `/` işaretine
+  izin verdiği için bu yazım kaydedilebilir. Davranış bilerek korundu.
+- **Bilinçli farklar** (form doğrulayıcısı harf, virgül, `;`, `{}` kabul etmediği için kayıtlı formüllerde
+  olamazlar): `nand`/`nor`/`xor` gibi işleçler, `;` ile çoklu ifade, `{}` parantezi, değişken/atama ve
+  `abs`/`min`/`max`/`floor`/`ceil`/`round`/`trunc`/`sqrt`/`not` dışındaki fonksiyonlar desteklenmez
+  (cexprtk hesaplıyordu, burada `FormulaError`). Desteklenen fonksiyonlar ExprTk'in tuhaflıklarıyla birlikte
+  taklit edilir (`trunc(1e20)` = -9.22e18, `abs(-0)` = -0).
+- Testler `tests/test_formula.py`: cexprtk'in verdiği değerlerle doldurulmuş bir tablo + geçersiz formüller +
+  kural akışı. Ortamda `cexprtk==0.4.1` kuruluysa üç üreteçle (doğrulayıcının üreteceği biçimler, iç içe
+  rastgele ifadeler, rastgele karakter dizileri) 15.000 formül iki hesaplayıcıda karşılaştırılır; kurulu değilse
+  atlanır. Hesaplayıcı değişirse bu karşılaştırma bir 3.9 ortamında çalıştırılmalıdır:
+  `uv venv -p 3.9 /tmp/v39 && uv pip install -p /tmp/v39/bin/python -r requirements.txt -r requirements-dev.txt cexprtk==0.4.1`.
+  (Yazılırken 1 milyondan fazla rastgele formülde, işaretli sıfır dahil, hiç fark çıkmadı.)
+
 ## Bağımlılıklar
 
 Sunucu **Python 3.9**'dur: `requirements.txt`teki sürümler 3.9'u destekleyen son sürümlerdir (2026-11'de
-güncellendi). `cexprtk` 0.4.1'de durur: 0.4.2 yalnızca kaynak kodu olarak yayınlandı, sunucuda C++ derlemesi
-ister. Uygulama ana sitenin altında yayınlandığında sunucuya kurulan, ana deponun kökündeki birleşik
+güncellendi). `cexprtk` 2026-11'de kaldırıldı (kurulu hâlde ~108 MB; bkz. "Kural formülleri"). Uygulama ana sitenin altında yayınlandığında sunucuya kurulan, ana deponun kökündeki birleşik
 `requirements.txt`tir; buradaki dosya onunla aynı sürümlerde tutulur.
 
 ## Yerelde çalıştırma ve test

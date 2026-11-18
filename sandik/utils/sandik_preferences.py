@@ -40,7 +40,7 @@ def remaining_debt_balance(sandik, whose):
                       f"<br>Aidat miktarı: {sandik.amount_str(whose.total_amount_of_paid_contribution())}"
         max_debt_of_share = base_sandik_rule_function(sandik=sandik, rule_type=SandikRule.TYPE.MAX_AMOUNT_OF_DEBT,
                                                       no_rule_msg=no_rule_msg, whose=whose)
-        # `cexprtk` float döndürdüğü için Decimal'a str üzerinden çevrilir (ikilik artık kalmasın).
+        # Formül hesaplayıcı (`utils/formula.py`) float döndürdüğü için Decimal'a str üzerinden çevrilir (ikilik artık kalmasın).
         max_debt_balance = Decimal(str(max_debt_of_share))
         unpaid_installments_amount = whose.total_amount_unpaid_installments()
         return max_debt_balance - unpaid_installments_amount
