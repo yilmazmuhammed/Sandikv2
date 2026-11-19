@@ -7,6 +7,7 @@ from wtforms.validators import NumberRange, Optional, Email, ValidationError
 from sandik.auth import db as auth_db
 from sandik.sandik import db, utils
 from sandik.sandik.exceptions import InvalidRuleVariable, InvalidRuleCharacter, RuleOperatorCountException, \
+    InvalidRuleFormula, \
     NoValidRuleFound
 from sandik.utils import money, sandik_preferences
 from sandik.utils.db_models import RemainingMoneyPreference, Sandik, SmsPackage, SandikRule
@@ -441,7 +442,7 @@ class SandikRuleFormulaValidator:
             utils.rule_formula_validator(formula_string=field.data, variables=self.variable_list,
                                          operators=self.comparison_operators + self.arithmetic_operators,
                                          formula_type=self.formula_type)
-        except RuleOperatorCountException as e:
+        except (RuleOperatorCountException, InvalidRuleFormula) as e:
             raise ValidationError(str(e))
         except InvalidRuleVariable as variable_name:
             raise ValidationError(f"{self.message}: {variable_name} geçerli bir değişken değil")

@@ -6,13 +6,14 @@ olması gerekir. Tablodaki değerler cexprtk 0.4.1'in verdiği değerlerdir. Ort
 """
 import math
 import random
+import re
 from decimal import Decimal
 
 import pytest
 from pony.orm import db_session, flush
 
 from sandik.sandik import utils as sandik_utils
-from sandik.sandik.exceptions import InvalidRuleCharacter
+from sandik.sandik.exceptions import InvalidRuleCharacter, InvalidRuleFormula
 from sandik.utils import period as period_utils, sandik_preferences
 from sandik.utils.db_models import SandikRule
 from sandik.utils.formula import FormulaError, evaluate_expression
@@ -263,3 +264,79 @@ def test_matches_exprtk_on_random_validator_formulas():
             if not (math.isfinite(b) and abs(a - b) <= 8 * math.ulp(b)):
                 differences.append((expression, expected, actual))
     assert differences == []
+
+
+# ----------------------------------------------------------------------------------------------------------
+# Kural eklenirken formülün hesaplanabilmesi
+# ----------------------------------------------------------------------------------------------------------
+
+def _validate(formula, formula_type):
+    variables = SandikRule.FORMULA_VARIABLE.strings.keys()
+    operators = list(SandikRule.COMPARISON_OPERATOR.strings) + list(SandikRule.ARITHMETIC_OPERATOR.strings)
+    sandik_utils.rule_formula_validator(formula_string=formula, variables=variables, operators=operators,
+                                        formula_type=formula_type)
+
+
+@pytest.mark.parametrize("formula, formula_type", [
+    ("+", SandikRule.FORMULA_TYPE.VALUE),  # sunucuda bu biçimde kayıtlı bozuk kurallar vardı
+    ("{hisse_toplam_aidat}*", SandikRule.FORMULA_TYPE.VALUE),
+    ("*3", SandikRule.FORMULA_TYPE.VALUE),
+    ("5/*2", SandikRule.FORMULA_TYPE.VALUE),
+    ("{borc-miktari}<", SandikRule.FORMULA_TYPE.CONDITION),
+    ("<5000", SandikRule.FORMULA_TYPE.CONDITION),
+    ("{borc-miktari}<=+", SandikRule.FORMULA_TYPE.CONDITION),
+])
+def test_incomplete_formula_is_rejected_when_the_rule_is_added(formula, formula_type):
+    with pytest.raises(InvalidRuleFormula):
+        _validate(formula, formula_type)
+
+
+@pytest.mark.parametrize("formula, formula_type", [
+    ("", SandikRule.FORMULA_TYPE.CONDITION),  # koşul boş bırakılabilir: her zaman geçerli
+    ("{borc-miktari}/{uye_toplam_aidat}", SandikRule.FORMULA_TYPE.VALUE),
+    ("-{hisse_toplam_aidat}+5000", SandikRule.FORMULA_TYPE.VALUE),
+    ("{hisse_toplam_aidat}*3<=5000", SandikRule.FORMULA_TYPE.CONDITION),
+])
+def test_complete_formula_is_accepted(formula, formula_type):
+    _validate(formula, formula_type)
+
+
+@pytest.fixture
+def app(monkeypatch):
+    from sandik.app import create_app
+    flask_app = create_app()
+    flask_app.config.update(TESTING=True, SECRET_KEY="test")
+    flask_app.secret_key = "test"
+    return flask_app
+
+
+def test_add_rule_page_shows_the_error_and_saves_nothing(app):
+    base_url = "https://localhost"
+    with db_session:
+        manager = factories.make_web_user()
+        sandik = factories.make_sandik(created_by=manager)
+        flush()
+        ids = dict(manager=manager.id, sandik=sandik.id)
+
+    client = app.test_client()
+    with client.session_transaction(base_url=base_url) as session:
+        session["_user_id"] = str(ids["manager"])
+        session["_fresh"] = True
+    url = f"/sandik/{ids['sandik']}/sandik-kurali-ekle"
+    page = client.get(url, base_url=base_url).get_data(as_text=True)
+    token = re.search(r'<meta name="csrf-token" content="([^"]+)"', page).group(1)
+
+    def post(value_formula):
+        return client.post(url, base_url=base_url, headers={"Referer": base_url + url}, data={
+            "csrf_token": token, "type": str(SandikRule.TYPE.MAX_NUMBER_OF_SHARE), "condition_formula": "",
+            "value_formula": value_formula})
+
+    response = post("+")
+    assert response.status_code == 200
+    assert "Formül eksik ya da hatalı yazılmış" in response.get_data(as_text=True)
+    with db_session:
+        assert SandikRule.select().count() == 0
+
+    assert post("5").status_code == 302
+    with db_session:
+        assert [r.value_formula for r in SandikRule.select()] == ["5"]

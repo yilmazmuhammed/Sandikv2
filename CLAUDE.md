@@ -1116,6 +1116,13 @@ olmaması gereken her karakter `FormulaError` (bir `ValueError`) verir.
 - **Form doğrulayıcısı `//` ve `**`'yı reddeder** (`sandik/utils.py → rule_formula_validator`): işaretler tek tek
   kabul edildiği için geçiyorlardı ve anlamları iki kütüphanede farklıdır (ExprTk'te `//` yorum başlatırdı,
   Python'da tam sayı bölmesidir). Sunucuda böyle bir kural yoktu.
+- **Formül kural eklenirken bir kez hesaplanır** (kullanıcı istedi): `rule_formula_validator` karakterleri
+  denetledikten sonra değişkenlerin yerine 1 koyup formülü `formula.py` ile hesaplar; hesaplanamazsa
+  `InvalidRuleFormula` atar ve form "Formül eksik ya da hatalı yazılmış" der. Eskiden yalnızca karakterlere
+  bakıldığı için `+`, `5<`, `{borc-miktari}*` gibi yarım formüller kaydediliyor, kural ilk kullanıldığında hata
+  veriyordu (sunucuda değeri yalnızca `+` olan kurallar bu yüzden var; onlar kendiliğinden düzelmez). Boş koşul
+  formülü hesaplanmaz (her zaman geçerli demektir). Sıfıra bölme hata değildir, deneme 1 ile yapıldığı için de
+  çıkmaz.
 - Testler `tests/test_formula.py`. Ortamda `cexprtk==0.4.1` kuruluysa sunucudaki kural biçimleri ve formun kabul
   edeceği rastgele formüller iki hesaplayıcıda karşılaştırılır; kurulu değilse atlanır. Hesaplayıcı değişirse bir
   3.9 ortamında çalıştırılmalıdır:

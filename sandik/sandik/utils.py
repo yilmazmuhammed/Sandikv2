@@ -12,10 +12,12 @@ from sandik.sandik import db
 from sandik.sandik.exceptions import MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
     ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException, InvalidSmsType, \
     InvalidRuleVariable, InvalidRuleCharacter, InvalidArgument, RuleOperatorCountException, ThereIsNoMember, \
+    InvalidRuleFormula, \
     ThereIsNoShare, RemoveMemberException, RemoveShareException
 from sandik.sandik.exceptions import UpdateMemberException
 from sandik.transaction import utils as transaction_utils, db as transaction_db
 from sandik.utils import period as period_utils, sandik_preferences
+from sandik.utils.formula import FormulaError, evaluate_expression as evaluate_formula_expression
 from sandik.utils.db_models import Member, Share, MoneyTransaction, TrustRelationship, SmsPackage, Sandik, SandikRule, \
     SubReceipt, Debt
 
@@ -448,6 +450,18 @@ def rule_formula_validator(formula_string, variables, operators, formula_type):
         raise RuleOperatorCountException("Değer formülünde karşılaştırma işareti bulunamaz")
     if formula_type == SandikRule.FORMULA_TYPE.CONDITION and comp_operator_counts > 1:
         raise RuleOperatorCountException("Koşul formülünde en fazla 1 tane karşılaştırma işareti bulunmalıdır.")
+
+    # Karakterler geçerli olsa da formül yarım kalmış olabilir ("+", "5<", "{borc-miktari}*"); bunlar eskiden
+    # kaydediliyor, kural ilk kullanıldığında hata veriyordu. Değişkenlerin yerine 1 konup bir kez hesaplanır.
+    if data:
+        sample = data
+        for variable in variables:
+            sample = sample.replace("{" + variable + "}", "1")
+        try:
+            evaluate_formula_expression(sample)
+        except FormulaError:
+            raise InvalidRuleFormula("Formül eksik ya da hatalı yazılmış: her işaretin iki yanında bir sayı ya da "
+                                     "değişken olmalıdır.")
 
 
 def add_sandik_rule_to_sandik(condition_formula, value_formula, type, sandik, **kwargs):

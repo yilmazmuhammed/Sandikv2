@@ -152,6 +152,10 @@ class RuleOperatorCountException(SandikRuleException):
     pass
 
 
+class InvalidRuleFormula(SandikRuleException):
+    pass
+
+
 class InvalidArgument(SandikRuleException):
     pass
 
