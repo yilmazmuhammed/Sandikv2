@@ -64,7 +64,6 @@ Kilit kavramlar:
 | `transaction` | `/sandik/<id>/` | Para giriş/çıkışı, aidat, borç, taksit |
 | `website_transaction` | `/websitesi-masraflari/` | Sitenin kendi gider kaydı |
 | `backup` | `/yedek/` | Veritabanının JSON olarak dışa/içe aktarımı |
-| `paw` | `/paw/` | PythonAnywhere: git pull + bağımlılık kurulumu + webapp reload (aşağıya bak) |
 | `bot` | — | E-posta (`email_bot.py`), SMS (NetGSM), Kuveyt Türk API |
 | `bugfixs` | — | Tek seferlik veri düzeltme scriptleri (`.env`'i, yani **gerçek veritabanını** kullanır) |
 | `blueprint_template` | — | Yeni modül açarken kopyalanacak iskelet |
@@ -74,24 +73,13 @@ Tasks). Aidat oluşturur ve sırası gelen ödeme hatırlatma e-postalarını g�
 "Gecelik işler ve hatırlatma e-postaları". (Procfile'daki `clock` satırı Heroku dönemindendir;
 PythonAnywhere Procfile'ı yok sayar.)
 
-### `/paw`: sunucuyu güncelleme
+### `/paw` bu depoda yok
 
-Site yöneticisine (`admin_required`) açık tek sayfa, üç düğme — **bu sırayla** basılır: kaynak kodu
-güncelle (`git pull`) → bağımlılıkları kur (`pip install -r requirements.txt`) → uygulamayı yenile
-(PythonAnywhere API). Yeni paket gerektiren bir değişiklikte ortadaki atlanırsa yeniden başlatılan
-uygulama import hatasıyla açılamaz.
-
-- Üç uç da (`paw/api.py`) sunucuda değişiklik yaptığı için yalnızca **POST** kabul eder.
-- `utils.pip_install()` python'u `sys.executable`'dan değil `sys.prefix`'ten bulur (uWSGI altında
-  `sys.executable` uwsgi'yi gösterebilir) ve 240 sn'de bırakır (PythonAnywhere web isteklerini
-  5 dakikada keser). Komutlar `subprocess` ile çalışır; GitPython bağımlılığı kaldırıldı.
-- Sayfa pip çıktısını `.text()` ile yazar (`httpx<1,>=0.24` gibi satırlar `.html()` ile bozulur) ve
-  bu isteği asenkron atar; diğer ikisi senkrondur.
-- Uygulama bir ana sitenin altına mount edilmişse (`www.myilmaz.tr/sandikv2`) deploy o sitenin
-  kendi `/paw`ından yapılır: orada bu depo submodule olarak, ayrık HEAD'de durur ve buradaki
-  `git pull` çalışmaz. Bu modül uygulama tek başına yayınlandığında geçerlidir.
-- Modül `dirilis_yonetim`deki eşiyle **birebir aynıdır** (yalnızca import yolu ve ortam değişkeni
-  öneki farklı); birinde yapılan değişiklik diğerine de taşınmalıdır.
+Sunucuyu güncelleme sayfası (git pull + bağımlılık kurulumu + webapp reload) eskiden burada da vardı
+(`sandik/paw/`, `dirilis_yonetim`dekinin kopyası); 2026-11'de kaldırıldı (kullanıcı istedi). Uygulama
+`www.myilmaz.tr/sandikv2` altında yayınlandığı için deploy zaten ana sitenin `/paw`ından yapılıyordu:
+**`/paw` artık yalnızca `myilmaz_tr` deposundadır** (`myilmaz_tr/paw/`). Sandıkv2 bir gün tek başına
+yayınlanırsa ve böyle bir sayfa gerekirse oradan alınır.
 
 ## Üye tercihleri (`/sandik/<id>/tercihlerim`)
 
@@ -426,7 +414,7 @@ if migrations.is_enabled():
 db.generate_mapping(create_tables=True)
 ```
 
-Böylece deploy **elle bir adım gerektirmez**: `/paw` → git pull → reload yeter.
+Böylece deploy **elle bir adım gerektirmez**: ana sitenin `/paw`ından git pull → reload yeter.
 
 - **Yeni taşıma `steps.py` listesinin sonuna eklenir**, var olanlar değiştirilmez. `db_models.py`
   içindeki model de güncellenmelidir: taşıma var olan veritabanlarını, model sıfırdan kurulanları
@@ -715,7 +703,7 @@ satırıyla işaret etmesi gerekir. Uygulama kendi alan adının kökünde çal�
 Dizine girmemesi gereken sayfalar robots.txt ile **kapatılmaz**, `<meta name="robots">` ile
 işaretlenir: robots.txt ile kapatılan bir sayfayı bot açamaz, dolayısıyla `noindex` etiketini de
 göremez ve sayfa dizinde kalmaya devam eder. `DISALLOWED_PATHS` yalnızca gezilmesi anlamsız
-olanları (API'ler, indirmeler, yedek, `/paw`, giriş isteyen bölümler) kapatır.
+olanları (API'ler, indirmeler, yedek, giriş isteyen bölümler) kapatır.
 
 ### Yapısal veri (schema.org)
 
@@ -1029,7 +1017,7 @@ Bir güvenlik incelemesinde bulunan açıklar kapatıldı; aşağıdaki kurallar
   korunur. Jeton `utils/layout.html` ve `auth/auth_layout.html`deki `<meta name="csrf-token">`dadır; tanıtım
   kabuğuna konmadı (herkese açık sayfalarda oturum çerezi açılmasın), oradaki formlar jetonu kendileri taşır
   (`/tercih/<token>`). jQuery AJAX'ın GET dışındaki isteklerine `X-CSRFToken` kendiliğinden eklenir
-  (`ajaxSend`); `/paw` sayfası ayrıca açıkça yazar.
+  (`ajaxSend`).
 - İşlemden sonra geri dönüş `safe_referrer(varsayılan)` ile yapılır (`utils/__init__.py`): `Referer` yoksa
   ya da başka bir siteyse varsayılan adres. Çıplak `redirect(request.referrer)` yazılmaz (yoksa 500 veriyordu).
 - `/api/borc-gecmisi` GET'tir ve etkilenmez (CSRF yalnızca POST/PUT/PATCH/DELETE'e bakar); Cüzdan'ın süreç

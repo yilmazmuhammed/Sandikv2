@@ -320,7 +320,6 @@ DISALLOWED_PATHS = (
     "/sandik/",
     "/indir/",
     "/yedek/",
-    "/paw/",
     "/websitesi-masraflari/",
     "/ana-sayfa",
     "/giris",
