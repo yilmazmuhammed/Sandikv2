@@ -38,8 +38,9 @@ Kilit kavramlar:
 - **PieceOfDebt**: güven bağlı sandıkta bir borcun "kimin parasından" verildiğini tutar.
 - **Sandık tipleri**: `CLASSIC` (klasik) ve `WITH_TRUST_RELATIONSHIP` (güven bağlı). Borç limiti ve
   PieceOfDebt davranışı tipe göre değişir — yeni kod yazarken **iki tipi de** düşün.
-- **SandikRule**: borç limiti / taksit sayısı / hisse sayısı formülleri. `cexprtk` ile değerlendirilir,
-  `{uye_toplam_aidat}` gibi değişkenler içerir. Kural yoksa `NoValidRuleFound` atılır.
+- **SandikRule**: borç limiti / taksit sayısı / hisse sayısı formülleri. simpleeval üzerindeki
+  `utils/formula.py` ile (bkz. "Kural formülleri") değerlendirilir, `{uye_toplam_aidat}` gibi değişkenler
+  içerir. Kural yoksa `NoValidRuleFound` atılır.
 - **Log**: neredeyse her yazma işlemi `db.py` katmanında bir `Log` satırı da oluşturur.
 - **`WebUser.preferences`**: kişiye ait tercihler, `Member.preferences` ile aynı kalıpta bir Json
   sütunu. Şimdilik yalnızca ödeme hatırlatma günlerini tutar; yeni tercihler için sütun/tablo
@@ -1093,11 +1094,46 @@ sayfalama olmadan daha fazla kısalmaz. Güven bağlı sandığın özet sayfala
 bakiyeyi ayrı sorgularla hesaplar; borç limiti (`max_amount_can_borrow`) de hisse başına kural
 değerlendirir.
 
+## Kural formülleri (`sandik/utils/formula.py`)
+
+Sandık kurallarının formülleri (`SandikRule.calculate_formula`) eskiden `cexprtk` ile (ExprTk C++ kütüphanesi)
+hesaplanıyordu. Paket kurulu hâlde **~108 MB** tutuyordu ve PythonAnywhere'in disk kotası 2 GB'dir; 2026-11'de
+yerine **simpleeval** (saf Python, tek dosya, ~36 KB, MIT) geçildi (kullanıcı istedi). `formula.py` onun üstünde
+ince bir katmandır: `eval` yoktur, simpleeval formülü `ast` ile ayrıştırır ve yalnızca izin verilen işleçleri
+(`+ - * /`, tekli `- +`, `< <= > >= == !=`) çalıştırır; ad, fonksiyon, metin, `//`, `**`, `%`, `^` ve formülde
+olmaması gereken her karakter `FormulaError` (bir `ValueError`) verir.
+
+- **Karar sunucudaki kurallara bakılarak verildi.** 2026-11'de 8 sandıkta 43 kural vardı ve hepsi şu biçimlerdeydi:
+  sabit sayı, `{hisse_toplam_aidat}*3`, `{borc-miktari}<=19999`, `{hisse_toplam_aidat}*3<=5000`,
+  `10*{uye_toplam_aidat}`, `{a}/{b}` (bir sandıkta değeri yalnızca `+` olan bozuk kurallar da var; ikisinde de hata
+  verir). Bu kurallar gerçek borç tutarları ve 40.000 rastgele aidat toplamıyla iki hesaplayıcıda karşılaştırıldı:
+  ~3,5 milyon hesaplamada sonuç **bit bit aynıydı**.
+- ExprTk'in anlamını korumak için: sonuç her zaman `float`tır (karşılaştırma 1.0/0.0); sıfıra bölme hata değil
+  inf/-inf/nan verir; sayılar float okunur (`1/-0` = -inf); baştaki sıfırlar atılır (`05` Python'da hatadır).
+- **Bilinen fark:** ExprTk bazı ondalıkları 1 ulp farklı okur (`2.53*14`: ExprTk 35.42, simpleeval
+  35.419999999999995). Formun kabul edeceği rastgele formüllerin ~%0,2'sinde görülür; tutarlar 2 basamaklı Decimal,
+  taksit/hisse sayısı `int()` olduğu için sunucudaki kurallarda hiçbir sonucu değiştirmedi.
+- **Form doğrulayıcısı `//` ve `**`'yı reddeder** (`sandik/utils.py → rule_formula_validator`): işaretler tek tek
+  kabul edildiği için geçiyorlardı ve anlamları iki kütüphanede farklıdır (ExprTk'te `//` yorum başlatırdı,
+  Python'da tam sayı bölmesidir). Sunucuda böyle bir kural yoktu.
+- **Formül kural eklenirken bir kez hesaplanır** (kullanıcı istedi): `rule_formula_validator` karakterleri
+  denetledikten sonra değişkenlerin yerine 1 koyup formülü `formula.py` ile hesaplar; hesaplanamazsa
+  `InvalidRuleFormula` atar ve form "Formül eksik ya da hatalı yazılmış" der. Eskiden yalnızca karakterlere
+  bakıldığı için `+`, `5<`, `{borc-miktari}*` gibi yarım formüller kaydediliyor, kural ilk kullanıldığında hata
+  veriyordu (sunucuda değeri yalnızca `+` olan kurallar bu yüzden var; onlar kendiliğinden düzelmez). Boş koşul
+  formülü hesaplanmaz (her zaman geçerli demektir). Sıfıra bölme hata değildir, deneme 1 ile yapıldığı için de
+  çıkmaz.
+- Testler `tests/test_formula.py`. Ortamda `cexprtk==0.4.1` kuruluysa sunucudaki kural biçimleri ve formun kabul
+  edeceği rastgele formüller iki hesaplayıcıda karşılaştırılır; kurulu değilse atlanır. Hesaplayıcı değişirse bir
+  3.9 ortamında çalıştırılmalıdır:
+  `uv venv -p 3.9 /tmp/v39 && uv pip install -p /tmp/v39/bin/python -r requirements.txt -r requirements-dev.txt cexprtk==0.4.1`.
+- Kuralları sunucudan okumak için PythonAnywhere konsolunda salt okunur bir sorgu yeterlidir (MySQL'de tablo adı
+  küçük harf: `sandikrule`). API ile bir konsola komut göndermek için konsolun tarayıcıda bir kez açılmış olması gerekir.
+
 ## Bağımlılıklar
 
 Sunucu **Python 3.9**'dur: `requirements.txt`teki sürümler 3.9'u destekleyen son sürümlerdir (2026-11'de
-güncellendi). `cexprtk` 0.4.1'de durur: 0.4.2 yalnızca kaynak kodu olarak yayınlandı, sunucuda C++ derlemesi
-ister. Uygulama ana sitenin altında yayınlandığında sunucuya kurulan, ana deponun kökündeki birleşik
+güncellendi). `cexprtk` 2026-11'de kaldırıldı (kurulu hâlde ~108 MB), yerine `simpleeval` geldi (bkz. "Kural formülleri"). Uygulama ana sitenin altında yayınlandığında sunucuya kurulan, ana deponun kökündeki birleşik
 `requirements.txt`tir; buradaki dosya onunla aynı sürümlerde tutulur.
 
 ## Yerelde çalıştırma ve test

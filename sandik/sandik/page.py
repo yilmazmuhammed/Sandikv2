@@ -10,7 +10,7 @@ from sandik.sandik.exceptions import TrustRelationshipAlreadyExist, TrustRelatio
     MembershipApplicationAlreadyExist, WebUserIsAlreadyMember, SandikAuthorityException, AddMemberException, \
     MembershipException, MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
     ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException, NoValidRuleFound, \
-    RuleOperatorCountException, RemoveMemberException, RemoveShareException
+    InvalidRuleFormula, RuleOperatorCountException, RemoveMemberException, RemoveShareException
 from sandik.sandik.requirement import sandik_required, sandik_authorization_required, to_be_member_of_sandik_required, \
     trust_relationship_required, to_be_member_or_manager_of_sandik_required, sandik_type_required, sandik_rule_required, \
     member_required
@@ -568,7 +568,7 @@ def add_sandik_rule_page(sandik_id):
                 request.args, default_url=url_for("sandik_page_bp.add_sandik_rule_page", sandik_id=sandik_id)
             )
             return redirect(next_url)
-        except RuleOperatorCountException as e:
+        except (RuleOperatorCountException, InvalidRuleFormula) as e:
             flash(str(e), "danger")
     return render_template("sandik/add_sandik_rule_page.html",
                            page_info=FormPI(title="Sandık kuralı ekle", form=form, active_dropdown='sandik-rules'))

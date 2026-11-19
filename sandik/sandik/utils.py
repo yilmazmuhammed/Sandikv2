@@ -12,10 +12,12 @@ from sandik.sandik import db
 from sandik.sandik.exceptions import MaxShareCountExceed, NotActiveMemberException, ThereIsUnpaidDebtOfMemberException, \
     ThereIsUnpaidAmountOfLoanedException, NotActiveShareException, ThereIsUnpaidDebtOfShareException, InvalidSmsType, \
     InvalidRuleVariable, InvalidRuleCharacter, InvalidArgument, RuleOperatorCountException, ThereIsNoMember, \
+    InvalidRuleFormula, \
     ThereIsNoShare, RemoveMemberException, RemoveShareException
 from sandik.sandik.exceptions import UpdateMemberException
 from sandik.transaction import utils as transaction_utils, db as transaction_db
 from sandik.utils import period as period_utils, sandik_preferences
+from sandik.utils.formula import FormulaError, evaluate_expression as evaluate_formula_expression
 from sandik.utils.db_models import Member, Share, MoneyTransaction, TrustRelationship, SmsPackage, Sandik, SandikRule, \
     SubReceipt, Debt
 
@@ -412,6 +414,11 @@ def rule_formula_validator(formula_string, variables, operators, formula_type):
         raise InvalidArgument(f"type is {formula_type} not in {SandikRule.FORMULA_TYPE.strings.keys()}")
 
     data = formula_string.replace(' ', '')
+    # `//` ve `**` işaret tek tek kabul edildiği için geçiyordu; anlamları belirsiz (ExprTk'te `//` yorum
+    # başlatırdı, Python'da tam sayı bölmesidir), formül hesaplayıcı da ikisini reddeder.
+    for forbidden in ("//", "**"):
+        if forbidden in data:
+            raise InvalidRuleCharacter(data.index(forbidden))
     operators = sorted(operators, reverse=True, key=len)
     i = 0
     comp_operator_counts = 0
@@ -424,7 +431,7 @@ def rule_formula_validator(formula_string, variables, operators, formula_type):
             continue
         # Sayı tek tek rakam olarak değil bütün olarak okunur; aksi hâlde ondalık ayracı (".")
         # geçersiz karakter sayılıyor ve `{hisse_toplam_aidat}*1.5` gibi bir kural
-        # kaydedilemiyordu (oysa cexprtk ondalığı destekler). "1.2.3" yine reddedilir:
+        # kaydedilemiyordu (oysa formül hesaplayıcı ondalığı destekler). "1.2.3" yine reddedilir:
         # kalıp "1.2"yi yer, sıradaki "." hiçbir dala uymaz.
         number_match = RULE_NUMBER_PATTERN.match(data, i)
         if number_match:
@@ -443,6 +450,18 @@ def rule_formula_validator(formula_string, variables, operators, formula_type):
         raise RuleOperatorCountException("Değer formülünde karşılaştırma işareti bulunamaz")
     if formula_type == SandikRule.FORMULA_TYPE.CONDITION and comp_operator_counts > 1:
         raise RuleOperatorCountException("Koşul formülünde en fazla 1 tane karşılaştırma işareti bulunmalıdır.")
+
+    # Karakterler geçerli olsa da formül yarım kalmış olabilir ("+", "5<", "{borc-miktari}*"); bunlar eskiden
+    # kaydediliyor, kural ilk kullanıldığında hata veriyordu. Değişkenlerin yerine 1 konup bir kez hesaplanır.
+    if data:
+        sample = data
+        for variable in variables:
+            sample = sample.replace("{" + variable + "}", "1")
+        try:
+            evaluate_formula_expression(sample)
+        except FormulaError:
+            raise InvalidRuleFormula("Formül eksik ya da hatalı yazılmış: her işaretin iki yanında bir sayı ya da "
+                                     "değişken olmalıdır.")
 
 
 def add_sandik_rule_to_sandik(condition_formula, value_formula, type, sandik, **kwargs):

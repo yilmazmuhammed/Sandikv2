@@ -5,11 +5,11 @@ import os
 from datetime import date, datetime
 from decimal import Decimal
 
-import cexprtk
 from flask_login import UserMixin
 from pony.orm import *
 
 from sandik.utils import migrations, money
+from sandik.utils.formula import evaluate_expression as evaluate_formula_expression
 from sandik.utils.sorting import turkish_sort_key
 
 db = Database()
@@ -1240,7 +1240,8 @@ class SandikRule(db.Entity):
 
     def calculate_formula(self, formula, **kwargs):
         parsed_formula = self.parse_formula(formula=formula, **kwargs)
-        result = cexprtk.evaluate_expression(parsed_formula or "1", {})
+        # ExprTk ile aynı sonucu veren saf Python hesaplayıcı (bkz. `utils/formula.py`); sonuç float'tır.
+        result = evaluate_formula_expression(parsed_formula or "1")
         return result
 
     def evaluate_condition_formula(self, **kwargs):
