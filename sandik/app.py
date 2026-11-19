@@ -18,8 +18,6 @@ from sandik.backup.page import backup_page_bp
 from sandik.general.api import general_api_bp
 from sandik.general.page import general_page_bp
 from sandik.intro.page import intro_page_bp
-from sandik.paw.api import paw_api_bp
-from sandik.paw.page import paw_page_bp
 from sandik.sandik.api import sandik_api_bp
 from sandik.sandik.page import sandik_page_bp
 from sandik.transaction.api import transaction_api_bp
@@ -87,8 +85,6 @@ def register_blueprints(flask_app: Flask) -> Flask:
     flask_app.register_blueprint(backup_page_bp, url_prefix="/yedek/")
     flask_app.register_blueprint(backup_dw_bp, url_prefix="/indir/yedek/")
     flask_app.register_blueprint(website_transaction_page_bp, url_prefix="/websitesi-masraflari/")
-    flask_app.register_blueprint(paw_page_bp, url_prefix="/paw/")
-    flask_app.register_blueprint(paw_api_bp, url_prefix="/api/paw/")
     return flask_app
 
 
