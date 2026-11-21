@@ -297,7 +297,7 @@ betiktir. Betik her gece çalıştığı için "hangi işin sırası geldi" kara
 | Ay başı hatırlatması — bu ayın ödemeleri | kişinin seçtiği gün (varsayılan **1**) | `reminder.KIND_MONTH_START` |
 | Ay sonu hatırlatması — bu ay + gelecek ay | kişinin seçtiği gün (varsayılan **25**) | `reminder.KIND_NEXT_MONTH` |
 | Yönetici ön hatırlatması — yarın kime gidecek | isteyen yöneticiye, üyelerin gününden bir gün önce | `manager_reminder.run_manager_reminder` |
-| Özelliğin duyurusu | yönetici başına bir kez (2026-12-31'e kadar) | `manager_reminder.run_announcement` |
+| Yeni özellik duyuruları | son günü geçmemiş her duyuru, hedef kişi başına bir kez | `announcement.run_announcements` |
 
 **Gün, kullanıcı tercihidir** (`ReminderPreference`); herkes iki hatırlatmayı da ayın istediği
 gününde alabilir ya da hiç almayabilir. Tercihi olmayan kullanıcı varsayılanları kullanır, yani
@@ -343,13 +343,33 @@ e-postasında yazacak tutar ve işleme konmamış parası listelenir, sandık ba
   `_projected_contribution_rows` ile hesaplanır (yazılmaz). Testler: `tests/test_manager_reminder.py`.
 - Gecelik akışta üye hatırlatmalarından sonra koşar (`_step`, ayrı adım). Kapatma valfi ve test adresi
   üyelerdekiyle ortaktır (`SANDIKv2_REMINDER_EMAIL_*`).
-- **Duyuru (bir kereye mahsus)**: işlem girme yetkisi olan ve özelliği henüz açmamış herkese "Yeni özellik"
-  e-postası (`email/manager_reminder_announcement.html`, düğmesi jetonlu tercih sayfasını açar). Gönderilene
-  `manager_reminder_announced_at` yazılır, ikinci kez gitmez; başarısız gönderim ve test adresine gönderim
-  işaretlenmez. Gecelik akış bunu `ANNOUNCEMENT_LAST_DAY`e (2026-12-31) kadar dener, yani deploy'dan sonraki ilk
-  gece gider; o tarihten sonra adım hiçbir şey yapmaz ve koddan kaldırılabilir. Elle: `--yonetici-duyurusu`.
+- Özelliğin duyurusu genel duyuru altyapısıyla gider (bkz. "Yeni özellik duyuruları"; anahtar `yonetici_on_hatirlatmasi`).
 - Elle önizleme: `clock.py --yonetici-hatirlatmasi --bugun=2026-11-24 --kuru --html=/tmp/y.html`. Gecelik akışta
-  `--html=x.html` verilirse yönetici e-postaları `x-yonetici.html`, duyuru `x-duyuru.html`ya yazılır.
+  `--html=x.html` verilirse yönetici e-postaları `x-yonetici.html`, duyurular `x-duyuru.html`ya yazılır.
+
+### Yeni özellik duyuruları (`sandik/utils/announcement.py`)
+
+Kullanıcı istedi: yeni özellikler ara ara e-postayla duyurulacak, ama her duyuru için kalıcı, ona özel kod
+istenmiyor. Altyapı geneldir, **duyuru veridir**:
+
+- **Yeni duyuru** = `ANNOUNCEMENTS`a bir `Announcement` satırı (`key`, `subject`, `audience`, `last_day`, isteğe
+  bağlı `skip`) + `email/duyurular/<key>.html` (`email/duyurular/_layout.html`i genişletir, yalnızca
+  `duyuru_icerik` bloğunu doldurur; selamlama, "tek seferlik" notu ve tercih bağlantısı kabuktadır). Şablona
+  `data.name_surname`, `data.sandik_names` (hedef kitleye göre ilgili sandıklar), `data.preference_url` gelir.
+  `tests/test_announcement.py` her duyurunun şablonu olduğunu ve basıldığını denetler.
+- **Kişi başına bir kez**: gönderilene `WebUser.preferences["announcements"][<key>]` = zaman yazılır
+  (`auth/db.py → mark_announcement_sent`). Başarısız gönderim ve test adresine gönderim işaretlenmez. **`key`
+  sonradan değiştirilmez**, değişirse herkese ikinci kez gider.
+- Gecelik iş son günü (`last_day`) geçmemiş bütün duyuruları dener: deploy'dan sonraki ilk gece gider, son güne
+  kadar hedefe yeni giren de alır. Son gün geçince duyuru hiçbir şey yapmaz; **temizlik**: `ANNOUNCEMENTS`taki
+  satır ve şablonu silinir (kişilerdeki işaretler zararsız kalır).
+- **Hedef kitleler** (`AUDIENCES`, yeniden kullanılır): `isleyen_sandik_yoneticileri` (işleyen sandıkta işlem girme
+  yetkisi olanlar), `isleyen_sandik_uyeleri`. "İşleyen sandık" istatistik sayfasının ölçütüdür
+  (`intro/utils.py → collect_sandik_facts`, `is_recently_active`: etkin, ≥3 aktif üye, ≥20 para hareketi, son 6
+  ayda hareket). Kullanıcı sordu: açılıp hiç kullanılmamış deneme sandıklarının yöneticilerine duyuru gitmesin.
+  2026-11 gerçek veride bu ölçütle 15 yöneticiden 6'sı kaldı. Yeni bir kitle gerekirse buraya fonksiyon eklenir.
+- Elle: `clock.py --duyuru=<key> [--kuru] [--html=x.html]` (son günü geçmiş olsa da gönderir; almış olana yine
+  gitmez). Kapatma valfi ve test adresi hatırlatmalarla ortaktır.
 
 ### `sandik/utils/reminder.py`
 

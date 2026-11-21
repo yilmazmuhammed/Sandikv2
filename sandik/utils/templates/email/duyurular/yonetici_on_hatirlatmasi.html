@@ -1,15 +1,9 @@
-{#
-  Yönetici ön hatırlatmasının bir kereye mahsus duyurusu (`manager_reminder.run_announcement`).
-  Özellik varsayılan kapalıdır; e-postadaki düğme jetonlu tercih sayfasını açar (giriş gerekmez).
-#}
-{% extends "email/_layout.html" %}
+{# Duyuru: yönetici ön hatırlatması (sandik/utils/manager_reminder.py). Son gün: 2026-12-31. #}
+{% extends "email/duyurular/_layout.html" %}
 
 {% block email_title %}Yeni özellik: üyelere hatırlatma gitmeden önce haber alın{% endblock %}
-{% block email_header %}Yeni özellik{% endblock %}
 
-{% block email_content %}
-    <p style="margin:0 0 12px 0; font-size:16px;">Sayın {{ data.name_surname }},</p>
-
+{% block duyuru_icerik %}
     <p style="margin:0 0 12px 0; font-size:14px; line-height:1.7;">
         Sandık uygulaması üyelere her ay ödeme hatırlatma e-postası gönderir. Üyenin yatırdığı para
         henüz sisteme işlenmediyse, ödeme yapmış üye de "ödemeniz gereken" e-postası alır.

@@ -35,7 +35,6 @@ from time import sleep
 
 from pony.orm import db_session
 
-from sandik.transaction import db as transaction_db
 from sandik.transaction import utils as transaction_utils
 from sandik.utils import period as period_utils
 from sandik.utils.db_models import Contribution, ReminderPreference, WebUser
@@ -131,7 +130,8 @@ def _projected_contribution_rows(member, term, show_share):
     """
     rows = []
     for share in member.get_active_shares().order_by(lambda s: s.share_order_of_member):
-        if transaction_db.get_contribution(share_ref=share, term=term):
+        # `get` değil `exists`: canlı veride aynı hisse/ay için birden fazla aidat olabiliyor (get hata verirdi).
+        if Contribution.exists(share_ref=share, term=term):
             continue
         rows.append({
             "kind": KIND_CONTRIBUTION,

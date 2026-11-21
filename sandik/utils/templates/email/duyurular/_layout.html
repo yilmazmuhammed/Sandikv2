@@ -1,0 +1,25 @@
+{#
+  Yeni özellik duyurularının ortak kabuğu (`sandik/utils/announcement.py`).
+
+  Yeni duyuru: `ANNOUNCEMENTS`a bir satır + bu klasörde `<anahtar>.html`; şablon bunu genişletip yalnızca
+  `duyuru_icerik` bloğunu doldurur. Selamlama, "tek seferlik" notu ve tercih bağlantısı buradadır.
+  `data`: name_surname, sandik_names (hedef kitleye göre ilgili sandıklar), preference_url.
+#}
+{% extends "email/_layout.html" %}
+
+{% block email_header %}Yeni özellik{% endblock %}
+
+{% block email_content %}
+    <p style="margin:0 0 12px 0; font-size:16px;">Sayın {{ data.name_surname }},</p>
+    {% block duyuru_icerik %}{% endblock %}
+{% endblock %}
+
+{% block email_footer %}
+    Bu e-posta Sandık uygulaması tarafından otomatik olarak gönderilmiştir. Lütfen yanıtlamayınız.
+    <br><br>
+    Bu tek seferlik bir duyurudur; aynı konuda size tekrar e-posta gönderilmez.
+    {% if data.preference_url %}
+        E-posta tercihleriniz:
+        <a href="{{ data.preference_url }}" style="color:#2c6fbb;">E-posta tercihlerim</a>
+    {% endif %}
+{% endblock %}

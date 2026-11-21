@@ -1,4 +1,4 @@
-"""`sandik/utils/manager_reminder.py` için testler: yönetici ön hatırlatması ve duyurusu.
+"""`sandik/utils/manager_reminder.py` için testler: yönetici ön hatırlatması (duyurusu: `test_announcement.py`).
 
 Gönderim `render`/`send` enjekte edilerek SMTP'siz sınanır (`test_payment_reminder.py` ile aynı kalıp). Tarihler
 gerçek bugünden türetilir: tutarlar `period_utils.current_period()` (date.today) ile hesaplandığı için "ayın son
@@ -15,7 +15,7 @@ from pony.orm import db_session, flush
 from sandik.auth import db as auth_db
 from sandik.utils import manager_reminder
 from sandik.utils import period as period_utils
-from sandik.utils.db_models import Contribution, ManagerReminderPreference, WebUser
+from sandik.utils.db_models import Contribution, WebUser
 
 from tests import factories
 
@@ -224,57 +224,6 @@ def test_one_email_per_manager_with_an_attention_grabbing_subject():
     assert "(Aile Sandığı)" in subject
 
 
-# --- Duyuru -------------------------------------------------------------------------------------
-
-def run_announcement(today=None, force=False, send=None):
-    send = send if send is not None else Recorder()
-    result = manager_reminder.run_announcement(render=lambda data: repr(data), send=send, today=today, force=force,
-                                               log=lambda *a: None)
-    return result, send
-
-
-def test_announcement_is_sent_once_to_managers_only():
-    with db_session:
-        manager, sandik, members = _sandik_with_manager(opt_in=False)
-        manager_email = manager.email_address
-
-    result, recorder = run_announcement(today=date(2026, 11, 22))
-    assert [m["to"] for m in recorder.sent] == [manager_email]
-    assert recorder.sent[0]["subject"] == manager_reminder.ANNOUNCEMENT_SUBJECT
-
-    with db_session:
-        assert WebUser.get(email_address=manager_email).preferences.get(ManagerReminderPreference.ANNOUNCED_KEY)
-
-    result, recorder = run_announcement(today=date(2026, 11, 23))
-    assert result["recipients"] == 0
-
-
-def test_announcement_skips_users_who_already_enabled_it_and_stops_after_the_last_day():
-    with db_session:
-        _sandik_with_manager(opt_in=True)
-
-    assert run_announcement(today=date(2026, 11, 22))[0]["recipients"] == 0
-
-    with db_session:
-        _sandik_with_manager(opt_in=False)
-    late = manager_reminder.ANNOUNCEMENT_LAST_DAY + timedelta(days=1)
-    assert run_announcement(today=late)[0]["recipients"] == 0
-    assert run_announcement(today=late, force=True)[0]["sent"] == 1
-
-
-def test_failed_or_test_address_announcement_is_not_marked(monkeypatch):
-    with db_session:
-        manager, _, _ = _sandik_with_manager(opt_in=False)
-        email = manager.email_address
-
-    run_announcement(today=date(2026, 11, 22), send=Recorder(fail_for={email}))
-    monkeypatch.setenv("SANDIKv2_REMINDER_EMAIL_TEST_ADDRESS", "test@example.com")
-    run_announcement(today=date(2026, 11, 22))
-
-    with db_session:
-        assert not WebUser.get(email_address=email).preferences.get(ManagerReminderPreference.ANNOUNCED_KEY)
-
-
 # --- Şablonlar ve sayfa -------------------------------------------------------------------------
 
 @pytest.fixture
@@ -298,18 +247,11 @@ def test_email_templates_render(app):
             _set_days(wu, next_month_day=25)
         data = collect(this_month_day(24))[0]
         data["preference_url"] = "https://ornek/tercih/abc"
-        announcement = manager_reminder.collect_announcement_recipients()
 
     with app.app_context():
         html = render_template("email/manager_reminder.html", data=data)
         assert "Zeynep Üye" in html and "Para girişi ekle" in html and "E-posta tercihlerim" in html
         assert "Ay sonu hatırlatması" in html
-
-        html = render_template("email/manager_reminder_announcement.html",
-                               data={"name_surname": "X Y", "preference_url": "https://ornek/tercih/abc",
-                                     "sandik_names": ["Aile Sandığı"]})
-        assert "Bildirimi aç" in html and "Aile Sandığı" in html
-    assert announcement == []  # opt_in açık olduğu için duyuru gitmez
 
 
 def _login(app, web_user_id):

@@ -113,9 +113,14 @@ def update_manager_reminder_preference(web_user, updated_by, sandik_ids) -> WebU
     return web_user
 
 
-def mark_manager_reminder_announced(web_user, when) -> WebUser:
-    """Yönetici ön hatırlatmasının duyuru e-postası bu kişiye gönderildi; bir daha gönderilmez."""
-    web_user.preferences[ManagerReminderPreference.ANNOUNCED_KEY] = when.strftime("%Y-%m-%d %H:%M")
+def mark_announcement_sent(web_user, key, when) -> WebUser:
+    """Duyuru bu kişiye gönderildi; `sandik/utils/announcement.py` bir daha göndermez.
+
+    `preferences["announcements"]` = `{<duyuru anahtarı>: "YYYY-MM-DD HH:MM"}`; diğer tercihlere dokunulmaz.
+    """
+    sent = dict((web_user.preferences or {}).get("announcements") or {})
+    sent[key] = when.strftime("%Y-%m-%d %H:%M")
+    web_user.preferences["announcements"] = sent
     flush()
     return web_user
 

@@ -456,3 +456,17 @@ def test_form_falls_back_to_the_default_day_when_the_value_is_broken(reminder_fo
 
     assert form.to_days() == (ReminderPreference.DEFAULT_MONTH_START_DAY,
                               ReminderPreference.DEFAULT_NEXT_MONTH_DAY)
+
+
+@db_session
+def test_duplicate_contributions_for_a_month_do_not_break_the_projection():
+    """Canlı veride aynı hisse ve ay için birden fazla aidat kaydı var; hesap yine çalışmalı."""
+    wu = factories.make_web_user()
+    sandik = factories.make_sandik(created_by=wu, contribution_amount=Decimal("100"))
+    share = factories.make_member_with_share(sandik=sandik, web_user=wu, created_by=wu)
+    next_term = period_utils.next_period()
+    factories.make_contribution(share=share, term=next_term, created_by=wu, amount=Decimal("100"))
+    factories.make_contribution(share=share, term=next_term, created_by=wu, amount=Decimal("50"))
+
+    section = collect(wu, include_next_month=True)["sandiks"][0]
+    assert section["next_month_total"] == Decimal("150")  # ikisi de kayıtlı; ayrıca hesaplanan yok

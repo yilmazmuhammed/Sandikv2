@@ -557,11 +557,8 @@ class ManagerReminderPreference:
     gün önce** "yarın şu üyelere hatırlatma gidecek, hesabı güncel tutun" e-postası alır (bkz.
     `sandik/utils/manager_reminder.py`). Tercih sandık başınadır: açık olduğu sandıkların kimlikleri
     liste olarak tutulur. **Varsayılan kapalıdır** (anahtar yok = boş liste).
-
-    `ANNOUNCED_KEY`: özelliğin duyuru e-postası bu kişiye gönderildiyse zamanı; duyuru bir kez gider.
     """
     SANDIK_IDS_KEY = "manager_reminder_sandik_ids"
-    ANNOUNCED_KEY = "manager_reminder_announced_at"
 
 
 class Log(db.Entity):
