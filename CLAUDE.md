@@ -289,6 +289,8 @@ betiktir. Betik her gece çalıştığı için "hangi işin sırası geldi" kara
 | Vadesi gelmiş aidatları oluşturma | her çalıştırmada (idempotent) | `clock.beginning_of_each_month` |
 | Ay başı hatırlatması — bu ayın ödemeleri | kişinin seçtiği gün (varsayılan **1**) | `reminder.KIND_MONTH_START` |
 | Ay sonu hatırlatması — bu ay + gelecek ay | kişinin seçtiği gün (varsayılan **25**) | `reminder.KIND_NEXT_MONTH` |
+| Yönetici ön hatırlatması — yarın kime gidecek | isteyen yöneticiye, üyelerin gününden bir gün önce | `manager_reminder.run_manager_reminder` |
+| Özelliğin duyurusu | yönetici başına bir kez (2026-12-31'e kadar) | `manager_reminder.run_announcement` |
 
 **Gün, kullanıcı tercihidir** (`ReminderPreference`); herkes iki hatırlatmayı da ayın istediği
 gününde alabilir ya da hiç almayabilir. Tercihi olmayan kullanıcı varsayılanları kullanır, yani
@@ -312,6 +314,35 @@ bkz. `_step`) ve herhangi bir adım hata verince betik sıfırdan farklı çıka
 kontrolü `date.today()` ile yapılır; 01:01 seçilmesi, görev birkaç dakika gecikse bile günün
 değişmemesi içindir. `period_utils.current_period()` de aynı `date.today()`yi kullanır, böylece
 e-postadaki "bu ay" üyenin sitede gördüğü "bu ay" ile aynı kalır.
+
+### Yönetici ön hatırlatması (`sandik/utils/manager_reminder.py`)
+
+Kullanıcı istedi: yöneticinin işlemediği bir ödeme yüzünden üye, ödediği tutar için hatırlatma almasın. İsteyen
+yöneticiye, yönettiği sandıkta **ertesi gün** hatırlatma alacak üyeler bugünden bildirilir (konu: "⚠️ Hesap güncel
+mi? Yarın N üyeye ödeme hatırlatması gidecek"); her üyenin adı, hangi hatırlatma (ay başı/ay sonu), yarınki
+e-postasında yazacak tutar ve işleme konmamış parası listelenir, sandık başına "Para girişi ekle" düğmesi vardır.
+
+- **Tercih sandık başına ve varsayılan kapalıdır**: `WebUser.preferences["manager_reminder_sandik_ids"]`
+  (`ManagerReminderPreference`, entity değil). Yalnızca o sandıkta **işlem girme yetkisi** olan (yönetici ya da
+  `can_write`) kişi açabilir (`WebUser.get_managed_sandiks`); yetkisi kalkınca e-posta da kesilir. Yazma
+  `auth/db.py → update_manager_reminder_preference` (yetkisi olmayan sandık kimliği atılır). Arayüz:
+  `/tercihlerim` ve jetonlu `/tercih/<token>` sayfasındaki "Sandık yöneticisi bildirimi" kartı (yalnızca
+  yönettiği sandık varsa görünür). Jetonlu sayfa bu yüzden yönettiği sandıkların **adlarını** da gösterir.
+- **Her üyenin günü ayrıdır**: bugün, `reminder.reminder_for_today(web_user, yarın)` ile kimin yarın hangi
+  hatırlatmayı alacağına bakılır; kimse yoksa yöneticiye e-posta gitmez. Mükerrer engeli üyelerdekiyle aynı (tam
+  gün eşitliği, kayıt yok). Yönetici başına tek e-posta, sandıklar bölüm bölüm.
+- **Tutarlar yarınki e-postayla aynı fonksiyondan** gelir (`reminder.collect_member_section`). Ayın son günü yarın
+  yeni ay başlar ve o ayın aidatları henüz oluşturulmamıştır: `current_term` parametresi verilir, aidatlar
+  `_projected_contribution_rows` ile hesaplanır (yazılmaz). Testler: `tests/test_manager_reminder.py`.
+- Gecelik akışta üye hatırlatmalarından sonra koşar (`_step`, ayrı adım). Kapatma valfi ve test adresi
+  üyelerdekiyle ortaktır (`SANDIKv2_REMINDER_EMAIL_*`).
+- **Duyuru (bir kereye mahsus)**: işlem girme yetkisi olan ve özelliği henüz açmamış herkese "Yeni özellik"
+  e-postası (`email/manager_reminder_announcement.html`, düğmesi jetonlu tercih sayfasını açar). Gönderilene
+  `manager_reminder_announced_at` yazılır, ikinci kez gitmez; başarısız gönderim ve test adresine gönderim
+  işaretlenmez. Gecelik akış bunu `ANNOUNCEMENT_LAST_DAY`e (2026-12-31) kadar dener, yani deploy'dan sonraki ilk
+  gece gider; o tarihten sonra adım hiçbir şey yapmaz ve koddan kaldırılabilir. Elle: `--yonetici-duyurusu`.
+- Elle önizleme: `clock.py --yonetici-hatirlatmasi --bugun=2026-11-24 --kuru --html=/tmp/y.html`. Gecelik akışta
+  `--html=x.html` verilirse yönetici e-postaları `x-yonetici.html`, duyuru `x-duyuru.html`ya yazılır.
 
 ### `sandik/utils/reminder.py`
 

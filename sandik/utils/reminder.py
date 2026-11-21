@@ -117,8 +117,8 @@ def _payment_row(payment, show_share):
     }
 
 
-def _next_month_contribution_rows(member, next_term, show_share):
-    """Gelecek ayın aidat satırları.
+def _projected_contribution_rows(member, term, show_share):
+    """Henüz oluşturulmamış bir ayın aidat satırları.
 
     Aidat kayıtları yalnızca içinde bulunulan aya kadar oluşturulur
     (`transaction_utils.create_due_contributions_for_share`), dolayısıyla ayın 25'inde gelecek ayın
@@ -131,12 +131,12 @@ def _next_month_contribution_rows(member, next_term, show_share):
     """
     rows = []
     for share in member.get_active_shares().order_by(lambda s: s.share_order_of_member):
-        if transaction_db.get_contribution(share_ref=share, term=next_term):
+        if transaction_db.get_contribution(share_ref=share, term=term):
             continue
         rows.append({
             "kind": KIND_CONTRIBUTION,
-            "term": next_term,
-            "term_text": period_utils.period_to_tr_text(next_term),
+            "term": term,
+            "term_text": period_utils.period_to_tr_text(term),
             "type": "Aidat",
             "share": f"{share.share_order_of_member}. hisse" if show_share else None,
             "amount": member.contribution_amount,
@@ -152,31 +152,45 @@ def _sum_amounts(rows, kind=None):
     return sum((r["amount"] for r in rows if kind is None or r["kind"] == kind), Decimal(0))
 
 
-def collect_member_section(member, include_next_month, url_builder):
+def _unpaid_rows(member, show_share, **filters):
+    rows = []
+    for payment in transaction_utils.get_payments(whose=member, is_fully_paid=False, **filters):
+        if payment.get_unpaid_amount() <= 0:
+            continue
+        rows.append(_payment_row(payment, show_share))
+    return rows
+
+
+def collect_member_section(member, include_next_month, url_builder, current_term=None):
     """Tek bir sandık üyeliği için e-postadaki bölümü hazırlar. Ödeme yoksa `None` döner.
 
     Satırlar (`overdue`/`this_month`/`next_month`) tek tek hesaplanır ama **e-postada
     listelenmez**: şablon yalnızca sandık başına iki kalemi (`contribution_total`,
     `installment_total`) gösterir, ayrıntı için sitedeki "Ödemelerim" sayfasına bağlantı verir
     (`payments_url`). Satırlar toplamların kaynağı olarak ve testler için tutulur.
+
+    `current_term`: e-postanın "bu ay"ı; verilmezse içinde bulunulan ay. Yönetici ön hatırlatması
+    (`manager_reminder.py`) **yarın** gidecek e-postayı bugünden hesapladığı için ayın son günü
+    gelecek ayı verir: o ayın aidatları henüz oluşturulmamıştır (gece oluşturulacak), bu yüzden
+    burada hesaplanır (`_projected_contribution_rows`), yarınki e-postayla aynı sonuç çıkar.
     """
-    current_term = period_utils.current_period()
-    next_term = period_utils.next_period()
+    real_current_term = period_utils.current_period()
+    current_term = current_term or real_current_term
+    next_term = period_utils.get_period_by_difference(start_period=current_term, diff_count=1)
     show_share = member.get_active_shares().count() > 1
 
     overdue, this_month = [], []
-    for payment in transaction_utils.get_payments(whose=member, is_fully_paid=False, is_due=True):
-        if payment.get_unpaid_amount() <= 0:
-            continue
-        (this_month if payment.term == current_term else overdue).append(_payment_row(payment, show_share))
+    for row in _unpaid_rows(member, show_share, is_due=True):
+        (this_month if row["term"] == current_term else overdue).append(row)
+    if current_term > real_current_term:
+        # "Bu ay" henüz gelmedi: o ayın taksitleri zaten kayıtlıdır, aidatları hesaplanır.
+        this_month += _unpaid_rows(member, show_share, periods=[current_term])
+        this_month += _projected_contribution_rows(member=member, term=current_term, show_share=show_share)
 
     next_month = []
     if include_next_month:
-        for payment in transaction_utils.get_payments(whose=member, is_fully_paid=False, periods=[next_term]):
-            if payment.get_unpaid_amount() <= 0:
-                continue
-            next_month.append(_payment_row(payment, show_share))
-        next_month += _next_month_contribution_rows(member=member, next_term=next_term, show_share=show_share)
+        next_month += _unpaid_rows(member, show_share, periods=[next_term])
+        next_month += _projected_contribution_rows(member=member, term=next_term, show_share=show_share)
 
     if not overdue and not this_month and not next_month:
         return None

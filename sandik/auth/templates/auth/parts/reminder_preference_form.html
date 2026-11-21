@@ -21,6 +21,8 @@
   .rp-day.rp-off { opacity: .45; }
   .rp-note { color: #6b7280; font-size: 13px; line-height: 1.7; margin: 0 0 18px 0; }
   .rp-actions { margin-top: 18px; }
+  .rp-manager { border-color: #f5c542; background-color: rgba(245, 197, 66, .08); }
+  .rp-manager .rp-check { margin-bottom: 8px; }
 </style>
 
 <p class="rp-note">
@@ -51,6 +53,33 @@
       </div>
     </div>
   {% endfor %}
+
+  {#
+    Yönetici ön hatırlatması (sandik/utils/manager_reminder.py). Yalnızca kişinin işlem girme yetkisi
+    olduğu sandık varsa görünür; varsayılan kapalıdır, sandık sandık açılır.
+  #}
+  {% set manager_field = form.manager_sandik_ids %}
+  {% if manager_field.choices %}
+    <div class="rp-card rp-manager">
+      <p class="rp-title">Sandık yöneticisi bildirimi</p>
+      <p class="rp-desc">
+        Yönettiğiniz sandıkta üyelere ödeme hatırlatması gitmeden <strong>bir gün önce</strong> size
+        e-posta gelir: yarın kimlere hatırlatma gideceği ve e-postalarında ne kadar ödeme isteneceği yazar.
+        Gelen paraları o gün işlerseniz, ödeme yapmış üyeler boşuna hatırlatma almaz.
+      </p>
+      {% for value, label in manager_field.choices %}
+        <div class="rp-check">
+          <input type="checkbox" name="{{ manager_field.name }}" value="{{ value }}"
+                 id="{{ manager_field.id }}-{{ value }}"
+                 {% if manager_field.data and value in manager_field.data %}checked{% endif %}>
+          <label for="{{ manager_field.id }}-{{ value }}"><strong>{{ label }}</strong> için haber ver</label>
+        </div>
+      {% endfor %}
+      {% for error in manager_field.errors %}
+        <p class="rp-desc" style="color:#b71c1c;">{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
 
   <div class="rp-actions">
     {{ form.submit(class="btn btn-primary") }}

@@ -10,6 +10,8 @@ Betik her gece çalıştığından, "hangi işin sırası geldi" kararı **burad
 - Ödeme hatırlatma e-postaları her kullanıcının **kendi seçtiği günde** gönderilir; gün tam
   eşitlikle karşılaştırıldığı için iş kişi başına ayda bir kez koşar ve mükerrer engeli için kayıt
   tutulmaz (bkz. `sandik/utils/reminder.py`).
+- İsteyen sandık yöneticisine, yarın hatırlatma alacak üyeler bugünden bildirilir
+  (`sandik/utils/manager_reminder.py`). Özelliğin duyurusu da buradan, yönetici başına bir kez gider.
 
 **Adımlar birbirinden yalıtılmıştır**: aidat oluşturma patlarsa hata yazılır ama hatırlatma yine
 çalışır. Hatırlatmanın tek şansı olduğu için (kaçarsa o ay tekrar denenmez) erken bir hatanın onu
@@ -23,6 +25,7 @@ Elle çalıştırma:
 import os
 import sys
 import traceback
+from datetime import date
 
 from dotenv import load_dotenv
 
@@ -43,6 +46,7 @@ from sandik.auth import db as auth_db  # noqa: E402
 from sandik.auth import utils as auth_utils  # noqa: E402
 from sandik.bot import email_bot  # noqa: E402
 from sandik.transaction import utils as transaction_utils  # noqa: E402
+from sandik.utils import manager_reminder  # noqa: E402
 from sandik.utils import reminder  # noqa: E402
 
 USAGE = """Kullanım: python sandik/utils/clock.py [seçenekler]
@@ -55,6 +59,12 @@ aidatları oluşturur, sonra günün hangi hatırlatmaları gerektirdiğine baka
   --hatirlatma-ay-sonu    Ay sonu hatırlatmasını çalıştır (bu ay + gelecek ay)
                           Bu iki seçenek gün tercihini yok sayar; hatırlatmayı kapatmış
                           kullanıcılara yine gönderilmez.
+  --yonetici-hatirlatmasi Yalnızca yönetici ön hatırlatmasını çalıştır (yarın hatırlatma
+                          alacak üyeleri, bildirimi açmış yöneticilere bildirir)
+  --bugun=YYYY-MM-DD      Yönetici ön hatırlatmasında "bugün" (önizleme için; ertesi günün
+                          hatırlatmaları hesaplanır)
+  --yonetici-duyurusu     Özelliğin duyurusunu, henüz almamış yöneticilere şimdi gönder
+                          (gecelik akış bunu ANNOUNCEMENT_LAST_DAY'e kadar kendisi yapar)
   --kuru                  Hiçbir e-posta gönderme, kime ne gideceğini yaz
   --html=<dosya>          Üretilen e-postaların HTML'ini bu dosyaya yaz (gözle kontrol için)
   --yardim                Bu metni göster
@@ -107,42 +117,34 @@ class _LazyEmailSender:
             self.bot = None
 
 
-def run_reminders(kind=None, dry_run=False, html_path=None):
-    """Hatırlatmaları çalıştırır.
+def _preference_url(web_user):
+    from flask import url_for
+    token = auth_utils.create_reminder_preference_token(web_user=web_user)
+    return url_for("auth_page_bp.reminder_preference_by_token_page", token=token, _external=True)
 
-    `kind` verilmezse gecelik kip: kimin bugün istediğine `reminder.reminder_for_today` karar verir.
-    Verilirse elle kip: gün yok sayılır (bkz. `USAGE`).
-    """
+
+def _run_with_app(job, template, dry_run, html_path, **kwargs):
+    """`job`u (`run_*` fonksiyonu) e-posta şablonu ve SMTP göndericisiyle çalıştırır."""
     # Kapatma valfi yalnızca gerçek gönderimi durdurur; kuru çalıştırma zaten e-posta göndermez.
     if not dry_run and not reminder.is_enabled():
         print("Hatırlatma e-postaları kapalı (SANDIKv2_REMINDER_EMAIL_ENABLED)")
         return
 
-    from flask import render_template, url_for
+    from flask import render_template
 
     app = build_app()
     sender = _LazyEmailSender()
     rendered_pages = []
 
-    def url_builder(sandik_id):
-        return url_for("transaction_page_bp.payments_of_member_page", sandik_id=sandik_id, _external=True)
-
-    def preference_url_builder(web_user):
-        token = auth_utils.create_reminder_preference_token(web_user=web_user)
-        return url_for("auth_page_bp.reminder_preference_by_token_page", token=token, _external=True)
-
     def render(data):
-        html = render_template("email/payment_reminder.html", data=data)
+        html = render_template(template, data=data)
         if html_path:
             rendered_pages.append(html)
         return html
 
     try:
         with app.app_context():
-            reminder.run_payment_reminder(
-                url_builder=url_builder, preference_url_builder=preference_url_builder,
-                render=render, send=sender, kind=kind, dry_run=dry_run,
-            )
+            job(render=render, send=sender, dry_run=dry_run, preference_url_builder=_preference_url, **kwargs)
     finally:
         sender.close()
 
@@ -150,6 +152,47 @@ def run_reminders(kind=None, dry_run=False, html_path=None):
         with open(html_path, "w", encoding="utf-8") as f:
             f.write("<hr>".join(rendered_pages))
         print(f"{len(rendered_pages)} e-postanın HTML'i yazıldı: {html_path}")
+
+
+def run_manager_reminders(dry_run=False, html_path=None, today=None):
+    """Yarın hatırlatma alacak üyeleri, bildirimi açmış yöneticilere bildirir."""
+    from flask import url_for
+
+    def url_builder(sandik_id):
+        return url_for("transaction_page_bp.add_money_transaction_by_manager_page", sandik_id=sandik_id,
+                       _external=True)
+
+    _run_with_app(manager_reminder.run_manager_reminder, "email/manager_reminder.html", dry_run=dry_run,
+                  html_path=html_path, today=today, url_builder=url_builder)
+
+
+def run_manager_announcement(dry_run=False, html_path=None, force=False):
+    """Yönetici ön hatırlatmasının duyurusu (yönetici başına bir kez)."""
+    _run_with_app(manager_reminder.run_announcement, "email/manager_reminder_announcement.html",
+                  dry_run=dry_run, html_path=html_path, force=force)
+
+
+def run_reminders(kind=None, dry_run=False, html_path=None):
+    """Hatırlatmaları çalıştırır.
+
+    `kind` verilmezse gecelik kip: kimin bugün istediğine `reminder.reminder_for_today` karar verir.
+    Verilirse elle kip: gün yok sayılır (bkz. `USAGE`).
+    """
+    from flask import url_for
+
+    def url_builder(sandik_id):
+        return url_for("transaction_page_bp.payments_of_member_page", sandik_id=sandik_id, _external=True)
+
+    _run_with_app(reminder.run_payment_reminder, "email/payment_reminder.html", dry_run=dry_run,
+                  html_path=html_path, kind=kind, url_builder=url_builder)
+
+
+def _html_path_for(html_path, suffix):
+    """Gecelik akışta her adım önizlemesini ayrı dosyaya yazar (`onizleme-yonetici.html` ...)."""
+    if not html_path:
+        return None
+    base, ext = os.path.splitext(html_path)
+    return f"{base}-{suffix}{ext or '.html'}"
 
 
 def _step(title, func, **kwargs):
@@ -178,7 +221,11 @@ def main(argv):
     only_contributions = "--aidat" in argv
     month_start = "--hatirlatma-ay-basi" in argv
     next_month = "--hatirlatma-ay-sonu" in argv
-    selected_reminder = month_start or next_month
+    only_manager = "--yonetici-hatirlatmasi" in argv
+    only_announcement = "--yonetici-duyurusu" in argv
+    selected_reminder = month_start or next_month or only_manager or only_announcement
+    today_arg = next((a.split("=", 1)[1] for a in argv if a.startswith("--bugun=")), None)
+    today = date.fromisoformat(today_arg) if today_arg else None
 
     kinds = []
     if month_start:
@@ -193,6 +240,16 @@ def main(argv):
     if not selected_reminder and not only_contributions:
         # Seçeneksiz çağrı: gecelik akış. Kimin bugün mail istediğine kullanıcı tercihleri karar verir.
         failed |= not _step("Hatırlatma e-postaları", run_reminders, dry_run=dry_run, html_path=html_path)
+        failed |= not _step("Yönetici ön hatırlatması", run_manager_reminders, dry_run=dry_run,
+                            html_path=_html_path_for(html_path, "yonetici"))
+        failed |= not _step("Yönetici duyurusu", run_manager_announcement, dry_run=dry_run,
+                            html_path=_html_path_for(html_path, "duyuru"))
+    if only_manager:
+        failed |= not _step("Yönetici ön hatırlatması", run_manager_reminders, dry_run=dry_run,
+                            html_path=html_path, today=today)
+    if only_announcement:
+        failed |= not _step("Yönetici duyurusu", run_manager_announcement, dry_run=dry_run,
+                            html_path=html_path, force=True)
     for kind in kinds:
         failed |= not _step(f"Hatırlatma e-postaları ({kind})", run_reminders, kind=kind,
                             dry_run=dry_run, html_path=html_path)

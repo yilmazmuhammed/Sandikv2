@@ -189,16 +189,24 @@ def _reminder_preference_page_base(web_user, title, template):
     hangi kabuğun kullanıldığıdır; form ve kaydetme mantığı aynıdır.
     """
     form = forms.ReminderPreferenceForm()
+    # Yönetici ön hatırlatması yalnızca işlem girme yetkisi olduğu sandıklar için gösterilir.
+    managed_sandiks = web_user.get_managed_sandiks()
+    form.set_managed_sandiks(managed_sandiks)
 
     if form.validate_on_submit():
         month_start_day, next_month_day = form.to_days()
         db.update_reminder_preference(web_user=web_user, updated_by=web_user,
                                       month_start_day=month_start_day, next_month_day=next_month_day)
+        if managed_sandiks:
+            db.update_manager_reminder_preference(web_user=web_user, updated_by=web_user,
+                                                  sandik_ids=form.manager_sandik_ids.data or [])
         flash("E-posta hatırlatma tercihleriniz kaydedildi", "success")
         form.fill_from_days(month_start_day=month_start_day, next_month_day=next_month_day)
+        form.manager_sandik_ids.data = web_user.get_manager_reminder_sandik_ids()
     elif not form.is_submitted():
         month_start_day, next_month_day = web_user.get_reminder_days()
         form.fill_from_days(month_start_day=month_start_day, next_month_day=next_month_day)
+        form.manager_sandik_ids.data = web_user.get_manager_reminder_sandik_ids()
 
     return render_template(template, page_info=FormPI(title=title, form=form))
 

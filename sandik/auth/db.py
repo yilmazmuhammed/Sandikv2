@@ -2,7 +2,7 @@ from passlib.hash import pbkdf2_sha256 as hasher
 from pony.orm import flush
 
 from sandik.auth.exceptions import EmailAlreadyExist
-from sandik.utils.db_models import WebUser, Log, ReminderPreference, get_updated_fields
+from sandik.utils.db_models import WebUser, Log, ReminderPreference, ManagerReminderPreference, get_updated_fields
 
 
 # Kişisel API anahtarı (Cüzdan bağlantısı) `WebUser.preferences` içinde bu anahtarlarla durur
@@ -86,6 +86,36 @@ def update_reminder_preference(web_user, updated_by, month_start_day, next_month
             detail=str(updated_fields)[:1000])
 
     web_user.preferences.update(preferences)
+    flush()
+    return web_user
+
+
+def update_manager_reminder_preference(web_user, updated_by, sandik_ids) -> WebUser:
+    """Yönetici ön hatırlatmasının açık olduğu sandıkları `WebUser.preferences` Json'una yazar.
+
+    Yalnızca kişinin işlem girme yetkisi olduğu sandıklar kaydedilir (`get_managed_sandiks`); başka
+    bir kimlik sessizce atılır. Json'daki diğer tercihlere dokunulmaz.
+
+    Yetkisi olmadığı için formda görünmeyen bir sandığın eski kaydı korunmaz: liste her kayıtta formun
+    gösterdiği sandıklarla yeniden kurulur. Yetkisi geri verilirse tercih yeniden açılmalıdır.
+    """
+    allowed = {s.id for s in web_user.get_managed_sandiks()}
+    new_ids = sorted({int(i) for i in sandik_ids if int(i) in allowed})
+    old_ids = web_user.get_manager_reminder_sandik_ids()
+
+    if new_ids != sorted(old_ids) and updated_by:
+        Log(web_user_ref=updated_by, type=Log.TYPE.WEB_USER.UPDATE, logged_web_user_ref=web_user,
+            detail=str({f"preferences.{ManagerReminderPreference.SANDIK_IDS_KEY}":
+                        {"new": new_ids, "old": old_ids}})[:1000])
+
+    web_user.preferences[ManagerReminderPreference.SANDIK_IDS_KEY] = new_ids
+    flush()
+    return web_user
+
+
+def mark_manager_reminder_announced(web_user, when) -> WebUser:
+    """Yönetici ön hatırlatmasının duyuru e-postası bu kişiye gönderildi; bir daha gönderilmez."""
+    web_user.preferences[ManagerReminderPreference.ANNOUNCED_KEY] = when.strftime("%Y-%m-%d %H:%M")
     flush()
     return web_user
 
