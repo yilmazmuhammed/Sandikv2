@@ -7,6 +7,13 @@ Bu depo, `myilmaz_tr` ana deposunun bir git submodule'üdür. Ana deponun `CLAUD
 yönlendirme, ortam değişkenleri ve ortak kalıplar anlatılır; burada yalnızca Sandıkv2'ye özel
 bilgiler var.
 
+## Sunucuya erişim (kullanıcı kuralı)
+
+**Canlı sunucuya (PythonAnywhere: API, konsol, dosyalar, veritabanı) kullanıcıya sormadan ve onayını almadan asla
+erişilmez** — salt okuma da dahil. Kullanıcı 2026-11'de bir kereye mahsus gerçek veriyi çekme izni verdi ve bundan
+sonrası için bunu açıkça yasakladı. Her erişimden önce ne yapılacağı söylenip izin istenir; bir önceki izin
+sonrakine geçmez.
+
 ## Uygulama ne yapar?
 
 Bir "sandık" (imece usulü ortak kasa) yönetim uygulamasıdır. Üyeler her ay **aidat** öder, biriken
