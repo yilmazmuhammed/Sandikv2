@@ -502,6 +502,26 @@ class WebUser(db.Entity, UserMixin):
                 self.preferences.get(ReminderPreference.NEXT_MONTH_KEY,
                                      ReminderPreference.DEFAULT_NEXT_MONTH_DAY))
 
+    def get_manager_reminder_sandik_ids(self):
+        """Yönetici ön hatırlatmasının istendiği sandıkların kimlikleri (bkz. `ManagerReminderPreference`).
+
+        Varsayılan boştur, yani özellik kapalıdır. Json elle bozulmuşsa da boş sayılır.
+        """
+        value = (self.preferences or {}).get(ManagerReminderPreference.SANDIK_IDS_KEY) or []
+        if not isinstance(value, list):
+            return []
+        return [v for v in value if isinstance(v, int) and not isinstance(v, bool)]
+
+    def get_managed_sandiks(self):
+        """İşlem girme yetkisi olduğu (yönetici ya da yazma yetkili) etkin sandıklar, türkçe sıralı.
+
+        Yönetici ön hatırlatması bu sandıklar için açılabilir: "hesabı güncel tut" diyebileceğimiz kişi,
+        gelen parayı sisteme işleyebilen kişidir.
+        """
+        sandiks = {sat.sandik_ref for sat in self.sandik_authority_types_set
+                   if (sat.is_admin or sat.can_write) and sat.sandik_ref.is_active}
+        return sorted(sandiks, key=lambda s: turkish_sort_key(s.name))
+
 
 class ReminderPreference:
     """**Entity değildir**: `WebUser.preferences` Json'undaki hatırlatma anahtarlarının sabitleri.
@@ -528,6 +548,17 @@ class ReminderPreference:
     @classmethod
     def is_valid_day(cls, day):
         return day == cls.OFF or cls.MIN_DAY <= day <= cls.MAX_DAY
+
+
+class ManagerReminderPreference:
+    """**Entity değildir**: `WebUser.preferences` Json'undaki yönetici ön hatırlatması anahtarları.
+
+    Sandık yöneticisi isterse, yönettiği sandıkta üyelere ödeme hatırlatma e-postası gitmeden **bir
+    gün önce** "yarın şu üyelere hatırlatma gidecek, hesabı güncel tutun" e-postası alır (bkz.
+    `sandik/utils/manager_reminder.py`). Tercih sandık başınadır: açık olduğu sandıkların kimlikleri
+    liste olarak tutulur. **Varsayılan kapalıdır** (anahtar yok = boş liste).
+    """
+    SANDIK_IDS_KEY = "manager_reminder_sandik_ids"
 
 
 class Log(db.Entity):

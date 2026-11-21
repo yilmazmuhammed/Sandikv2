@@ -7,6 +7,13 @@ Bu depo, `myilmaz_tr` ana deposunun bir git submodule'üdür. Ana deponun `CLAUD
 yönlendirme, ortam değişkenleri ve ortak kalıplar anlatılır; burada yalnızca Sandıkv2'ye özel
 bilgiler var.
 
+## Sunucuya erişim (kullanıcı kuralı)
+
+**Canlı sunucuya (PythonAnywhere: API, konsol, dosyalar, veritabanı) kullanıcıya sormadan ve onayını almadan asla
+erişilmez** — salt okuma da dahil. Kullanıcı 2026-11'de bir kereye mahsus gerçek veriyi çekme izni verdi ve bundan
+sonrası için bunu açıkça yasakladı. Her erişimden önce ne yapılacağı söylenip izin istenir; bir önceki izin
+sonrakine geçmez.
+
 ## Uygulama ne yapar?
 
 Bir "sandık" (imece usulü ortak kasa) yönetim uygulamasıdır. Üyeler her ay **aidat** öder, biriken
@@ -289,6 +296,8 @@ betiktir. Betik her gece çalıştığı için "hangi işin sırası geldi" kara
 | Vadesi gelmiş aidatları oluşturma | her çalıştırmada (idempotent) | `clock.beginning_of_each_month` |
 | Ay başı hatırlatması — bu ayın ödemeleri | kişinin seçtiği gün (varsayılan **1**) | `reminder.KIND_MONTH_START` |
 | Ay sonu hatırlatması — bu ay + gelecek ay | kişinin seçtiği gün (varsayılan **25**) | `reminder.KIND_NEXT_MONTH` |
+| Yönetici ön hatırlatması — yarın kime gidecek | isteyen yöneticiye, üyelerin gününden bir gün önce | `manager_reminder.run_manager_reminder` |
+| Yeni özellik duyuruları | son günü geçmemiş her duyuru, hedef kişi başına bir kez | `announcement.run_announcements` |
 
 **Gün, kullanıcı tercihidir** (`ReminderPreference`); herkes iki hatırlatmayı da ayın istediği
 gününde alabilir ya da hiç almayabilir. Tercihi olmayan kullanıcı varsayılanları kullanır, yani
@@ -312,6 +321,55 @@ bkz. `_step`) ve herhangi bir adım hata verince betik sıfırdan farklı çıka
 kontrolü `date.today()` ile yapılır; 01:01 seçilmesi, görev birkaç dakika gecikse bile günün
 değişmemesi içindir. `period_utils.current_period()` de aynı `date.today()`yi kullanır, böylece
 e-postadaki "bu ay" üyenin sitede gördüğü "bu ay" ile aynı kalır.
+
+### Yönetici ön hatırlatması (`sandik/utils/manager_reminder.py`)
+
+Kullanıcı istedi: yöneticinin işlemediği bir ödeme yüzünden üye, ödediği tutar için hatırlatma almasın. İsteyen
+yöneticiye, yönettiği sandıkta **ertesi gün** hatırlatma alacak üyeler bugünden bildirilir (konu: "⚠️ Hesap güncel
+mi? Yarın N üyeye ödeme hatırlatması gidecek"); her üyenin adı, hangi hatırlatma (ay başı/ay sonu), yarınki
+e-postasında yazacak tutar ve işleme konmamış parası listelenir, sandık başına "Para girişi ekle" düğmesi vardır.
+
+- **Tercih sandık başına ve varsayılan kapalıdır**: `WebUser.preferences["manager_reminder_sandik_ids"]`
+  (`ManagerReminderPreference`, entity değil). Yalnızca o sandıkta **işlem girme yetkisi** olan (yönetici ya da
+  `can_write`) kişi açabilir (`WebUser.get_managed_sandiks`); yetkisi kalkınca e-posta da kesilir. Yazma
+  `auth/db.py → update_manager_reminder_preference` (yetkisi olmayan sandık kimliği atılır). Arayüz:
+  `/tercihlerim` ve jetonlu `/tercih/<token>` sayfasındaki "Sandık yöneticisi bildirimi" kartı (yalnızca
+  yönettiği sandık varsa görünür). Jetonlu sayfa bu yüzden yönettiği sandıkların **adlarını** da gösterir.
+- **Her üyenin günü ayrıdır**: bugün, `reminder.reminder_for_today(web_user, yarın)` ile kimin yarın hangi
+  hatırlatmayı alacağına bakılır; kimse yoksa yöneticiye e-posta gitmez. Mükerrer engeli üyelerdekiyle aynı (tam
+  gün eşitliği, kayıt yok). Yönetici başına tek e-posta, sandıklar bölüm bölüm.
+- **Tutarlar yarınki e-postayla aynı fonksiyondan** gelir (`reminder.collect_member_section`). Ayın son günü yarın
+  yeni ay başlar ve o ayın aidatları henüz oluşturulmamıştır: `current_term` parametresi verilir, aidatlar
+  `_projected_contribution_rows` ile hesaplanır (yazılmaz). Testler: `tests/test_manager_reminder.py`.
+- Gecelik akışta üye hatırlatmalarından sonra koşar (`_step`, ayrı adım). Kapatma valfi ve test adresi
+  üyelerdekiyle ortaktır (`SANDIKv2_REMINDER_EMAIL_*`).
+- Özelliğin duyurusu genel duyuru altyapısıyla gider (bkz. "Yeni özellik duyuruları"; anahtar `yonetici_on_hatirlatmasi`).
+- Elle önizleme: `clock.py --yonetici-hatirlatmasi --bugun=2026-11-24 --kuru --html=/tmp/y.html`. Gecelik akışta
+  `--html=x.html` verilirse yönetici e-postaları `x-yonetici.html`, duyurular `x-duyuru.html`ya yazılır.
+
+### Yeni özellik duyuruları (`sandik/utils/announcement.py`)
+
+Kullanıcı istedi: yeni özellikler ara ara e-postayla duyurulacak, ama her duyuru için kalıcı, ona özel kod
+istenmiyor. Altyapı geneldir, **duyuru veridir**:
+
+- **Yeni duyuru** = `ANNOUNCEMENTS`a bir `Announcement` satırı (`key`, `subject`, `audience`, `last_day`, isteğe
+  bağlı `skip`) + `email/duyurular/<key>.html` (`email/duyurular/_layout.html`i genişletir, yalnızca
+  `duyuru_icerik` bloğunu doldurur; selamlama, "tek seferlik" notu ve tercih bağlantısı kabuktadır). Şablona
+  `data.name_surname`, `data.sandik_names` (hedef kitleye göre ilgili sandıklar), `data.preference_url` gelir.
+  `tests/test_announcement.py` her duyurunun şablonu olduğunu ve basıldığını denetler.
+- **Kişi başına bir kez**: gönderilene `WebUser.preferences["announcements"][<key>]` = zaman yazılır
+  (`auth/db.py → mark_announcement_sent`). Başarısız gönderim ve test adresine gönderim işaretlenmez. **`key`
+  sonradan değiştirilmez**, değişirse herkese ikinci kez gider.
+- Gecelik iş son günü (`last_day`) geçmemiş bütün duyuruları dener: deploy'dan sonraki ilk gece gider, son güne
+  kadar hedefe yeni giren de alır. Son gün geçince duyuru hiçbir şey yapmaz; **temizlik**: `ANNOUNCEMENTS`taki
+  satır ve şablonu silinir (kişilerdeki işaretler zararsız kalır).
+- **Hedef kitleler** (`AUDIENCES`, yeniden kullanılır): `isleyen_sandik_yoneticileri` (işleyen sandıkta işlem girme
+  yetkisi olanlar), `isleyen_sandik_uyeleri`. "İşleyen sandık" istatistik sayfasının ölçütüdür
+  (`intro/utils.py → collect_sandik_facts`, `is_recently_active`: etkin, ≥3 aktif üye, ≥20 para hareketi, son 6
+  ayda hareket). Kullanıcı sordu: açılıp hiç kullanılmamış deneme sandıklarının yöneticilerine duyuru gitmesin.
+  2026-11 gerçek veride bu ölçütle 15 yöneticiden 6'sı kaldı. Yeni bir kitle gerekirse buraya fonksiyon eklenir.
+- Elle: `clock.py --duyuru=<key> [--kuru] [--html=x.html]` (son günü geçmiş olsa da gönderir; almış olana yine
+  gitmez). Kapatma valfi ve test adresi hatırlatmalarla ortaktır.
 
 ### `sandik/utils/reminder.py`
 

@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import PasswordField, SubmitField, BooleanField, StringField, EmailField, TelField, SelectField, \
-    HiddenField
+    HiddenField, SelectMultipleField
 from wtforms.validators import Email, Optional, EqualTo
 
 from sandik.utils.forms import CustomFlaskForm, input_required_validator, max_length_validator, PhoneNumberValidator
@@ -213,7 +213,17 @@ class ReminderPreferenceForm(CustomFlaskForm):
         coerce=str,
     )
 
+    # Yönetici ön hatırlatması: açık olduğu sandıklar. Seçenekler sayfada, kişinin işlem girme yetkisi
+    # olduğu sandıklarla doldurulur (`set_managed_sandiks`); hiç yoksa bölüm gösterilmez.
+    manager_sandik_ids = SelectMultipleField(
+        label="Üyelere hatırlatma gitmeden bir gün önce bana haber ver",
+        choices=[], coerce=int, validate_choice=True,
+    )
+
     submit = SubmitField(label="Kaydet")
+
+    def set_managed_sandiks(self, sandiks):
+        self.manager_sandik_ids.choices = [(s.id, s.name) for s in sandiks]
 
     def __init__(self, form_title='E-posta hatırlatma tercihlerim', *args, **kwargs):
         # form_name/form_id şablondaki JS seçicisiyle eşleşmeli (parts/reminder_preference_form.html)
