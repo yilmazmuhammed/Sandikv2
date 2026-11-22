@@ -19,7 +19,7 @@ sonrakine geçmez.
 Kullanıcı canlıya almadan önce ne yapıldığını görmek istiyor: **görünen her değişiklikten sonra (sayfa, düzen, metin,
 yeni özellik) ekran görüntüsü alınıp kullanıcıya gönderilir** (oturumdaki dosya gönderme aracıyla), istenmesini
 beklemeden. Telefon genişliği (390 px) her zaman, düzen değiştiyse bilgisayar genişliği (1280 px) de çekilir; değişen
-yer görünür olmalı. Görüntü yalnızca yerel/geçici veriyle alınır, canlı sunucuya bunun için de erişilmez. Nasıl
+yer görünür olmalı; yalnızca yeni hâl gönderilir, eskisi gönderilmez. Görüntü yalnızca yerel/geçici veriyle alınır, canlı sunucuya bunun için de erişilmez. Nasıl
 alınacağı (geçici veritabanı, Node ile Playwright, kapalı CDN'in npm paketlerine yönlendirilmesi) `myilmaz_tr`
 deposunun CLAUDE.md'sinde aynı başlık altındadır.
 
