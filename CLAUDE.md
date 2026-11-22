@@ -14,6 +14,15 @@ erişilmez** — salt okuma da dahil. Kullanıcı 2026-11'de bir kereye mahsus g
 sonrası için bunu açıkça yasakladı. Her erişimden önce ne yapılacağı söylenip izin istenir; bir önceki izin
 sonrakine geçmez.
 
+## Her değişiklik için ekran görüntüsü (kullanıcı kuralı)
+
+Kullanıcı canlıya almadan önce ne yapıldığını görmek istiyor: **görünen her değişiklikten sonra (sayfa, düzen, metin,
+yeni özellik) ekran görüntüsü alınıp kullanıcıya gönderilir** (oturumdaki dosya gönderme aracıyla), istenmesini
+beklemeden. Telefon genişliği (390 px) her zaman, düzen değiştiyse bilgisayar genişliği (1280 px) de çekilir; değişen
+yer görünür olmalı. Görüntü yalnızca yerel/geçici veriyle alınır, canlı sunucuya bunun için de erişilmez. Nasıl
+alınacağı (geçici veritabanı, Node ile Playwright, kapalı CDN'in npm paketlerine yönlendirilmesi) `myilmaz_tr`
+deposunun CLAUDE.md'sinde aynı başlık altındadır.
+
 ## Uygulama ne yapar?
 
 Bir "sandık" (imece usulü ortak kasa) yönetim uygulamasıdır. Üyeler her ay **aidat** öder, biriken
