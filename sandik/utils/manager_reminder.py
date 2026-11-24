@@ -56,18 +56,17 @@ def collect_sandik_section(sandik: Sandik, reminder_day: date, url_builder=None)
         web_user = member.web_user_ref
         if web_user is None or not web_user.email_address:
             continue
-        include_next_month = reminder.reminder_for_today(web_user=web_user, today=reminder_day)
-        if include_next_month is None:
+        is_month_end = reminder.reminder_for_today(web_user=web_user, today=reminder_day)
+        if is_month_end is None:
             continue
-        section = reminder.collect_member_section(member=member, include_next_month=include_next_month,
-                                                  url_builder=lambda _: None, current_term=current_term)
+        section = reminder.collect_member_section(member=member, url_builder=lambda _: None,
+                                                  current_term=current_term)
         if not section:
             continue
         rows.append({
             "member_id": member.id,
             "name_surname": web_user.name_surname,
-            "kind_text": KIND_TEXTS[include_next_month],
-            "include_next_month": include_next_month,
+            "kind_text": KIND_TEXTS[is_month_end],
             "total": section["total"],
             "undistributed": section["undistributed"],
             "remaining": section["remaining"],

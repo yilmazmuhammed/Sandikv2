@@ -21,9 +21,8 @@ def fake_url(sandik_id):
     return f"https://ornek/sandik/{sandik_id}/ozet"
 
 
-def collect(web_user, include_next_month=False):
-    return reminder.collect_reminder_data(web_user=web_user, include_next_month=include_next_month,
-                                          url_builder=fake_url)
+def collect(web_user):
+    return reminder.collect_reminder_data(web_user=web_user, url_builder=fake_url)
 
 
 class Recorder:
@@ -105,7 +104,7 @@ def test_a_user_who_turned_both_off_is_never_sent_to():
 
 
 @db_session
-def test_both_reminders_on_the_same_day_produce_one_email_including_next_month():
+def test_both_reminders_on_the_same_day_produce_one_email():
     wu = _web_user(month_start_day=10, next_month_day=10)
 
     assert reminder.reminder_for_today(web_user=wu, today=date(2026, 1, 10)) is True
@@ -137,7 +136,6 @@ def test_overdue_and_this_month_are_separated():
 
     assert [r["term"] for r in section["overdue"]] == [previous_term]
     assert [r["term"] for r in section["this_month"]] == [current_term]
-    assert section["next_month"] == []
     assert section["overdue_total"] == Decimal("100")
     assert section["this_month_total"] == Decimal("120")
     assert section["total"] == Decimal("220")
@@ -216,39 +214,55 @@ def test_payments_are_summed_into_contribution_and_installment_per_sandik():
                                 amount=Decimal("100"))
     factories.make_contribution(share=share, term=period_utils.current_period(), created_by=wu,
                                 amount=Decimal("100"))
-    # 3 taksit: geçen ay (gecikmiş), bu ay, gelecek ay
+    # 3 taksit: geçen ay (gecikmiş), bu ay, gelecek ay (e-postaya girmez)
     factories.make_debt(share=share, amount=Decimal("300"), created_by=wu, number_of_installment=3,
                         start_period=period_utils.previous_period())
 
-    section = collect(wu, include_next_month=True)["sandiks"][0]
+    section = collect(wu)["sandiks"][0]
 
-    # Aidat: geçen ay + bu ay + gelecek ay (hesaplanan)
-    assert section["contribution_total"] == Decimal("300")
-    assert section["installment_total"] == Decimal("300")
+    # Aidat: geçen ay + bu ay
+    assert section["contribution_total"] == Decimal("200")
+    assert section["installment_total"] == Decimal("200")
     assert section["contribution_total"] + section["installment_total"] == section["total"]
 
 
 @db_session
-def test_amounts_are_grouped_by_term_and_an_empty_current_month_is_still_listed():
-    """Kullanıcı sordu: bu ayın ödemesi bitmişken ay sonu e-postasında yalnızca gelecek ayın tutarı
-    görünüyordu ve hangi aya ait olduğu anlaşılmıyordu. Tutarlar ay ay ayrılır, bu ay boş olsa da yazılır."""
+def test_next_month_is_not_in_the_email_and_a_paid_up_member_gets_none():
+    """Kullanıcı istedi: ay sonu e-postasında gelecek ayın ödemeleri listelenmez. Bu ayın ödemesi bitmiş
+    üyeye (gelecek ayın taksiti, hesaplanacak aidatı olsa da) e-posta gitmez."""
     wu = factories.make_web_user()
     sandik = factories.make_sandik(created_by=wu, contribution_amount=Decimal("100"))
     share = factories.make_member_with_share(sandik=sandik, web_user=wu, created_by=wu)
     factories.pay_contribution_partially(share=share, term=period_utils.current_period(),
                                          paid_amount=Decimal("100"), created_by=wu)
+    factories.make_debt(share=share, amount=Decimal("200"), created_by=wu, number_of_installment=2,
+                        start_period=period_utils.next_period())
+    contribution_count_before = Contribution.select().count()
 
-    data = collect(wu, include_next_month=True)
-    terms = data["sandiks"][0]["terms"]
-
-    assert [t["label"] for t in terms] == [data["current_term_text"], data["next_term_text"]]
-    assert terms[0]["total"] == Decimal("0")
-    assert terms[1]["contribution_total"] == Decimal("100")
-    assert terms[1]["installment_total"] == Decimal("0")
+    assert collect(wu) is None
+    assert Contribution.select().count() == contribution_count_before
 
 
 @db_session
-def test_overdue_payments_are_a_separate_term_group():
+def test_amounts_are_grouped_by_term():
+    """Kullanıcı sordu: tutarın hangi aya ait olduğu anlaşılmıyordu. Tutarlar dönem dönem ayrılır."""
+    wu = factories.make_web_user()
+    sandik = factories.make_sandik(created_by=wu)
+    share = factories.make_member_with_share(sandik=sandik, web_user=wu, created_by=wu)
+    factories.make_contribution(share=share, term=period_utils.previous_period(), created_by=wu,
+                                amount=Decimal("100"))
+    factories.make_contribution(share=share, term=period_utils.current_period(), created_by=wu,
+                                amount=Decimal("120"))
+
+    data = collect(wu)
+    terms = data["sandiks"][0]["terms"]
+
+    assert [t["label"] for t in terms] == ["Geçmiş aylardan kalan", data["current_term_text"]]
+    assert [t["total"] for t in terms] == [Decimal("100"), Decimal("120")]
+
+
+@db_session
+def test_an_empty_current_month_is_still_listed():
     wu = factories.make_web_user()
     sandik = factories.make_sandik(created_by=wu)
     share = factories.make_member_with_share(sandik=sandik, web_user=wu, created_by=wu)
@@ -263,87 +277,27 @@ def test_overdue_payments_are_a_separate_term_group():
 
 
 @db_session
-def test_rendered_email_names_each_month_and_says_when_this_month_is_done():
+def test_rendered_email_names_each_term_and_says_when_this_month_is_done():
     from flask import render_template
     from sandik.app import create_app
 
     wu = factories.make_web_user()
-    sandik = factories.make_sandik(created_by=wu, contribution_amount=Decimal("100"))
+    sandik = factories.make_sandik(created_by=wu)
     share = factories.make_member_with_share(sandik=sandik, web_user=wu, created_by=wu)
-    factories.pay_contribution_partially(share=share, term=period_utils.current_period(),
-                                         paid_amount=Decimal("100"), created_by=wu)
-    data = collect(wu, include_next_month=True)
+    factories.make_contribution(share=share, term=period_utils.previous_period(), created_by=wu,
+                                amount=Decimal("100"))
+    data = collect(wu)
 
     app = create_app()
     app.config.update(SERVER_NAME="localhost")
     with app.app_context():
         html = render_template("email/payment_reminder.html", data=data)
 
-    current_at = html.index(data["current_term_text"], html.index(sandik.name))
-    next_at = html.index(data["next_term_text"], current_at + 1)
-    assert "Ödenmemiş ödemeniz yok" in html[current_at:next_at]
-    assert "Aidat" in html[next_at:]
-
-
-# --- Gelecek ay --------------------------------------------------------------------------------
-
-@db_session
-def test_next_month_contribution_is_calculated_without_writing_to_database():
-    wu = factories.make_web_user()
-    sandik = factories.make_sandik(created_by=wu, contribution_amount=Decimal("100"))
-    share = factories.make_member_with_share(sandik=sandik, web_user=wu, created_by=wu)
-    factories.make_contribution(share=share, term=period_utils.current_period(), created_by=wu,
-                                amount=Decimal("100"))
-    contribution_count_before = Contribution.select().count()
-
-    section = collect(wu, include_next_month=True)["sandiks"][0]
-
-    next_term = period_utils.next_period()
-    assert [(r["term"], r["type"], r["amount"]) for r in section["next_month"]] == [
-        (next_term, "Aidat", Decimal("100"))
-    ]
-    assert Contribution.select().count() == contribution_count_before
-
-
-@db_session
-def test_next_month_contribution_scales_with_active_share_count():
-    wu = factories.make_web_user()
-    sandik = factories.make_sandik(created_by=wu, contribution_amount=Decimal("100"))
-    share = factories.make_member_with_share(sandik=sandik, web_user=wu, created_by=wu)
-    member = share.member_ref
-    factories.make_share(member=member, created_by=wu)  # ikinci hisse
-    factories.make_contribution(share=share, term=period_utils.current_period(), created_by=wu,
-                                amount=Decimal("100"))
-
-    section = collect(wu, include_next_month=True)["sandiks"][0]
-    assert section["next_month_total"] == Decimal("200")
-    # Birden fazla hisse varsa satırlarda hisse bilgisi gösterilir
-    assert {r["share"] for r in section["next_month"]} == {"1. hisse", "2. hisse"}
-
-
-@db_session
-def test_existing_next_month_contribution_is_not_duplicated():
-    wu = factories.make_web_user()
-    sandik = factories.make_sandik(created_by=wu, contribution_amount=Decimal("100"))
-    share = factories.make_member_with_share(sandik=sandik, web_user=wu, created_by=wu)
-    next_term = period_utils.next_period()
-    # Gelecek ayın aidatı elle oluşturulmuş
-    factories.make_contribution(share=share, term=next_term, created_by=wu, amount=Decimal("80"))
-
-    section = collect(wu, include_next_month=True)["sandiks"][0]
-    assert [(r["term"], r["amount"]) for r in section["next_month"]] == [(next_term, Decimal("80"))]
-
-
-@db_session
-def test_next_month_is_not_included_in_month_start_mail():
-    wu = factories.make_web_user()
-    sandik = factories.make_sandik(created_by=wu, contribution_amount=Decimal("100"))
-    share = factories.make_member_with_share(sandik=sandik, web_user=wu, created_by=wu)
-    factories.make_contribution(share=share, term=period_utils.current_period(), created_by=wu,
-                                amount=Decimal("100"))
-
-    section = collect(wu, include_next_month=False)["sandiks"][0]
-    assert section["next_month"] == []
+    overdue_at = html.index("Geçmiş aylardan kalan", html.index(sandik.name))
+    current_at = html.index(data["current_term_text"], overdue_at)
+    assert "Aidat" in html[overdue_at:current_at]
+    assert "Ödenmemiş ödemeniz yok" in html[current_at:]
+    assert period_utils.period_to_tr_text(period_utils.next_period()) not in html
 
 
 # --- Kişi başına tek e-posta -------------------------------------------------------------------
@@ -368,11 +322,8 @@ def test_one_email_per_person_covering_every_sandik():
 
 # --- Konu satırı -------------------------------------------------------------------------------
 
-def test_subject_mentions_one_or_two_months():
-    base = {"current_term_text": "Ağustos 2026", "next_term_text": "Eylül 2026"}
-    assert reminder.build_subject(dict(base, include_next_month=False)) == "Ağustos 2026 ödemeleriniz"
-    assert reminder.build_subject(dict(base, include_next_month=True)) == \
-        "Ağustos 2026 ve Eylül 2026 ödemeleriniz"
+def test_subject_mentions_the_current_month():
+    assert reminder.build_subject({"current_term_text": "Ağustos 2026"}) == "Ağustos 2026 ödemeleriniz"
 
 
 # --- Gönderim davranışı ------------------------------------------------------------------------
@@ -525,5 +476,7 @@ def test_duplicate_contributions_for_a_month_do_not_break_the_projection():
     factories.make_contribution(share=share, term=next_term, created_by=wu, amount=Decimal("100"))
     factories.make_contribution(share=share, term=next_term, created_by=wu, amount=Decimal("50"))
 
-    section = collect(wu, include_next_month=True)["sandiks"][0]
-    assert section["next_month_total"] == Decimal("150")  # ikisi de kayıtlı; ayrıca hesaplanan yok
+    # Yönetici ön hatırlatması ayın son günü yarınki (yeni ayın) e-postasını hesaplar
+    section = reminder.collect_member_section(member=share.member_ref, url_builder=fake_url,
+                                              current_term=next_term)
+    assert section["this_month_total"] == Decimal("150")  # ikisi de kayıtlı; ayrıca hesaplanan yok

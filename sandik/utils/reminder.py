@@ -3,8 +3,10 @@
 `clock.py` her gece çalışır. Bu modül "bugün kime hatırlatma gönderilmeli" sorusunu cevaplar ve
 gönderimi yürütür. İki hatırlatma vardır:
 
-- **Ay başı**: geçmiş aylardan kalan + bu ayın ödemeleri
-- **Ay sonu**: yukarıdakilere ek olarak gelecek ayın ödemeleri
+- **Ay başı** ve **ay sonu**: ikisi de geçmiş aylardan kalan + bu ayın ödemelerini listeler. Ay sonu
+  e-postası eskiden gelecek ayın ödemelerini de içeriyordu; kullanıcı istedi, kaldırıldı (2026-11): bu ayın
+  ödemesi bitmiş üyeye gelecek ayın aidatı "ödemeniz gereken" diye gidiyor, kafa karıştırıyordu. Artık
+  ikisi yalnızca gününde farklıdır; bu ayın ödemesi bitmiş üyeye ay sonu e-postası gitmez.
 
 **Gün, kullanıcı tercihidir** (`ReminderPreference`): herkes ikisini de ayın istediği gününde
 alabilir ya da hiç almayabilir. Tercihi olmayan kullanıcı varsayılanları kullanır (1 ve 25), yani
@@ -16,8 +18,7 @@ bir kez koşar. Karşılaştırma aralığa çevrilirse bu güvence kaybolur ve 
 gelir. Gün seçenekleri 1-28 ile sınırlıdır (`ReminderPreference.MAX_DAY`): 29-31 seçilebilseydi o
 gün olmayan aylarda hatırlatma hiç gitmezdi.
 
-İki hatırlatma aynı güne denk gelirse **tek e-posta** gönderilir (gelecek ay dahil edilir); aynı
-gün iki mail gitmez.
+İki hatırlatma aynı güne denk gelirse **tek e-posta** gönderilir; aynı gün iki mail gitmez.
 
 Akış bilerek iki evreye ayrılmıştır:
 
@@ -70,10 +71,11 @@ def get_sleep_seconds():
 def reminder_for_today(web_user, today: date = None):
     """Bugün bu kişiye hangi hatırlatma gönderilecek?
 
-    `None` → gönderilmez. `False` → yalnızca bu ayın ödemeleri. `True` → gelecek ay da dahil.
+    `None` → gönderilmez. `False` → ay başı hatırlatması. `True` → ay sonu hatırlatması. İçerikleri
+    aynıdır; ayrım yalnızca yönetici ön hatırlatmasında hangi hatırlatmanın gideceğini yazmak içindir.
 
     Karşılaştırma **tam eşitliktir**; mükerrer engeli buna dayanır (bkz. modül açıklaması).
-    İki tercih aynı güne denk gelirse gelecek ayı içeren tek e-posta gönderilir.
+    İki tercih aynı güne denk gelirse tek e-posta gönderilir.
     """
     today = today or date.today()
     month_start_day, next_month_day = web_user.get_reminder_days()
@@ -120,8 +122,8 @@ def _projected_contribution_rows(member, term, show_share):
     """Henüz oluşturulmamış bir ayın aidat satırları.
 
     Aidat kayıtları yalnızca içinde bulunulan aya kadar oluşturulur
-    (`transaction_utils.create_due_contributions_for_share`), dolayısıyla ayın 25'inde gelecek ayın
-    `Contribution` satırları henüz yoktur. Tutar burada hesaplanır — `transaction_db`'deki
+    (`transaction_utils.create_due_contributions_for_share`); yönetici ön hatırlatması ayın son günü
+    yarınki (yeni ayın) e-postasını hesaplarken o ayın `Contribution` satırları henüz yoktur. Tutar burada hesaplanır — `transaction_db`'deki
     `create_contribution`'ın varsayılanıyla (üyenin aidat tutarı, hisse başına) aynı formül, yani
     ayın 1'inde oluşacak kayıtla aynı sonucu verir. **Veritabanına hiçbir şey yazılmaz.**
 
@@ -171,11 +173,11 @@ def _unpaid_rows(member, show_share, **filters):
     return rows
 
 
-def collect_member_section(member, include_next_month, url_builder, current_term=None):
+def collect_member_section(member, url_builder, current_term=None):
     """Tek bir sandık üyeliği için e-postadaki bölümü hazırlar. Ödeme yoksa `None` döner.
 
-    Satırlar (`overdue`/`this_month`/`next_month`) tek tek hesaplanır ama **e-postada
-    listelenmez**: şablon dönem başına (`terms`: geçmiş aylardan kalan, bu ay, gelecek ay) iki kalemi
+    Satırlar (`overdue`/`this_month`) tek tek hesaplanır ama **e-postada listelenmez**: şablon
+    dönem başına (`terms`: geçmiş aylardan kalan, bu ay) iki kalemi
     (aidat, taksit) gösterir, ayrıntı için sitedeki "Ödemelerim" sayfasına bağlantı verir
     (`payments_url`). Satırlar toplamların kaynağı olarak ve testler için tutulur.
 
@@ -186,7 +188,6 @@ def collect_member_section(member, include_next_month, url_builder, current_term
     """
     real_current_term = period_utils.current_period()
     current_term = current_term or real_current_term
-    next_term = period_utils.get_period_by_difference(start_period=current_term, diff_count=1)
     show_share = member.get_active_shares().count() > 1
 
     overdue, this_month = [], []
@@ -197,35 +198,26 @@ def collect_member_section(member, include_next_month, url_builder, current_term
         this_month += _unpaid_rows(member, show_share, periods=[current_term])
         this_month += _projected_contribution_rows(member=member, term=current_term, show_share=show_share)
 
-    next_month = []
-    if include_next_month:
-        next_month += _unpaid_rows(member, show_share, periods=[next_term])
-        next_month += _projected_contribution_rows(member=member, term=next_term, show_share=show_share)
-
-    if not overdue and not this_month and not next_month:
+    if not overdue and not this_month:
         return None
 
     overdue = _sort_rows(overdue)
     this_month = _sort_rows(this_month)
-    next_month = _sort_rows(next_month)
 
     overdue_total = _sum_amounts(overdue)
     this_month_total = _sum_amounts(this_month)
-    next_month_total = _sum_amounts(next_month)
-    total = overdue_total + this_month_total + next_month_total
-    all_rows = overdue + this_month + next_month
+    total = overdue_total + this_month_total
+    all_rows = overdue + this_month
     # Üyenin yatırdığı ama henüz bir ödemeye dağıtılmamış parası; hatırlatılan tutardan düşülür.
     undistributed = member.total_of_undistributed_amount() or Decimal(0)
 
-    # E-postada tutarlar ay ay gösterilir (kullanıcı istedi: gelecek ayın ödemesi görünürken bu ayın
-    # ödemelerinin bitip bitmediği anlaşılmıyordu). "Bu ay" hiç ödemesi olmasa da listelenir, şablon
-    # onu "ödenmemiş ödemeniz yok" diye yazar; geçmiş aylardan kalan yalnızca varsa görünür.
+    # E-postada tutarlar dönem dönem gösterilir: hangi tutarın hangi aya ait olduğu anlaşılsın
+    # (kullanıcı istedi). "Bu ay" hiç ödemesi olmasa da listelenir, şablon onu "ödenmemiş ödemeniz yok"
+    # diye yazar; geçmiş aylardan kalan yalnızca varsa görünür.
     terms = []
     if overdue:
         terms.append(_term_group("Geçmiş aylardan kalan", overdue))
     terms.append(_term_group(period_utils.period_to_tr_text(current_term), this_month))
-    if include_next_month:
-        terms.append(_term_group(period_utils.period_to_tr_text(next_term), next_month))
 
     sandik = member.sandik_ref
     bank_account = sandik.bank_accounts_set.filter(lambda ba: ba.is_primary).first()
@@ -242,10 +234,8 @@ def collect_member_section(member, include_next_month, url_builder, current_term
         "iban_holder": (bank_account.holder or bank_account.title) if bank_account else None,
         "overdue": overdue,
         "this_month": this_month,
-        "next_month": next_month,
         "overdue_total": overdue_total,
         "this_month_total": this_month_total,
-        "next_month_total": next_month_total,
         "terms": terms,
         "contribution_total": _sum_amounts(all_rows, KIND_CONTRIBUTION),
         "installment_total": _sum_amounts(all_rows, KIND_INSTALLMENT),
@@ -255,8 +245,7 @@ def collect_member_section(member, include_next_month, url_builder, current_term
     }
 
 
-def collect_reminder_data(web_user: WebUser, include_next_month: bool, url_builder,
-                          preference_url_builder=None):
+def collect_reminder_data(web_user: WebUser, url_builder, preference_url_builder=None):
     """Bir kişinin bütün sandık üyeliklerini kapsayan e-posta verisi. Ödemesi yoksa `None` döner.
 
     Kişi başına tek e-posta gönderilir; birden fazla sandıktaki üyelikler tek mailde bölüm bölüm
@@ -269,8 +258,7 @@ def collect_reminder_data(web_user: WebUser, include_next_month: bool, url_build
 
     sections = []
     for member in members:
-        section = collect_member_section(member=member, include_next_month=include_next_month,
-                                         url_builder=url_builder)
+        section = collect_member_section(member=member, url_builder=url_builder)
         if section:
             sections.append(section)
 
@@ -278,7 +266,6 @@ def collect_reminder_data(web_user: WebUser, include_next_month: bool, url_build
         return None
 
     current_term = period_utils.current_period()
-    next_term = period_utils.next_period()
     return {
         "web_user_id": web_user.id,
         "email_address": web_user.email_address,
@@ -293,16 +280,11 @@ def collect_reminder_data(web_user: WebUser, include_next_month: bool, url_build
         "is_single_currency": len({s["currency"] for s in sections}) <= 1,
         "currency": sections[0]["currency"] if sections else None,
         "current_term": current_term,
-        "next_term": next_term,
         "current_term_text": period_utils.period_to_tr_text(current_term),
-        "next_term_text": period_utils.period_to_tr_text(next_term),
-        "include_next_month": include_next_month,
     }
 
 
 def build_subject(data):
-    if data["include_next_month"]:
-        return f"{data['current_term_text']} ve {data['next_term_text']} ödemeleriniz"
     return f"{data['current_term_text']} ödemeleriniz"
 
 
@@ -320,14 +302,13 @@ def collect_recipients(url_builder, today: date = None, kind=None, preference_ur
             continue
 
         if kind:
-            include_next_month = reminder_for_kind(web_user=web_user, kind=kind)
+            which = reminder_for_kind(web_user=web_user, kind=kind)
         else:
-            include_next_month = reminder_for_today(web_user=web_user, today=today)
-        if include_next_month is None:
+            which = reminder_for_today(web_user=web_user, today=today)
+        if which is None:
             continue
 
-        data = collect_reminder_data(web_user=web_user, include_next_month=include_next_month,
-                                     url_builder=url_builder,
+        data = collect_reminder_data(web_user=web_user, url_builder=url_builder,
                                      preference_url_builder=preference_url_builder)
         if data:
             recipients.append(data)

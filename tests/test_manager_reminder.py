@@ -159,11 +159,11 @@ def test_amounts_match_the_members_email_and_count_undistributed_money():
     section = data["sandiks"][0]
     by_name = {m["name_surname"]: m for m in section["members"]}
 
-    # Ay sonu: bu ayın 100'ü + gelecek ayın hesaplanan 100'ü
-    assert by_name["Zeynep Üye"]["remaining"] == Decimal("200")
+    # Ay sonu: yalnızca bu ayın 100'ü (gelecek ay e-postaya girmez)
+    assert by_name["Zeynep Üye"]["remaining"] == Decimal("100")
     assert by_name["Ahmet Üye"]["undistributed"] == Decimal("30")
-    assert by_name["Ahmet Üye"]["remaining"] == Decimal("170")
-    assert section["remaining_total"] == Decimal("370")
+    assert by_name["Ahmet Üye"]["remaining"] == Decimal("70")
+    assert section["remaining_total"] == Decimal("170")
     assert section["undistributed_member_count"] == 1
     assert section["add_transaction_url"] == f"https://ornek/{sandik.id}/islem-ekle"
 

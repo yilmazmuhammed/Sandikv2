@@ -160,8 +160,8 @@ göster"** (kullanıcı istedi).
   görüneceğine tarayıcı karar verir; seçim `localStorage["sandikv2-ana-sayfa-gelecek-aidatlar"]`te
   durur ve tablonun hemen altındaki satır içi script ile **ilk boyamadan önce** uygulanır.
 - Gelecek aidatlar `_future_contribution_amounts` ile **hesaplanır, veritabanına yazılmaz**:
-  `member.contribution_amount` × aktif hisse (hatırlatma e-postasındaki gelecek ay aidatıyla aynı
-  formül). Kaydı zaten olan hisse/ay ve hissenin açılış ayından önceki aylar atlanır. Aralık gelecek
+  `member.contribution_amount` × aktif hisse (yönetici ön hatırlatmasının yeni ay için
+  hesapladığı aidatla aynı formül). Kaydı zaten olan hisse/ay ve hissenin açılış ayından önceki aylar atlanır. Aralık gelecek
   aydan tablodaki son aya (çoğunlukla son taksit) kadardır; hiç ödeme yoksa yalnızca gelecek ay.
 - Hesaplanan tutar içeren hücreler eğik yazılır (`projected_member_ids`) ve tablonun altında açıklanır.
 - Sandık başlıklarının yazı boyutunu küçülten JS gizli tabloda çalışamaz (genişlikler 0); bu yüzden
@@ -303,8 +303,8 @@ betiktir. Betik her gece çalıştığı için "hangi işin sırası geldi" kara
 | İş | Ne zaman | Nerede |
 |---|---|---|
 | Vadesi gelmiş aidatları oluşturma | her çalıştırmada (idempotent) | `clock.beginning_of_each_month` |
-| Ay başı hatırlatması — bu ayın ödemeleri | kişinin seçtiği gün (varsayılan **1**) | `reminder.KIND_MONTH_START` |
-| Ay sonu hatırlatması — bu ay + gelecek ay | kişinin seçtiği gün (varsayılan **25**) | `reminder.KIND_NEXT_MONTH` |
+| Ay başı hatırlatması — geçmiş + bu ayın ödemeleri | kişinin seçtiği gün (varsayılan **1**) | `reminder.KIND_MONTH_START` |
+| Ay sonu hatırlatması — aynı içerik, başka gün | kişinin seçtiği gün (varsayılan **25**) | `reminder.KIND_NEXT_MONTH` |
 | Yönetici ön hatırlatması — yarın kime gidecek | isteyen yöneticiye, üyelerin gününden bir gün önce | `manager_reminder.run_manager_reminder` |
 | Yeni özellik duyuruları | son günü geçmemiş her duyuru, hedef kişi başına bir kez | `announcement.run_announcements` |
 
@@ -312,13 +312,20 @@ betiktir. Betik her gece çalıştığı için "hangi işin sırası geldi" kara
 gününde alabilir ya da hiç almayabilir. Tercihi olmayan kullanıcı varsayılanları kullanır, yani
 sistem baştan herkese gönderir.
 
+**İki hatırlatmanın içeriği aynıdır** (geçmiş aylardan kalan + bu ay); yalnızca günleri farklıdır. Ay sonu
+e-postası eskiden gelecek ayın ödemelerini de (hesaplanan aidat dahil) listeliyordu; kullanıcı istedi,
+kaldırıldı (2026-11): bu ayın ödemesi bitmiş üyeye gelecek ayın aidatı "ödemeniz gereken" diye gidiyor ve
+hangi aya ait olduğu anlaşılmıyordu. Artık bu ayı bitmiş üyeye ay sonu e-postası hiç gitmez.
+`reminder_for_today` hâlâ hangisinin günü olduğunu (`True` = ay sonu) döner; yalnızca yönetici ön
+hatırlatması bunu yazmak için kullanır. Tercih anahtarları (`reminder_next_month_day`, `KIND_NEXT_MONTH`,
+`--hatirlatma-ay-sonu`) kayıtlı veriyle uyumlu kalsın diye adlarını korur.
+
 **Mükerrer gönderim, gün karşılaştırmasının tam eşitlik olmasıyla engellenir; veritabanında "bu
 dönem gönderildi" kaydı tutulmaz.** Kişinin seçtiği gün ayda bir kez geldiği için iş o kişi için
 ayda bir kez koşar. Karşılaştırma **aralığa çevrilmemelidir**: aralık, işin aynı ay içinde arka
 arkaya birkaç gece koşması demektir ve o zaman kayıt tutmak zorunlu hâle gelir. Gün seçenekleri
 **1-28** ile sınırlıdır (`ReminderPreference.MAX_DAY`): 29-31 seçilebilseydi o gün olmayan aylarda
-hatırlatma hiç gitmezdi. İki hatırlatma aynı güne denk gelirse **tek e-posta** gönderilir (gelecek
-ay dahil edilir).
+hatırlatma hiç gitmezdi. İki hatırlatma aynı güne denk gelirse **tek e-posta** gönderilir.
 
 Bunun bedeli, o gece görev hiç çalışmazsa o ayın hatırlatmasının kaçmasıdır. İki şey bu riski
 küçültür: `clock.py` adımları birbirinden yalıtır (aidat oluşturma patlasa bile hatırlatma koşar,
@@ -385,13 +392,12 @@ istenmiyor. Altyapı geneldir, **duyuru veridir**:
 - **Kişi başına tek e-posta.** Bir kişi birden fazla sandıkta üyeyse hepsi tek mailde bölüm bölüm
   listelenir (`general/utils.py` → `get_home_page_data` ile aynı yaklaşım).
 - **Ödemeler e-postada tek tek listelenmez.** Sandık başına, **dönem dönem** (`terms`: "Geçmiş aylardan
-  kalan" yalnızca varsa, bu ay, ay sonu e-postasında gelecek ay) iki kalem gösterilir: aidat ve taksit;
-  tutarı sıfır olan kalem yazılmaz. **Bu ay ödemesi olmasa da yazılır** ("✓ Ödenmemiş ödemeniz yok"):
-  kullanıcı sordu, eskiden tutarlar dönemlere ayrılmadan toplandığı için ay sonu e-postasında gelecek
-  ayın aidatı görünürken bu ayın ödemelerinin bitip bitmediği anlaşılmıyordu (2026-11). Sandık
+  kalan" yalnızca varsa, bu ay) iki kalem gösterilir: aidat ve taksit; tutarı sıfır olan kalem yazılmaz.
+  **Bu ay ödemesi olmasa da yazılır** ("✓ Ödenmemiş ödemeniz yok"; geçmiş aydan kalan varken görülür):
+  kullanıcı sordu, tutarlar dönemlere ayrılmadan toplandığında hangi aya ait olduğu anlaşılmıyordu (2026-11). Sandık
   toplamı `contribution_total`/`installment_total` hâlâ üretilir. Ayrıntı için her sandık bölümünde
   sitedeki "Ödemelerim" sayfasına (`transaction_page_bp.payments_of_member_page`, `payments_url`)
-  bağlantı vardır. Satır listeleri (`overdue`/`this_month`/`next_month`) toplamların kaynağı ve
+  bağlantı vardır. Satır listeleri (`overdue`/`this_month`) toplamların kaynağı ve
   testler için hâlâ üretilir; her satır `kind` (`KIND_CONTRIBUTION`/`KIND_INSTALLMENT`) taşır.
 - **Bütün sandıkların genel toplamı e-postanın en üstündedir** (birden fazla sandık ve tek para
   birimi varsa); sandık bölümleri onun dökümüdür.
@@ -401,9 +407,10 @@ istenmiyor. Altyapı geneldir, **duyuru veridir**:
   `member.get_active_shares()` gibi mevcut yardımcılar kullanılır. `Member.web_user_ref`
   **`Optional`**'dır — `None` olan üyeler atlanmalıdır (`get_payments`'ın `order_by`'ı
   `p.member_ref.web_user_ref.name_surname` dereference eder ve patlar).
-- **Gelecek ayın aidatı hesaplanır, veritabanına yazılmaz.** `create_due_contributions_for_share`
-  aidatları yalnızca içinde bulunulan aya kadar oluşturur; ayın 25'inde gelecek ayın `Contribution`
-  satırları henüz yoktur. Tutar `member.contribution_amount × aktif hisse` ile bulunur — bu,
+- **Henüz oluşturulmamış ayın aidatı hesaplanır, veritabanına yazılmaz** (`_projected_contribution_rows`).
+  Üye e-postasında bu gerekmez; yönetici ön hatırlatması ayın son günü yarınki (yeni ayın) e-postasını
+  hesaplarken o ayın `Contribution` satırları henüz yoktur (`create_due_contributions_for_share` aidatları
+  yalnızca içinde bulunulan aya kadar oluşturur). Tutar `member.contribution_amount × aktif hisse` ile bulunur — bu,
   `transaction_db.create_contribution`'ın varsayılanıyla aynı formüldür, yani ayın 1'inde oluşacak
   kayıtla aynı sonucu verir. Kayıt zaten varsa (ör. elle oluşturulmuş) o hisse için satır üretilmez.
 - Akış iki evrelidir: önce `db_session` içinde bütün veri **entity içermeyen düz sözlüklere**

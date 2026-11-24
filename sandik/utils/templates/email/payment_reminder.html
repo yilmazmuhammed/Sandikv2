@@ -2,10 +2,9 @@
   Aylık ödeme hatırlatma e-postası. Veriyi `sandik/utils/reminder.py` hazırlar; buraya entity değil,
   düz sözlükler gelir (`collect_reminder_data`).
 
-  `include_next_month` ayın 25'inde gönderilen e-postada `True`'dur; yalnızca o zaman gelecek ay
-  bölümü çıkar.
+  Ay başı ve ay sonu hatırlatması aynı e-postadır; gelecek ayın ödemeleri listelenmez (kullanıcı istedi).
 
-  Ödemeler tek tek listelenmez: sandık başına, dönem dönem (geçmiş aylardan kalan, bu ay, gelecek ay)
+  Ödemeler tek tek listelenmez: sandık başına, dönem dönem (geçmiş aylardan kalan, bu ay)
   aidat ve taksit olmak üzere iki kalem gösterilir; bu ayın ödemesi yoksa bu söylenir. Ayrıntı için
   sitedeki "Ödemelerim" sayfasına bağlantı verilir. Birden fazla sandık varsa genel toplam en üsttedir.
 #}
@@ -28,11 +27,7 @@
 {% block email_content %}
     <p style="margin:0 0 12px 0; font-size:16px;">Sayın {{ data.name_surname }},</p>
     <p style="margin:0 0 4px 0; font-size:14px; line-height:1.6;">
-        {% if data.include_next_month %}
-            {{ data.current_term_text }} ve {{ data.next_term_text }} dönemlerine ait ödemeleriniz aşağıdadır.
-        {% else %}
-            {{ data.current_term_text }} dönemine ait ödemeleriniz aşağıdadır.
-        {% endif %}
+        {{ data.current_term_text }} dahil ödenmemiş ödemeleriniz aşağıdadır.
     </p>
 
     {#
@@ -65,10 +60,9 @@
                     </p>
 
                     {#
-                      Ödemeler tek tek listelenmez; dönem dönem (geçmiş aylardan kalan, bu ay, gelecek ay)
-                      aidat ve taksit toplamı gösterilir. "Bu ay" ödemesi olmasa da yazılır: gelecek ayın
-                      ödemesi görünürken bu ayın bitip bitmediği anlaşılsın (kullanıcı istedi). Tutarı
-                      olmayan kalem yazılmaz. Ayrıntı sitedeki "Ödemelerim" sayfasındadır.
+                      Ödemeler tek tek listelenmez; dönem dönem (geçmiş aylardan kalan, bu ay) aidat ve
+                      taksit toplamı gösterilir. "Bu ay" ödemesi olmasa da yazılır: hangi tutarın hangi aya
+                      ait olduğu anlaşılsın (kullanıcı istedi). Tutarı olmayan kalem yazılmaz. Ayrıntı sitedeki "Ödemelerim" sayfasındadır.
                     #}
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
                            style="width:100%; border-collapse:collapse; font-size:14px;">

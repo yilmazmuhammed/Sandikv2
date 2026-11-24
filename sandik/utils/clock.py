@@ -59,7 +59,7 @@ aidatları oluşturur, sonra günün hangi hatırlatmaları gerektirdiğine baka
 
   --aidat                 Yalnızca vadesi gelmiş aidatları oluştur
   --hatirlatma-ay-basi    Ay başı hatırlatmasını çalıştır (bu ayın ödemeleri)
-  --hatirlatma-ay-sonu    Ay sonu hatırlatmasını çalıştır (bu ay + gelecek ay)
+  --hatirlatma-ay-sonu    Ay sonu hatırlatmasını çalıştır (bu ayın ödemeleri)
                           Bu iki seçenek gün tercihini yok sayar; hatırlatmayı kapatmış
                           kullanıcılara yine gönderilmez.
   --yonetici-hatirlatmasi Yalnızca yönetici ön hatırlatmasını çalıştır (yarın hatırlatma

@@ -202,7 +202,7 @@ class ReminderPreferenceForm(CustomFlaskForm):
     )
 
     next_month_enabled = BooleanField(
-        label="Ay sonu hatırlatması: bu ay + gelecek ayın ödemeleri",
+        label="Ay sonu hatırlatması: bu ayın ödenmemiş kalan ödemeleri",
         default=True
     )
     next_month_day = SelectField(
