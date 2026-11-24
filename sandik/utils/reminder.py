@@ -152,6 +152,16 @@ def _sum_amounts(rows, kind=None):
     return sum((r["amount"] for r in rows if kind is None or r["kind"] == kind), Decimal(0))
 
 
+def _term_group(label, rows):
+    """E-postadaki bir dönem bloğu: dönemin adı ve o dönemin aidat/taksit toplamları."""
+    return {
+        "label": label,
+        "contribution_total": _sum_amounts(rows, KIND_CONTRIBUTION),
+        "installment_total": _sum_amounts(rows, KIND_INSTALLMENT),
+        "total": _sum_amounts(rows),
+    }
+
+
 def _unpaid_rows(member, show_share, **filters):
     rows = []
     for payment in transaction_utils.get_payments(whose=member, is_fully_paid=False, **filters):
@@ -165,8 +175,8 @@ def collect_member_section(member, include_next_month, url_builder, current_term
     """Tek bir sandık üyeliği için e-postadaki bölümü hazırlar. Ödeme yoksa `None` döner.
 
     Satırlar (`overdue`/`this_month`/`next_month`) tek tek hesaplanır ama **e-postada
-    listelenmez**: şablon yalnızca sandık başına iki kalemi (`contribution_total`,
-    `installment_total`) gösterir, ayrıntı için sitedeki "Ödemelerim" sayfasına bağlantı verir
+    listelenmez**: şablon dönem başına (`terms`: geçmiş aylardan kalan, bu ay, gelecek ay) iki kalemi
+    (aidat, taksit) gösterir, ayrıntı için sitedeki "Ödemelerim" sayfasına bağlantı verir
     (`payments_url`). Satırlar toplamların kaynağı olarak ve testler için tutulur.
 
     `current_term`: e-postanın "bu ay"ı; verilmezse içinde bulunulan ay. Yönetici ön hatırlatması
@@ -207,6 +217,16 @@ def collect_member_section(member, include_next_month, url_builder, current_term
     # Üyenin yatırdığı ama henüz bir ödemeye dağıtılmamış parası; hatırlatılan tutardan düşülür.
     undistributed = member.total_of_undistributed_amount() or Decimal(0)
 
+    # E-postada tutarlar ay ay gösterilir (kullanıcı istedi: gelecek ayın ödemesi görünürken bu ayın
+    # ödemelerinin bitip bitmediği anlaşılmıyordu). "Bu ay" hiç ödemesi olmasa da listelenir, şablon
+    # onu "ödenmemiş ödemeniz yok" diye yazar; geçmiş aylardan kalan yalnızca varsa görünür.
+    terms = []
+    if overdue:
+        terms.append(_term_group("Geçmiş aylardan kalan", overdue))
+    terms.append(_term_group(period_utils.period_to_tr_text(current_term), this_month))
+    if include_next_month:
+        terms.append(_term_group(period_utils.period_to_tr_text(next_term), next_month))
+
     sandik = member.sandik_ref
     bank_account = sandik.bank_accounts_set.filter(lambda ba: ba.is_primary).first()
 
@@ -226,6 +246,7 @@ def collect_member_section(member, include_next_month, url_builder, current_term
         "overdue_total": overdue_total,
         "this_month_total": this_month_total,
         "next_month_total": next_month_total,
+        "terms": terms,
         "contribution_total": _sum_amounts(all_rows, KIND_CONTRIBUTION),
         "installment_total": _sum_amounts(all_rows, KIND_INSTALLMENT),
         "undistributed": undistributed,

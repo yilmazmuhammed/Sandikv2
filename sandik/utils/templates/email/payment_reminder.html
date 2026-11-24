@@ -5,9 +5,9 @@
   `include_next_month` ayın 25'inde gönderilen e-postada `True`'dur; yalnızca o zaman gelecek ay
   bölümü çıkar.
 
-  Ödemeler tek tek listelenmez: sandık başına aidat ve taksit olmak üzere iki kalem gösterilir,
-  ayrıntı için sitedeki "Ödemelerim" sayfasına bağlantı verilir. Birden fazla sandık varsa genel
-  toplam en üsttedir.
+  Ödemeler tek tek listelenmez: sandık başına, dönem dönem (geçmiş aylardan kalan, bu ay, gelecek ay)
+  aidat ve taksit olmak üzere iki kalem gösterilir; bu ayın ödemesi yoksa bu söylenir. Ayrıntı için
+  sitedeki "Ödemelerim" sayfasına bağlantı verilir. Birden fazla sandık varsa genel toplam en üsttedir.
 #}
 {% extends "email/_layout.html" %}
 
@@ -16,10 +16,10 @@
 
 {% macro amount_row(label, amount, currency, note=None) %}
     <tr>
-        <td style="padding:10px 8px; border-bottom:1px solid #eef0f2;">
+        <td style="padding:8px 8px 8px 20px; border-bottom:1px solid #eef0f2;">
             {{ label }}{% if note %}<br><span style="color:#7b8794; font-size:12px;">{{ note }}</span>{% endif %}
         </td>
-        <td align="right" style="padding:10px 8px; border-bottom:1px solid #eef0f2; white-space:nowrap;">
+        <td align="right" style="padding:8px; border-bottom:1px solid #eef0f2; white-space:nowrap;">
             {{ amount|money(currency) }}
         </td>
     </tr>
@@ -65,23 +65,36 @@
                     </p>
 
                     {#
-                      Ödemeler tek tek listelenmez; sandık başına iki kalem (aidat, taksit) gösterilir.
-                      Tutarı olmayan kalem yazılmaz. Ayrıntı sitedeki "Ödemelerim" sayfasındadır.
+                      Ödemeler tek tek listelenmez; dönem dönem (geçmiş aylardan kalan, bu ay, gelecek ay)
+                      aidat ve taksit toplamı gösterilir. "Bu ay" ödemesi olmasa da yazılır: gelecek ayın
+                      ödemesi görünürken bu ayın bitip bitmediği anlaşılsın (kullanıcı istedi). Tutarı
+                      olmayan kalem yazılmaz. Ayrıntı sitedeki "Ödemelerim" sayfasındadır.
                     #}
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
                            style="width:100%; border-collapse:collapse; font-size:14px;">
-                        {% if sandik.contribution_total > 0 %}
-                            {{ amount_row("Aidat", sandik.contribution_total, sandik.currency) }}
-                        {% endif %}
-                        {% if sandik.installment_total > 0 %}
-                            {{ amount_row("Taksit", sandik.installment_total, sandik.currency) }}
-                        {% endif %}
+                        {% for term in sandik.terms %}
+                            <tr>
+                                <td colspan="2" style="padding:{% if loop.first %}4px{% else %}14px{% endif %} 8px 2px 8px;
+                                           font-weight:bold; color:#2f3640;">
+                                    {{ term.label }}
+                                </td>
+                            </tr>
+                            {% if term.total <= 0 %}
+                                <tr>
+                                    <td colspan="2" style="padding:8px 8px 8px 20px; border-bottom:1px solid #eef0f2;
+                                               color:#2e7d32;">
+                                        &#10003; Ödenmemiş ödemeniz yok
+                                    </td>
+                                </tr>
+                            {% endif %}
+                            {% if term.contribution_total > 0 %}
+                                {{ amount_row("Aidat", term.contribution_total, sandik.currency) }}
+                            {% endif %}
+                            {% if term.installment_total > 0 %}
+                                {{ amount_row("Taksit", term.installment_total, sandik.currency) }}
+                            {% endif %}
+                        {% endfor %}
                     </table>
-                    {% if sandik.overdue %}
-                        <p style="margin:6px 0 0 0; font-size:12px; color:#7b8794;">
-                            Geçmiş aylardan kalan {{ sandik.overdue_total|money(sandik.currency) }} dahildir.
-                        </p>
-                    {% endif %}
 
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
                            style="width:100%; margin:12px 0 0 0; border-top:2px solid #e1e4e8; font-size:14px;">

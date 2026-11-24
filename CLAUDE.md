@@ -384,9 +384,12 @@ istenmiyor. Altyapı geneldir, **duyuru veridir**:
 
 - **Kişi başına tek e-posta.** Bir kişi birden fazla sandıkta üyeyse hepsi tek mailde bölüm bölüm
   listelenir (`general/utils.py` → `get_home_page_data` ile aynı yaklaşım).
-- **Ödemeler e-postada tek tek listelenmez.** Sandık başına iki kalem gösterilir: aidat
-  (`contribution_total`) ve taksit (`installment_total`); tutarı sıfır olan kalem yazılmaz.
-  Geçmiş aylardan kalan varsa tek satırlık bir notla belirtilir. Ayrıntı için her sandık bölümünde
+- **Ödemeler e-postada tek tek listelenmez.** Sandık başına, **dönem dönem** (`terms`: "Geçmiş aylardan
+  kalan" yalnızca varsa, bu ay, ay sonu e-postasında gelecek ay) iki kalem gösterilir: aidat ve taksit;
+  tutarı sıfır olan kalem yazılmaz. **Bu ay ödemesi olmasa da yazılır** ("✓ Ödenmemiş ödemeniz yok"):
+  kullanıcı sordu, eskiden tutarlar dönemlere ayrılmadan toplandığı için ay sonu e-postasında gelecek
+  ayın aidatı görünürken bu ayın ödemelerinin bitip bitmediği anlaşılmıyordu (2026-11). Sandık
+  toplamı `contribution_total`/`installment_total` hâlâ üretilir. Ayrıntı için her sandık bölümünde
   sitedeki "Ödemelerim" sayfasına (`transaction_page_bp.payments_of_member_page`, `payments_url`)
   bağlantı vardır. Satır listeleri (`overdue`/`this_month`/`next_month`) toplamların kaynağı ve
   testler için hâlâ üretilir; her satır `kind` (`KIND_CONTRIBUTION`/`KIND_INSTALLMENT`) taşır.

@@ -228,6 +228,63 @@ def test_payments_are_summed_into_contribution_and_installment_per_sandik():
     assert section["contribution_total"] + section["installment_total"] == section["total"]
 
 
+@db_session
+def test_amounts_are_grouped_by_term_and_an_empty_current_month_is_still_listed():
+    """Kullanıcı sordu: bu ayın ödemesi bitmişken ay sonu e-postasında yalnızca gelecek ayın tutarı
+    görünüyordu ve hangi aya ait olduğu anlaşılmıyordu. Tutarlar ay ay ayrılır, bu ay boş olsa da yazılır."""
+    wu = factories.make_web_user()
+    sandik = factories.make_sandik(created_by=wu, contribution_amount=Decimal("100"))
+    share = factories.make_member_with_share(sandik=sandik, web_user=wu, created_by=wu)
+    factories.pay_contribution_partially(share=share, term=period_utils.current_period(),
+                                         paid_amount=Decimal("100"), created_by=wu)
+
+    data = collect(wu, include_next_month=True)
+    terms = data["sandiks"][0]["terms"]
+
+    assert [t["label"] for t in terms] == [data["current_term_text"], data["next_term_text"]]
+    assert terms[0]["total"] == Decimal("0")
+    assert terms[1]["contribution_total"] == Decimal("100")
+    assert terms[1]["installment_total"] == Decimal("0")
+
+
+@db_session
+def test_overdue_payments_are_a_separate_term_group():
+    wu = factories.make_web_user()
+    sandik = factories.make_sandik(created_by=wu)
+    share = factories.make_member_with_share(sandik=sandik, web_user=wu, created_by=wu)
+    factories.make_contribution(share=share, term=period_utils.previous_period(), created_by=wu,
+                                amount=Decimal("100"))
+
+    data = collect(wu)
+    terms = data["sandiks"][0]["terms"]
+
+    assert [t["label"] for t in terms] == ["Geçmiş aylardan kalan", data["current_term_text"]]
+    assert [t["total"] for t in terms] == [Decimal("100"), Decimal("0")]
+
+
+@db_session
+def test_rendered_email_names_each_month_and_says_when_this_month_is_done():
+    from flask import render_template
+    from sandik.app import create_app
+
+    wu = factories.make_web_user()
+    sandik = factories.make_sandik(created_by=wu, contribution_amount=Decimal("100"))
+    share = factories.make_member_with_share(sandik=sandik, web_user=wu, created_by=wu)
+    factories.pay_contribution_partially(share=share, term=period_utils.current_period(),
+                                         paid_amount=Decimal("100"), created_by=wu)
+    data = collect(wu, include_next_month=True)
+
+    app = create_app()
+    app.config.update(SERVER_NAME="localhost")
+    with app.app_context():
+        html = render_template("email/payment_reminder.html", data=data)
+
+    current_at = html.index(data["current_term_text"], html.index(sandik.name))
+    next_at = html.index(data["next_term_text"], current_at + 1)
+    assert "Ödenmemiş ödemeniz yok" in html[current_at:next_at]
+    assert "Aidat" in html[next_at:]
+
+
 # --- Gelecek ay --------------------------------------------------------------------------------
 
 @db_session
