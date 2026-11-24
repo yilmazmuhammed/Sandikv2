@@ -58,9 +58,8 @@ Seçeneksiz çalıştırıldığında gecelik akışın tamamını yürütür:
 aidatları oluşturur, sonra günün hangi hatırlatmaları gerektirdiğine bakar.
 
   --aidat                 Yalnızca vadesi gelmiş aidatları oluştur
-  --hatirlatma-ay-basi    Ay başı hatırlatmasını çalıştır (bu ayın ödemeleri)
-  --hatirlatma-ay-sonu    Ay sonu hatırlatmasını çalıştır (bu ayın ödemeleri)
-                          Bu iki seçenek gün tercihini yok sayar; hatırlatmayı kapatmış
+  --hatirlatma           Ödeme hatırlatmasını hemen çalıştır (geçmiş + bu ayın ödemeleri).
+                          Gün tercihini yok sayar; hatırlatmayı tamamen kapatmış
                           kullanıcılara yine gönderilmez.
   --yonetici-hatirlatmasi Yalnızca yönetici ön hatırlatmasını çalıştır (yarın hatırlatma
                           alacak üyeleri, bildirimi açmış yöneticilere bildirir)
@@ -186,11 +185,11 @@ def run_announcements(dry_run=False, html_path=None, key=None):
     _run_with_app(job, None, dry_run=dry_run, html_path=html_path)
 
 
-def run_reminders(kind=None, dry_run=False, html_path=None):
+def run_reminders(manual=False, dry_run=False, html_path=None):
     """Hatırlatmaları çalıştırır.
 
-    `kind` verilmezse gecelik kip: kimin bugün istediğine `reminder.reminder_for_today` karar verir.
-    Verilirse elle kip: gün yok sayılır (bkz. `USAGE`).
+    Gecelik kip: kimin bugün istediğine `reminder.is_reminder_day` karar verir. `manual=True` elle kip:
+    gün yok sayılır (bkz. `USAGE`).
     """
     from flask import url_for
 
@@ -198,7 +197,7 @@ def run_reminders(kind=None, dry_run=False, html_path=None):
         return url_for("transaction_page_bp.payments_of_member_page", sandik_id=sandik_id, _external=True)
 
     _run_with_app(reminder.run_payment_reminder, "email/payment_reminder.html", dry_run=dry_run,
-                  html_path=html_path, kind=kind, url_builder=url_builder)
+                  html_path=html_path, manual=manual, url_builder=url_builder)
 
 
 def _html_path_for(html_path, suffix):
@@ -233,20 +232,14 @@ def main(argv):
     html_path = next((a.split("=", 1)[1] for a in argv if a.startswith("--html=")), None)
 
     only_contributions = "--aidat" in argv
-    month_start = "--hatirlatma-ay-basi" in argv
-    next_month = "--hatirlatma-ay-sonu" in argv
+    # Eski adlar (--hatirlatma-ay-basi / -ay-sonu) da kabul edilir; ikisi artık aynı e-postadır.
+    manual_reminder = any(a in argv for a in ("--hatirlatma", "--hatirlatma-ay-basi", "--hatirlatma-ay-sonu"))
     only_manager = "--yonetici-hatirlatmasi" in argv
     announcement_key = next((a.split("=", 1)[1] for a in argv if a.startswith("--duyuru=")), None)
     only_announcement = bool(announcement_key)
-    selected_reminder = month_start or next_month or only_manager or only_announcement
+    selected_reminder = manual_reminder or only_manager or only_announcement
     today_arg = next((a.split("=", 1)[1] for a in argv if a.startswith("--bugun=")), None)
     today = date.fromisoformat(today_arg) if today_arg else None
-
-    kinds = []
-    if month_start:
-        kinds.append(reminder.KIND_MONTH_START)
-    if next_month:
-        kinds.append(reminder.KIND_NEXT_MONTH)
 
     failed = False
     if only_contributions or not selected_reminder:
@@ -265,8 +258,8 @@ def main(argv):
     if only_announcement:
         failed |= not _step(f"Duyuru ({announcement_key})", run_announcements, dry_run=dry_run,
                             html_path=html_path, key=announcement_key)
-    for kind in kinds:
-        failed |= not _step(f"Hatırlatma e-postaları ({kind})", run_reminders, kind=kind,
+    if manual_reminder:
+        failed |= not _step("Hatırlatma e-postaları (elle)", run_reminders, manual=True,
                             dry_run=dry_run, html_path=html_path)
     return 1 if failed else 0
 

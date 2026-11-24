@@ -303,35 +303,35 @@ betiktir. Betik her gece çalıştığı için "hangi işin sırası geldi" kara
 | İş | Ne zaman | Nerede |
 |---|---|---|
 | Vadesi gelmiş aidatları oluşturma | her çalıştırmada (idempotent) | `clock.beginning_of_each_month` |
-| Ay başı hatırlatması — geçmiş + bu ayın ödemeleri | kişinin seçtiği gün (varsayılan **1**) | `reminder.KIND_MONTH_START` |
-| Ay sonu hatırlatması — aynı içerik, başka gün | kişinin seçtiği gün (varsayılan **25**) | `reminder.KIND_NEXT_MONTH` |
+| Ödeme hatırlatması — geçmiş + bu ayın ödenmemiş ödemeleri | kişinin seçtiği iki gün (varsayılan **1** ve **25**) | `reminder.run_payment_reminder` |
 | Yönetici ön hatırlatması — yarın kime gidecek | isteyen yöneticiye, üyelerin gününden bir gün önce | `manager_reminder.run_manager_reminder` |
 | Yeni özellik duyuruları | son günü geçmemiş her duyuru, hedef kişi başına bir kez | `announcement.run_announcements` |
 
-**Gün, kullanıcı tercihidir** (`ReminderPreference`); herkes iki hatırlatmayı da ayın istediği
-gününde alabilir ya da hiç almayabilir. Tercihi olmayan kullanıcı varsayılanları kullanır, yani
-sistem baştan herkese gönderir.
+**Tek bir hatırlatma vardır, kişi ayda iki gününü seçer** (`ReminderPreference`; tercih sayfasında
+"1. hatırlatma", "2. hatırlatma"). İkisi de açılıp kapatılabilir; tercihi olmayan kullanıcı varsayılanları
+kullanır, yani sistem baştan herkese gönderir. `reminder.is_reminder_day` bugünün iki günden biri olup
+olmadığına bakar.
 
-**İki hatırlatmanın içeriği aynıdır** (geçmiş aylardan kalan + bu ay); yalnızca günleri farklıdır. Ay sonu
-e-postası eskiden gelecek ayın ödemelerini de (hesaplanan aidat dahil) listeliyordu; kullanıcı istedi,
-kaldırıldı (2026-11): bu ayın ödemesi bitmiş üyeye gelecek ayın aidatı "ödemeniz gereken" diye gidiyor ve
-hangi aya ait olduğu anlaşılmıyordu. Artık bu ayı bitmiş üyeye ay sonu e-postası hiç gitmez.
-`reminder_for_today` hâlâ hangisinin günü olduğunu (`True` = ay sonu) döner; yalnızca yönetici ön
-hatırlatması bunu yazmak için kullanır. Tercih anahtarları (`reminder_next_month_day`, `KIND_NEXT_MONTH`,
-`--hatirlatma-ay-sonu`) kayıtlı veriyle uyumlu kalsın diye adlarını korur.
+Eskiden "ay başı" (bu ay) ve "ay sonu" (bu ay + gelecek ay, hesaplanan aidat dahil) diye iki ayrı
+hatırlatma vardı. Kullanıcı istedi (2026-11): gelecek ay kaldırıldı (bu ayı ödemiş üyeye gelecek ayın
+aidatı "ödemeniz gereken" diye gidiyor, hangi aya ait olduğu anlaşılmıyordu), ikisi aynı olunca tek
+hatırlatmaya, tek şablona (`email/payment_reminder.html`) ve tercih sayfasında tek karta indirildi. Bu ayı
+bitmiş üyeye e-posta gitmez. **Tercih anahtarları (`reminder_month_start_day`, `reminder_next_month_day`) ve
+form alanları (`month_start_*`, `next_month_*`) kayıtlı veriyle uyumlu kalsın diye eski adlarını korur**;
+yalnızca 1. ve 2. günü tutarlar.
 
 **Mükerrer gönderim, gün karşılaştırmasının tam eşitlik olmasıyla engellenir; veritabanında "bu
 dönem gönderildi" kaydı tutulmaz.** Kişinin seçtiği gün ayda bir kez geldiği için iş o kişi için
 ayda bir kez koşar. Karşılaştırma **aralığa çevrilmemelidir**: aralık, işin aynı ay içinde arka
 arkaya birkaç gece koşması demektir ve o zaman kayıt tutmak zorunlu hâle gelir. Gün seçenekleri
 **1-28** ile sınırlıdır (`ReminderPreference.MAX_DAY`): 29-31 seçilebilseydi o gün olmayan aylarda
-hatırlatma hiç gitmezdi. İki hatırlatma aynı güne denk gelirse **tek e-posta** gönderilir.
+hatırlatma hiç gitmezdi. İki gün aynıysa **tek e-posta** gönderilir.
 
 Bunun bedeli, o gece görev hiç çalışmazsa o ayın hatırlatmasının kaçmasıdır. İki şey bu riski
 küçültür: `clock.py` adımları birbirinden yalıtır (aidat oluşturma patlasa bile hatırlatma koşar,
 bkz. `_step`) ve herhangi bir adım hata verince betik sıfırdan farklı çıkar — PythonAnywhere görev
 çıktısını e-postayla gönderdiği için arıza görünür olur. Kaçan bir ay elle telafi edilir:
-`python sandik/utils/clock.py --hatirlatma-ay-basi`.
+`python sandik/utils/clock.py --hatirlatma`.
 
 **Görev saati gün sınırından uzak tutulmalıdır.** PythonAnywhere süreçleri UTC çalışır ve gün
 kontrolü `date.today()` ile yapılır; 01:01 seçilmesi, görev birkaç dakika gecikse bile günün
@@ -342,7 +342,7 @@ e-postadaki "bu ay" üyenin sitede gördüğü "bu ay" ile aynı kalır.
 
 Kullanıcı istedi: yöneticinin işlemediği bir ödeme yüzünden üye, ödediği tutar için hatırlatma almasın. İsteyen
 yöneticiye, yönettiği sandıkta **ertesi gün** hatırlatma alacak üyeler bugünden bildirilir (konu: "⚠️ Hesap güncel
-mi? Yarın N üyeye ödeme hatırlatması gidecek"); her üyenin adı, hangi hatırlatma (ay başı/ay sonu), yarınki
+mi? Yarın N üyeye ödeme hatırlatması gidecek"); her üyenin adı, yarınki
 e-postasında yazacak tutar ve işleme konmamış parası listelenir, sandık başına "Para girişi ekle" düğmesi vardır.
 
 - **Tercih sandık başına ve varsayılan kapalıdır**: `WebUser.preferences["manager_reminder_sandik_ids"]`
@@ -351,8 +351,8 @@ e-postasında yazacak tutar ve işleme konmamış parası listelenir, sandık ba
   `auth/db.py → update_manager_reminder_preference` (yetkisi olmayan sandık kimliği atılır). Arayüz:
   `/tercihlerim` ve jetonlu `/tercih/<token>` sayfasındaki "Sandık yöneticisi bildirimi" kartı (yalnızca
   yönettiği sandık varsa görünür). Jetonlu sayfa bu yüzden yönettiği sandıkların **adlarını** da gösterir.
-- **Her üyenin günü ayrıdır**: bugün, `reminder.reminder_for_today(web_user, yarın)` ile kimin yarın hangi
-  hatırlatmayı alacağına bakılır; kimse yoksa yöneticiye e-posta gitmez. Mükerrer engeli üyelerdekiyle aynı (tam
+- **Her üyenin günü ayrıdır**: bugün, `reminder.is_reminder_day(web_user, yarın)` ile kimin yarın
+  hatırlatma alacağına bakılır; kimse yoksa yöneticiye e-posta gitmez. Mükerrer engeli üyelerdekiyle aynı (tam
   gün eşitliği, kayıt yok). Yönetici başına tek e-posta, sandıklar bölüm bölüm.
 - **Tutarlar yarınki e-postayla aynı fonksiyondan** gelir (`reminder.collect_member_section`). Ayın son günü yarın
   yeni ay başlar ve o ayın aidatları henüz oluşturulmamıştır: `current_term` parametresi verilir, aidatlar
@@ -417,9 +417,9 @@ istenmiyor. Altyapı geneldir, **duyuru veridir**:
   çevrilir (`collect_recipients`), sonra oturum kapalıyken şablon basılıp SMTP'ye çıkılır. Böylece
   `EmailBot`'un hata hâlindeki 60 sn'lik beklemeleri boyunca uzun bir veritabanı işlemi açık kalmaz.
 - **`run_payment_reminder` kendisi mükerrer kontrolü yapmaz**, her çağrıldığında seçilen kişilere
-  gönderir; engel `reminder_for_today()` içindeki tam gün eşitliğidir.
-- İki kip vardır: `kind` verilmezse **gecelik kip** (`reminder_for_today`, herkesin kendi günü),
-  verilirse **elle kip** (`reminder_for_kind`, günü yok sayar ama **kapatmış kullanıcıya yine
+  gönderir; engel `is_reminder_day()` içindeki tam gün eşitliğidir.
+- İki kip vardır: varsayılan **gecelik kip** (`is_reminder_day`, herkesin kendi günleri) ve
+  `manual=True` **elle kip** (`wants_reminder`, günü yok sayar ama **iki günü de kapatmış kullanıcıya
   göndermez**).
 - E-postanın altındaki tercih bağlantısının adresi de `url_builder` gibi dışarıdan enjekte edilir
   (`preference_url_builder`); jeton üretmek uygulama bağlamı ister, testlerde `None` kalır.
@@ -547,12 +547,12 @@ Tutarlar `tr_number_format` filtresiyle basılır; bu filtre `sandik/app.py` iç
 
 ```bash
 FLASK_DEBUG=1 ../venv/bin/python sandik/utils/clock.py --yardim
-FLASK_DEBUG=1 ../venv/bin/python sandik/utils/clock.py --hatirlatma-ay-sonu --kuru --html=/tmp/onizleme.html
+FLASK_DEBUG=1 ../venv/bin/python sandik/utils/clock.py --hatirlatma --kuru --html=/tmp/onizleme.html
 ```
 
 `--kuru` hiçbir şey göndermez ve **kapatma valfinden etkilenmez** (önizleme her zaman çalışsın diye);
-`--html=<dosya>` üretilen e-postaların HTML'ini gözle kontrol için dosyaya yazar. Hatırlatma
-seçenekleri (`--hatirlatma-ay-basi` / `--hatirlatma-ay-sonu`) gün kontrolünü atlar, yani ayın
+`--html=<dosya>` üretilen e-postaların HTML'ini gözle kontrol için dosyaya yazar. `--hatirlatma`
+(eski adları `--hatirlatma-ay-basi` / `--hatirlatma-ay-sonu` da kabul edilir) gün kontrolünü atlar, yani ayın
 herhangi bir gününde çalıştırılabilir — ama hatırlatmayı **kapatmış kullanıcılara yine gönderilmez**. `.env_debug`'da
 `SANDIKv2_REMINDER_EMAIL_ENABLED="0"`dır: yerel çalıştırma yanlışlıkla gerçek üyelere mail atmasın.
 

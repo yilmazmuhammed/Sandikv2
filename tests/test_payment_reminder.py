@@ -64,58 +64,70 @@ def _web_user(month_start_day=None, next_month_day=None):
     return wu
 
 
+def _make_recipient_with_days(month_start_day, next_month_day):
+    """Bu ay ödenmemiş aidatı olan ve hatırlatma günlerini seçmiş bir kişi."""
+    wu = _web_user(month_start_day=month_start_day, next_month_day=next_month_day)
+    sandik = factories.make_sandik(created_by=wu)
+    share = factories.make_member_with_share(sandik=sandik, web_user=wu, created_by=wu)
+    factories.make_contribution(share=share, term=period_utils.current_period(), created_by=wu,
+                                amount=Decimal("100"))
+    return wu
+
+
 @pytest.mark.parametrize("day, expected", [
-    (1, False),    # varsayılan ay başı günü -> yalnızca bu ay
-    (2, None),
-    (24, None),
-    (25, True),    # varsayılan ay sonu günü -> gelecek ay dahil
-    (26, None),
-    (31, None),
+    (1, True),     # varsayılan 1. gün
+    (2, False),
+    (24, False),
+    (25, True),    # varsayılan 2. gün
+    (26, False),
+    (31, False),
 ])
 @db_session
 def test_default_days_decide_what_is_sent_today(day, expected):
     wu = factories.make_web_user()
-    assert reminder.reminder_for_today(web_user=wu, today=date(2026, 1, day)) is expected
+    assert reminder.is_reminder_day(web_user=wu, today=date(2026, 1, day)) is expected
 
 
 @db_session
 def test_user_can_choose_another_day():
     wu = _web_user(month_start_day=5, next_month_day=20)
 
-    assert reminder.reminder_for_today(web_user=wu, today=date(2026, 1, 1)) is None
-    assert reminder.reminder_for_today(web_user=wu, today=date(2026, 1, 5)) is False
-    assert reminder.reminder_for_today(web_user=wu, today=date(2026, 1, 20)) is True
+    assert reminder.is_reminder_day(web_user=wu, today=date(2026, 1, 1)) is False
+    assert reminder.is_reminder_day(web_user=wu, today=date(2026, 1, 5)) is True
+    assert reminder.is_reminder_day(web_user=wu, today=date(2026, 1, 20)) is True
 
 
 @db_session
 def test_zero_means_the_user_does_not_want_that_email():
     wu = _web_user(month_start_day=0, next_month_day=25)
 
-    assert reminder.reminder_for_today(web_user=wu, today=date(2026, 1, 1)) is None
-    assert reminder.reminder_for_today(web_user=wu, today=date(2026, 1, 25)) is True
+    assert reminder.is_reminder_day(web_user=wu, today=date(2026, 1, 1)) is False
+    assert reminder.is_reminder_day(web_user=wu, today=date(2026, 1, 25)) is True
 
 
 @db_session
 def test_a_user_who_turned_both_off_is_never_sent_to():
     wu = _web_user(month_start_day=0, next_month_day=0)
 
-    assert all(reminder.reminder_for_today(web_user=wu, today=date(2026, 1, day)) is None
-               for day in range(1, 32))
+    assert not any(reminder.is_reminder_day(web_user=wu, today=date(2026, 1, day)) for day in range(1, 32))
+    assert reminder.wants_reminder(wu) is False
 
 
 @db_session
-def test_both_reminders_on_the_same_day_produce_one_email():
-    wu = _web_user(month_start_day=10, next_month_day=10)
+def test_both_days_the_same_produce_one_email():
+    wu = _make_recipient_with_days(month_start_day=10, next_month_day=10)
 
-    assert reminder.reminder_for_today(web_user=wu, today=date(2026, 1, 10)) is True
+    result, recorder = run(today=date(2026, 1, 10))
+    assert result["sent"] == 1 and [m["to"] for m in recorder.sent] == [wu.email_address]
 
 
 @db_session
 def test_manual_run_ignores_the_day_but_not_the_opt_out():
-    wants = _web_user(month_start_day=7, next_month_day=0)
+    wants = _make_recipient_with_days(month_start_day=0, next_month_day=7)
+    _make_recipient_with_days(month_start_day=0, next_month_day=0)
 
-    assert reminder.reminder_for_kind(web_user=wants, kind=reminder.KIND_MONTH_START) is False
-    assert reminder.reminder_for_kind(web_user=wants, kind=reminder.KIND_NEXT_MONTH) is None
+    result, recorder = run(manual=True, today=date(2026, 1, 2))
+    assert [m["to"] for m in recorder.sent] == [wants.email_address]
 
 
 # --- Veri toplama -----------------------------------------------------------------------------
@@ -347,7 +359,7 @@ def test_a_user_is_mailed_on_exactly_two_days_a_month():
     """Mükerrer engeli tamamen buna dayanıyor: kişi başına ayda iki gün, her biri bir kez."""
     wu = _web_user(month_start_day=3, next_month_day=18)
     days = [day for day in range(1, 32)
-            if reminder.reminder_for_today(web_user=wu, today=date(2026, 1, day)) is not None]
+            if reminder.is_reminder_day(web_user=wu, today=date(2026, 1, day))]
     assert days == [3, 18]
 
 
@@ -363,7 +375,7 @@ def test_run_sends_to_the_member_with_an_unpaid_payment():
 def test_run_keeps_no_record_so_a_second_call_sends_again():
     """Kayıt tutulmadığı için `run_payment_reminder` her çağrıldığında gönderir.
 
-    Bu bilinçli: mükerrer engeli `reminder_for_today()` içindeki tam gün eşitliğidir, burada değil.
+    Bu bilinçli: mükerrer engeli `is_reminder_day()` içindeki tam gün eşitliğidir, burada değil.
     """
     _setup_recipient()
 

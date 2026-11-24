@@ -53,7 +53,6 @@
                             <tr>
                                 <td style="padding:9px 8px; border-bottom:1px solid #eef0f2;">
                                     {{ m.name_surname }}
-                                    <br><span style="color:#7b8794; font-size:12px;">{{ m.kind_text }}</span>
                                     {% if m.undistributed > 0 %}
                                         <br><span style="color:#b26a00; font-size:12px;">
                                             İşleme konmamış {{ m.undistributed|money(sandik.currency) }} var
@@ -90,7 +89,7 @@
 
     <p style="margin:20px 0 0 0; font-size:13px; line-height:1.6; color:#7b8794;">
         Tutarlar bugünkü kayıtlara göre hesaplanmıştır; bugün işleyeceğiniz ödemeler yarınki e-postalara
-        yansır. İki hatırlatma da geçmiş aylardan kalan ve o ayın ödemelerini içerir.
+        yansır. Hatırlatma geçmiş aylardan kalan ve o ayın ödenmemiş ödemelerini içerir.
     </p>
 {% endblock %}
 

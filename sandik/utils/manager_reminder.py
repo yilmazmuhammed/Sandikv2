@@ -7,8 +7,8 @@ hesabı güncel tutun" e-postası alır; içinde her üyenin yarınki e-postada 
 - **Tercih sandık başınadır ve varsayılan kapalıdır** (`ManagerReminderPreference`, `WebUser.preferences`).
   Yalnızca o sandıkta işlem girme yetkisi olan (yönetici ya da yazma yetkili) kişi açabilir
   (`WebUser.get_managed_sandiks`). Sayfa: `/tercihlerim` ve e-postadaki `/tercih/<token>`.
-- **Her üyenin günü farklı olabilir** (`ReminderPreference`): bugün, yarın kimin hangi hatırlatmayı
-  alacağına `reminder.reminder_for_today(web_user, yarın)` ile bakılır. Yarın kimseye gitmiyorsa
+- **Her üyenin günü farklı olabilir** (`ReminderPreference`): bugün, yarın kimin hatırlatma
+  alacağına `reminder.is_reminder_day(web_user, yarın)` ile bakılır. Yarın kimseye gitmiyorsa
   yöneticiye de e-posta gitmez. Mükerrer engeli üyelerdekiyle aynıdır: gün tam eşitlikle karşılaştırılır,
   kayıt tutulmaz.
 - Tutarlar yarınki e-postayla **aynı fonksiyondan** (`reminder.collect_member_section`) gelir. Ayın son
@@ -33,8 +33,6 @@ from sandik.utils.sorting import turkish_sort_key
 
 TR_DAY_NAMES = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
 
-KIND_TEXTS = {False: "Ay başı hatırlatması", True: "Ay sonu hatırlatması"}
-
 
 def date_to_tr_text(day: date):
     """date(2026, 11, 22) -> '22 Kasım 2026 Pazar'."""
@@ -56,8 +54,7 @@ def collect_sandik_section(sandik: Sandik, reminder_day: date, url_builder=None)
         web_user = member.web_user_ref
         if web_user is None or not web_user.email_address:
             continue
-        is_month_end = reminder.reminder_for_today(web_user=web_user, today=reminder_day)
-        if is_month_end is None:
+        if not reminder.is_reminder_day(web_user=web_user, today=reminder_day):
             continue
         section = reminder.collect_member_section(member=member, url_builder=lambda _: None,
                                                   current_term=current_term)
@@ -66,7 +63,6 @@ def collect_sandik_section(sandik: Sandik, reminder_day: date, url_builder=None)
         rows.append({
             "member_id": member.id,
             "name_surname": web_user.name_surname,
-            "kind_text": KIND_TEXTS[is_month_end],
             "total": section["total"],
             "undistributed": section["undistributed"],
             "remaining": section["remaining"],

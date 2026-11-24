@@ -1,15 +1,17 @@
 """Üyelere aylık ödeme hatırlatma e-postası gönderen iş.
 
 `clock.py` her gece çalışır. Bu modül "bugün kime hatırlatma gönderilmeli" sorusunu cevaplar ve
-gönderimi yürütür. İki hatırlatma vardır:
+gönderimi yürütür. **Tek bir hatırlatma vardır, kişi ayda iki gününü seçer** ("1. hatırlatma",
+"2. hatırlatma"); e-posta geçmiş aylardan kalan + bu ayın ödenmemiş ödemelerini listeler.
 
-- **Ay başı** ve **ay sonu**: ikisi de geçmiş aylardan kalan + bu ayın ödemelerini listeler. Ay sonu
-  e-postası eskiden gelecek ayın ödemelerini de içeriyordu; kullanıcı istedi, kaldırıldı (2026-11): bu ayın
-  ödemesi bitmiş üyeye gelecek ayın aidatı "ödemeniz gereken" diye gidiyor, kafa karıştırıyordu. Artık
-  ikisi yalnızca gününde farklıdır; bu ayın ödemesi bitmiş üyeye ay sonu e-postası gitmez.
+Eskiden "ay başı" (bu ay) ve "ay sonu" (bu ay + gelecek ay) diye iki ayrı hatırlatma vardı. Kullanıcı
+istedi (2026-11): gelecek ay kaldırıldı (bu ayı ödemiş üyeye gelecek ayın aidatı "ödemeniz gereken" diye
+gidiyor, kafa karıştırıyordu), ikisi aynı olunca da tek hatırlatmaya indirildi. Tercih anahtarlarının adları
+(`reminder_month_start_day`, `reminder_next_month_day`) kayıtlı veriyle uyumlu kalsın diye değişmedi;
+yalnızca 1. ve 2. günü tutarlar.
 
-**Gün, kullanıcı tercihidir** (`ReminderPreference`): herkes ikisini de ayın istediği gününde
-alabilir ya da hiç almayabilir. Tercihi olmayan kullanıcı varsayılanları kullanır (1 ve 25), yani
+**Günler kullanıcı tercihidir** (`ReminderPreference`): herkes ikisini de ayın istediği gününe alabilir ya
+da kapatabilir. Tercihi olmayan kullanıcı varsayılanları kullanır (1 ve 25), yani
 sistem baştan herkese gönderir; kullanıcı isterse kapatır.
 
 **Mükerrer gönderim, gün karşılaştırmasının tam eşitlik olmasıyla engellenir**; veritabanında
@@ -18,7 +20,7 @@ bir kez koşar. Karşılaştırma aralığa çevrilirse bu güvence kaybolur ve 
 gelir. Gün seçenekleri 1-28 ile sınırlıdır (`ReminderPreference.MAX_DAY`): 29-31 seçilebilseydi o
 gün olmayan aylarda hatırlatma hiç gitmezdi.
 
-İki hatırlatma aynı güne denk gelirse **tek e-posta** gönderilir; aynı gün iki mail gitmez.
+İki gün aynıysa **tek e-posta** gönderilir; aynı gün iki mail gitmez.
 
 Akış bilerek iki evreye ayrılmıştır:
 
@@ -40,9 +42,6 @@ from sandik.transaction import utils as transaction_utils
 from sandik.utils import period as period_utils
 from sandik.utils.db_models import Contribution, ReminderPreference, WebUser
 from sandik.utils.sorting import turkish_sort_key
-
-KIND_MONTH_START = "month_start"
-KIND_NEXT_MONTH = "next_month"
 
 DEFAULT_SLEEP_SECONDS = 2
 
@@ -68,35 +67,19 @@ def get_sleep_seconds():
         return DEFAULT_SLEEP_SECONDS
 
 
-def reminder_for_today(web_user, today: date = None):
-    """Bugün bu kişiye hangi hatırlatma gönderilecek?
-
-    `None` → gönderilmez. `False` → ay başı hatırlatması. `True` → ay sonu hatırlatması. İçerikleri
-    aynıdır; ayrım yalnızca yönetici ön hatırlatmasında hangi hatırlatmanın gideceğini yazmak içindir.
+def is_reminder_day(web_user, today: date = None) -> bool:
+    """Bugün bu kişinin seçtiği hatırlatma günlerinden biri mi?
 
     Karşılaştırma **tam eşitliktir**; mükerrer engeli buna dayanır (bkz. modül açıklaması).
-    İki tercih aynı güne denk gelirse tek e-posta gönderilir.
+    İki gün aynıysa tek e-posta gönderilir.
     """
     today = today or date.today()
-    month_start_day, next_month_day = web_user.get_reminder_days()
-
-    if next_month_day != ReminderPreference.OFF and today.day == next_month_day:
-        return True
-    if month_start_day != ReminderPreference.OFF and today.day == month_start_day:
-        return False
-    return None
+    return any(day != ReminderPreference.OFF and today.day == day for day in web_user.get_reminder_days())
 
 
-def reminder_for_kind(web_user, kind):
-    """Elle çalıştırma: günü yok sayar ama **kapatmış kullanıcıya yine göndermez**.
-
-    `--hatirlatma-ay-basi` / `--hatirlatma-ay-sonu` bunu kullanır; tercihini kapatmış birine elle
-    çalıştırmayla mail gitmesi istenmez.
-    """
-    month_start_day, next_month_day = web_user.get_reminder_days()
-    if kind == KIND_NEXT_MONTH:
-        return True if next_month_day != ReminderPreference.OFF else None
-    return False if month_start_day != ReminderPreference.OFF else None
+def wants_reminder(web_user) -> bool:
+    """Elle çalıştırma (`--hatirlatma`): günü yok sayar ama **iki günü de kapatmış kullanıcıya göndermez**."""
+    return any(day != ReminderPreference.OFF for day in web_user.get_reminder_days())
 
 
 # --- Veri toplama -----------------------------------------------------------------------------
@@ -288,11 +271,11 @@ def build_subject(data):
     return f"{data['current_term_text']} ödemeleriniz"
 
 
-def collect_recipients(url_builder, today: date = None, kind=None, preference_url_builder=None):
+def collect_recipients(url_builder, today: date = None, manual=False, preference_url_builder=None):
     """Mail gönderilecek kişilerin verisini toplar. `db_session` içinde çağrılmalıdır.
 
-    `kind` verilmezse **gecelik kip**: herkesin kendi tercih ettiği güne bakılır. `kind` verilirse
-    **elle kip**: gün yok sayılır, yalnızca o hatırlatmayı kapatmış olanlar atlanır.
+    **Gecelik kip** (varsayılan): herkesin kendi tercih ettiği günlere bakılır. `manual=True` **elle
+    kip**: gün yok sayılır, yalnızca hatırlatmayı tamamen kapatmış olanlar atlanır.
 
     Ödemesi olmayan kişi listeye girmez (`collect_reminder_data` `None` döner).
     """
@@ -301,11 +284,7 @@ def collect_recipients(url_builder, today: date = None, kind=None, preference_ur
         if not web_user.email_address:
             continue
 
-        if kind:
-            which = reminder_for_kind(web_user=web_user, kind=kind)
-        else:
-            which = reminder_for_today(web_user=web_user, today=today)
-        if which is None:
+        if not (wants_reminder(web_user) if manual else is_reminder_day(web_user=web_user, today=today)):
             continue
 
         data = collect_reminder_data(web_user=web_user, url_builder=url_builder,
@@ -317,11 +296,11 @@ def collect_recipients(url_builder, today: date = None, kind=None, preference_ur
 
 # --- İş yürütme -------------------------------------------------------------------------------
 
-def run_payment_reminder(url_builder, render, send, today: date = None, kind=None, dry_run=False,
+def run_payment_reminder(url_builder, render, send, today: date = None, manual=False, dry_run=False,
                          log=print, preference_url_builder=None):
     """Hatırlatma gönderimini baştan sona çalıştırır.
 
-    Mükerrer kontrolü burada değil, `reminder_for_today()` içindeki tam gün eşitliğindedir: bu
+    Mükerrer kontrolü burada değil, `is_reminder_day()` içindeki tam gün eşitliğindedir: bu
     fonksiyon her çağrıldığında, seçilen kişilere gönderir. Elle çağırırken bu bilinerek çağrılır.
 
     `render(data) -> html` ve `send(to_address, subject, html) -> None` dışarıdan verilir; böylece
@@ -330,11 +309,11 @@ def run_payment_reminder(url_builder, render, send, today: date = None, kind=Non
     Döner: `{"sent": int, "failed": int, "recipients": int}`
     """
     result = {"sent": 0, "failed": 0, "recipients": 0}
-    label = f"[{kind}] " if kind else ""
+    label = "[elle] " if manual else ""
 
     # Toplama db_session içinde biter; gönderim sırasında veritabanı oturumu açık kalmaz.
     with db_session:
-        recipients = collect_recipients(url_builder=url_builder, today=today, kind=kind,
+        recipients = collect_recipients(url_builder=url_builder, today=today, manual=manual,
                                         preference_url_builder=preference_url_builder)
 
     result["recipients"] = len(recipients)

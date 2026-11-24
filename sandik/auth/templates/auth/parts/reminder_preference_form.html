@@ -5,6 +5,10 @@
   jetonlu bağlantının sayfası (`intro/_layout.html`). İki kabuğun CSS'i ortak olmadığı için
   buradaki stiller **bu parçanın içinde** durur; genel form partial'ı (`utils/parts/form.html`)
   kullanılmaz çünkü alanları "istiyorum + hangi gün" şeklinde ikişerli gruplamak gerekiyor.
+
+  Tek bir hatırlatma vardır, kişi ayda iki gününü seçer (kullanıcı istedi: eski "ay başı" ve "ay sonu"
+  hatırlatmaları aynı e-postaya dönüşünce sadeleştirildi). Alan adları (`month_start_*`, `next_month_*`)
+  kayıtlı tercih anahtarlarıyla uyumlu kalsın diye değişmedi; yalnızca 1. ve 2. günü tutarlar.
 #}
 <style>
   .rp-card { border: 1px solid #dfe3e8; border-radius: 8px; padding: 16px 18px; margin-bottom: 14px; }
@@ -14,7 +18,8 @@
   .rp-check { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
   .rp-check input[type="checkbox"] { margin: 3px 0 0 0; width: 16px; height: 16px; flex: none; }
   .rp-check label { font-weight: normal; margin: 0; cursor: pointer; }
-  .rp-day { padding-left: 26px; }
+  .rp-day { padding-left: 26px; margin-bottom: 14px; }
+  .rp-day:last-child { margin-bottom: 0; }
   .rp-day label { display: block; font-weight: normal; font-size: 13px; margin-bottom: 4px; }
   .rp-day select { max-width: 260px; width: 100%; padding: 6px 8px; border: 1px solid #cbd2d9;
                    border-radius: 4px; background-color: #fff; }
@@ -26,33 +31,28 @@
 </style>
 
 <p class="rp-note">
-  Ödeme hatırlatma e-postalarını almak istemiyorsanız ilgili kutunun işaretini kaldırınız.
-  Almak istiyorsanız e-postanın ayın hangi gününde gönderileceğini seçebilirsiniz.
-  <strong>Ödemesi olmayan aylarda e-posta gönderilmez.</strong>
+  Hatırlatma e-postası ayda en fazla iki kez, seçtiğiniz günlerde gönderilir. İstemediğiniz günün
+  işaretini kaldırınız. <strong>O gün ödenmemiş ödemeniz yoksa e-posta gönderilmez.</strong>
 </p>
 
 {{ form.open|safe }}
   {{ form.csrf_token }}
 
-  {% for enabled_field, day_field, title, desc in [
-      (form.month_start_enabled, form.month_start_day, "Ay başı hatırlatması",
-       "Geçmiş aylardan kalan ve içinde bulunulan ayın ödemelerini listeler."),
-      (form.next_month_enabled, form.next_month_day, "Ay sonu hatırlatması",
-       "Ay başı hatırlatmasıyla aynı ödemeleri listeler; ay bitmeden ödenmemiş kalan varsa hatırlatmak için.")
-  ] %}
-    <div class="rp-card">
-      <p class="rp-title">{{ title }}</p>
-      <p class="rp-desc">{{ desc }}</p>
+  <div class="rp-card">
+    <p class="rp-title">Ödeme hatırlatma günleri</p>
+    <p class="rp-desc">E-postada geçmiş aylardan kalan ve içinde bulunulan ayın ödenmemiş ödemeleri listelenir.</p>
+    {% for enabled_field, day_field in [(form.month_start_enabled, form.month_start_day),
+                                        (form.next_month_enabled, form.next_month_day)] %}
       <div class="rp-check">
         {{ enabled_field(class="rp-toggle", **{"data-target": day_field.id}) }}
-        <label for="{{ enabled_field.id }}">Bu e-postayı almak istiyorum</label>
+        <label for="{{ enabled_field.id }}">{{ enabled_field.label.text }}</label>
       </div>
       <div class="rp-day" id="{{ day_field.id }}-wrap">
         <label for="{{ day_field.id }}">{{ day_field.label.text }}</label>
         {{ day_field() }}
       </div>
-    </div>
-  {% endfor %}
+    {% endfor %}
+  </div>
 
   {#
     Yönetici ön hatırlatması (sandik/utils/manager_reminder.py). Yalnızca kişinin işlem girme yetkisi

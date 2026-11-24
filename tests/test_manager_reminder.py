@@ -136,12 +136,10 @@ def test_manager_is_told_a_day_before_with_each_members_own_day():
 
     on_4th = collect(this_month_day(4))
     assert [m["name_surname"] for m in on_4th[0]["sandiks"][0]["members"]] == ["Zeynep Üye"]
-    assert on_4th[0]["sandiks"][0]["members"][0]["kind_text"] == "Ay başı hatırlatması"
 
     on_19th = collect(this_month_day(19))
     rows = on_19th[0]["sandiks"][0]["members"]
     assert [m["name_surname"] for m in rows] == ["Ahmet Üye", "Zeynep Üye"]  # türkçe alfabetik
-    assert {m["kind_text"] for m in rows} == {"Ay sonu hatırlatması"}
     assert on_19th[0]["member_count"] == 2
     assert on_19th[0]["email_address"] == manager.email_address
 
@@ -159,7 +157,7 @@ def test_amounts_match_the_members_email_and_count_undistributed_money():
     section = data["sandiks"][0]
     by_name = {m["name_surname"]: m for m in section["members"]}
 
-    # Ay sonu: yalnızca bu ayın 100'ü (gelecek ay e-postaya girmez)
+    # Yalnızca bu ayın 100.ü (gelecek ay e-postaya girmez)
     assert by_name["Zeynep Üye"]["remaining"] == Decimal("100")
     assert by_name["Ahmet Üye"]["undistributed"] == Decimal("30")
     assert by_name["Ahmet Üye"]["remaining"] == Decimal("70")
@@ -178,7 +176,6 @@ def test_on_the_last_day_of_the_month_the_new_months_contribution_is_projected()
     zeynep_row = next(m for m in data["sandiks"][0]["members"] if m["name_surname"] == "Zeynep Üye")
 
     assert data["reminder_day"].day == 1
-    assert zeynep_row["kind_text"] == "Ay başı hatırlatması"
     # Bu ayın ödenmemiş 100'ü (yarın "geçmiş aydan kalan") + yeni ayın hesaplanan 100'ü
     assert zeynep_row["remaining"] == Decimal("200")
     assert Contribution.select().count() == contribution_count
@@ -251,7 +248,7 @@ def test_email_templates_render(app):
     with app.app_context():
         html = render_template("email/manager_reminder.html", data=data)
         assert "Zeynep Üye" in html and "Para girişi ekle" in html and "E-posta tercihlerim" in html
-        assert "Ay sonu hatırlatması" in html
+        assert "hatırlatması" not in html.split("Zeynep Üye")[1].split("</td>")[0]  # tür yazılmaz
 
 
 def _login(app, web_user_id):

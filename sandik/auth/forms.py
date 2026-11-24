@@ -190,7 +190,7 @@ class ReminderPreferenceForm(CustomFlaskForm):
     `fill_from_days()` içindedir; sayfa katmanı iki temsili birbirine karıştırmaz.
     """
     month_start_enabled = BooleanField(
-        label="Ay başı hatırlatması: bu ayın ödemeleri",
+        label="1. hatırlatma",
         default=True
     )
     month_start_day = SelectField(
@@ -202,7 +202,7 @@ class ReminderPreferenceForm(CustomFlaskForm):
     )
 
     next_month_enabled = BooleanField(
-        label="Ay sonu hatırlatması: bu ayın ödenmemiş kalan ödemeleri",
+        label="2. hatırlatma",
         default=True
     )
     next_month_day = SelectField(
