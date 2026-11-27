@@ -697,6 +697,11 @@ simgenin eklendiği sayfanın klasöründen tahmin ediyor, alt sayfadan eklenen 
 - Tanım `sandik/intro/utils.py` → `web_app_manifest`, adres `sandik/intro/page.py`dedir. `scope`, `start_url` ve `id` uygulamanın köküdür ve
   `url_for` ile üretilir: mount noktasında `/sandikv2/`, kendi alt alan adında `/`. iPhone simgesi `my_custom/img/apple-touch-icon.png` (180×180).
 - `<link rel="manifest">` üç kabukta da (`utils/layout.html`, `intro/_layout.html`, `auth/auth_layout.html`)dadır; yeni bir kabuk şablonu eklenirse oraya da konmalıdır.
+- **Ana ekrandan açılınca ilerleme çubuğu ve aşağı çekince yenileme** (kullanıcı istedi): `my_custom/js/home_screen.js`,
+  üç kabukta manifestin hemen altında, `<head>` içinde `defer` olmadan yüklenir. Tarayıcıda bir şey yapmaz. Dosya
+  myilmaz_tr deposundaki uygulamalardakiyle **birebir aynıdır** (kopyalanır, değişiklik oralara da taşınmalıdır;
+  ana depodaki `myilmaz_tr/tests/test_home_screen.py` karşılaştırır). Kurallar ana depo CLAUDE.md → "İlerleme çubuğu ve
+  aşağı çekince yenileme".
 - **Android** (kullanıcı istedi): simgeler `my_custom/img/icon-192.png`, `icon-512.png` ve `icon-maskable-512.png`dir
   (maskelenebilir olan kenarından boşluk bırakılarak, köşesiz çizilmiştir). `apple-touch-icon.png` ile aynı görünümdür
   (dikey `#1a9bd7` → `#0b6a99` gradyan, simgenin yarısını kaplayan beyaz sandık) ve `logo.png`den üretildi: logo
